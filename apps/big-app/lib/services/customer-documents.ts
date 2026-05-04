@@ -1,6 +1,9 @@
 import type { Context } from "@/lib/context/types";
 import { NotFoundError, ValidationError } from "@/lib/errors";
-import { customerDocumentInputSchema } from "@/lib/schemas/customer-documents";
+import {
+	customerDocumentInputSchema,
+	customerLetterInputSchema,
+} from "@/lib/schemas/customer-documents";
 import { createSignedReadUrls } from "@/lib/services/storage";
 import {
 	assertAppointmentInBrand,
@@ -118,5 +121,49 @@ export async function deleteCustomerDocument(
 		.delete()
 		.eq("id", id);
 	if (error) throw new ValidationError(error.message);
-	return { storage_path: doc.storage_path };
+	return { storage_path: doc.storage_path ?? "" };
+}
+
+export async function createCustomerLetter(
+	ctx: Context,
+	input: unknown,
+): Promise<CustomerDocument> {
+	const p = customerLetterInputSchema.parse(input);
+	await assertCustomerInBrand(ctx, p.customer_id);
+	if (p.appointment_id) await assertAppointmentInBrand(ctx, p.appointment_id);
+	const { data, error } = await ctx.db
+		.from("customer_documents")
+		.insert({
+			customer_id: p.customer_id,
+			appointment_id: p.appointment_id,
+			uploaded_by_id: ctx.currentUser?.employeeId ?? null,
+			storage_path: "",
+			file_name: p.file_name,
+			mime_type: "text/html",
+			size_bytes: 0,
+			doc_type: "letter",
+			letter_template_id: p.letter_template_id,
+			letter_body_html: p.letter_body_html,
+		})
+		.select("*")
+		.single();
+	if (error) throw new ValidationError(error.message);
+	return data;
+}
+
+export async function updateCustomerLetter(
+	ctx: Context,
+	id: string,
+	letter_body_html: string,
+): Promise<CustomerDocument> {
+	const doc = await getCustomerDocument(ctx, id);
+	if (doc.doc_type !== "letter") throw new ValidationError("Not a letter");
+	const { data, error } = await ctx.db
+		.from("customer_documents")
+		.update({ letter_body_html })
+		.eq("id", id)
+		.select("*")
+		.single();
+	if (error) throw new ValidationError(error.message);
+	return data;
 }

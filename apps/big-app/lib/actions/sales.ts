@@ -11,7 +11,6 @@ import { listOutlets } from "@/lib/services/outlets";
 import { listActivePaymentMethods } from "@/lib/services/payment-methods";
 import type {
 	PaymentWithProcessedBy,
-	RefundNoteWithRefs,
 	SaleItem,
 	SaleItemIncentiveRow,
 	SalesOrderWithRelations,
@@ -80,7 +79,6 @@ export type SalesOrderDetailResult =
 			order: SalesOrderWithRelations;
 			items: SaleItem[];
 			payments: PaymentWithProcessedBy[];
-			refundNotes: RefundNoteWithRefs[];
 			incentives: SaleItemIncentiveRow[];
 			employees: EmployeeWithRelations[];
 	  }
@@ -91,12 +89,11 @@ export async function getSalesOrderDetailAction(
 ): Promise<SalesOrderDetailResult> {
 	const ctx = await getServerContext();
 	try {
-		const [order, items, payments, refundNotes, incentives, employees] =
+		const [order, items, payments, incentives, employees] =
 			await Promise.all([
 				salesService.getSalesOrder(ctx, id),
 				salesService.listSaleItems(ctx, id),
 				salesService.listPaymentsForOrder(ctx, id),
-				salesService.listRefundNotesForOrder(ctx, id),
 				salesService.listIncentivesForOrder(ctx, id),
 				listEmployees(ctx),
 			]);
@@ -105,7 +102,6 @@ export async function getSalesOrderDetailAction(
 			order,
 			items,
 			payments,
-			refundNotes,
 			incentives,
 			employees: employees.filter((e) => e.is_active),
 		};
@@ -129,7 +125,7 @@ export async function voidSalesOrderAction(
 	return {
 		cnNumber: result.cn_number,
 		rnNumber: result.rn_number,
-		refundAmount: result.refund_amount,
+		returnAmount: result.refund_amount,
 	};
 }
 
@@ -218,4 +214,18 @@ export async function replaceSaleItemIncentivesAction(
 	const ctx = await getServerContext();
 	await salesService.replaceSaleItemIncentives(ctx, input);
 	revalidateSalesOrder(salesOrderId, appointmentRef);
+}
+
+export async function writeOffOutstandingAction(
+	salesOrderId: string,
+	input: unknown,
+	appointmentRef?: string | null,
+) {
+	const ctx = await getServerContext();
+	const result = await salesService.writeOffOutstanding(ctx, salesOrderId, input);
+	revalidateSalesOrder(salesOrderId, appointmentRef);
+	return {
+		invoiceNo: result.invoice_no,
+		amount: Number(result.amount),
+	};
 }

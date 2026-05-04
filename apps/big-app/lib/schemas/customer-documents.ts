@@ -25,3 +25,12 @@ export const customerDocumentInputSchema = z.object({
 		.max(CUSTOMER_DOCUMENT_MAX_BYTES, "File too large"),
 });
 export type CustomerDocumentInput = z.infer<typeof customerDocumentInputSchema>;
+
+export const customerLetterInputSchema = z.object({
+	customer_id: z.string().uuid(),
+	appointment_id: z.string().uuid().nullable(),
+	letter_template_id: z.string().uuid().nullable(),
+	file_name: z.string().trim().min(1).max(255),
+	letter_body_html: z.string().min(1).max(50_000),
+});
+export type CustomerLetterInput = z.infer<typeof customerLetterInputSchema>;

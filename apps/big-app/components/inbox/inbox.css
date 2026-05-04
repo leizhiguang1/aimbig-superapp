@@ -97,6 +97,18 @@
 .inbox-compose-btn:hover { background: var(--wa-green-dark); }
 .inbox-compose-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.inbox-resync-btn {
+	font-size: 14px;
+	font-weight: 500;
+	padding: 5px 10px;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-secondary);
+}
+.inbox-resync-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.inbox-resync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .inbox-channel-filter {
 	font-size: 13px;
 	padding: 6px 10px;

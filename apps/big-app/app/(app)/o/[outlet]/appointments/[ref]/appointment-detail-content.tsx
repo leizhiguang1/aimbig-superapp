@@ -46,6 +46,9 @@ import {
 	listFollowUpsForCustomer,
 } from "@/lib/services/follow-ups";
 import { listSellableProducts } from "@/lib/services/inventory";
+import { listLetterTemplates } from "@/lib/services/letter-templates";
+import { listFormTemplates } from "@/lib/services/form-templates";
+import { listFormResponsesForAppointment } from "@/lib/services/form-responses";
 import { listMedicalCertificatesForAppointment } from "@/lib/services/medical-certificates";
 import { listOutlets, listRooms } from "@/lib/services/outlets";
 import { listActivePaymentMethods } from "@/lib/services/payment-methods";
@@ -141,6 +144,9 @@ export async function AppointmentDetailContent({
 		staffDiscountPercent,
 		fullCustomer,
 		wallet,
+		letterTemplates,
+		formTemplates,
+		formResponses,
 	] = await Promise.all([
 		listLineItemsForAppointment(ctx, id),
 		listIncentivesForAppointment(ctx, id),
@@ -171,6 +177,11 @@ export async function AppointmentDetailContent({
 		getBrandSetting(ctx, "billing.staff_discount_percent"),
 		fullCustomerPromise,
 		walletPromise,
+		listLetterTemplates(ctx, { activeOnly: true }),
+		listFormTemplates(ctx, { activeOnly: true }),
+		appointment.customer_id
+			? listFormResponsesForAppointment(ctx, id)
+			: Promise.resolve([]),
 	]);
 
 	const walletBalance = wallet ? Number(wallet.balance) : null;
@@ -190,6 +201,9 @@ export async function AppointmentDetailContent({
 				caseNotes={caseNotes}
 				followUps={followUps}
 				customerDocuments={customerDocuments}
+				letterTemplates={letterTemplates}
+				formTemplates={formTemplates}
+				formResponses={formResponses}
 				customerLineItemsHistory={customerLineItemsHistory}
 				customers={customers}
 				employees={employees}

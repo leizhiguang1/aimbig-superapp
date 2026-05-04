@@ -10,6 +10,9 @@ import { listCustomerTimeline } from "@/lib/services/appointments";
 import { listAppointmentTags } from "@/lib/services/brand-config";
 import { listCaseNotesWithContext } from "@/lib/services/case-notes";
 import { listCustomerDocuments } from "@/lib/services/customer-documents";
+import { listLetterTemplates } from "@/lib/services/letter-templates";
+import { listFormTemplates } from "@/lib/services/form-templates";
+import { listFormResponsesForCustomer } from "@/lib/services/form-responses";
 import {
 	listCustomerServiceBalances,
 	listCustomerServiceRedemptions,
@@ -23,10 +26,10 @@ import { listEmployees } from "@/lib/services/employees";
 import { listFollowUpsForCustomer } from "@/lib/services/follow-ups";
 import { listMedicalCertificatesForCustomer } from "@/lib/services/medical-certificates";
 import { listOutlets, listRooms } from "@/lib/services/outlets";
+import { listManualTransactions } from "@/lib/services/manual-transactions";
 import {
 	listCancellations,
 	listPayments,
-	listRefundNotes,
 	listSalesOrders,
 } from "@/lib/services/sales";
 import {
@@ -57,7 +60,6 @@ export async function CustomerDetailContent({
 			salesOrders,
 			cancellations,
 			payments,
-			refundNotes,
 			followUps,
 			documents,
 			medicalCertificates,
@@ -71,6 +73,10 @@ export async function CustomerDetailContent({
 			walletTransactions,
 			serviceRedemptions,
 			serviceBalances,
+			letterTemplates,
+			formTemplates,
+			formResponses,
+			manualTransactions,
 		] = await Promise.all([
 			listCustomerTimeline(ctx, id),
 			listLineItemsForCustomer(ctx, id),
@@ -78,7 +84,6 @@ export async function CustomerDetailContent({
 			listSalesOrders(ctx, { customerId: id }),
 			listCancellations(ctx, { customerId: id }),
 			listPayments(ctx, { customerId: id }),
-			listRefundNotes(ctx, { customerId: id }),
 			listFollowUpsForCustomer(ctx, id),
 			listCustomerDocuments(ctx, id),
 			listMedicalCertificatesForCustomer(ctx, id),
@@ -96,6 +101,10 @@ export async function CustomerDetailContent({
 			listWalletTransactions(ctx, id),
 			listCustomerServiceRedemptions(ctx, id),
 			listCustomerServiceBalances(ctx, id),
+			listLetterTemplates(ctx, { activeOnly: true }),
+			listFormTemplates(ctx, { activeOnly: true }),
+			listFormResponsesForCustomer(ctx, id),
+			listManualTransactions(ctx, { customerId: id }),
 		]);
 		const defaultConsultantId = ctx.currentUser?.employeeId ?? null;
 		const activeOutlets = outlets.filter((o) => o.is_active);
@@ -111,7 +120,6 @@ export async function CustomerDetailContent({
 					salesOrders={salesOrders}
 					cancellations={cancellations}
 					payments={payments}
-					refundNotes={refundNotes}
 					followUps={followUps}
 					documents={documents}
 					medicalCertificates={medicalCertificates}
@@ -128,6 +136,10 @@ export async function CustomerDetailContent({
 					shifts={shifts}
 					allOutlets={activeOutlets}
 					allEmployees={activeAllEmployees}
+					letterTemplates={letterTemplates}
+					formTemplates={formTemplates}
+					formResponses={formResponses}
+					manualTransactions={manualTransactions}
 				/>
 			</AppointmentConfigProvider>
 		);

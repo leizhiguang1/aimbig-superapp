@@ -94,15 +94,10 @@ export function InboxList({
 				<div className="inbox-list-header-actions">
 					<button
 						type="button"
-						className="inbox-compose-btn"
+						className="inbox-resync-btn"
 						onClick={handleResync}
 						disabled={resyncing}
 						title="Resync chats from connected channels"
-						style={{
-							background: "transparent",
-							border: "1px solid var(--border-color)",
-							color: "var(--text-secondary)",
-						}}
 					>
 						{resyncing ? "..." : "↻"}
 					</button>

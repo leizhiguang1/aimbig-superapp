@@ -6,7 +6,9 @@ import {
 	Bell,
 	Building2,
 	CalendarDays,
+	ChevronDown,
 	ChevronRight,
+	ChevronUp,
 	Cigarette,
 	Crown,
 	FileText,
@@ -32,6 +34,7 @@ import { AppointmentDialog } from "@/components/appointments/AppointmentDialog";
 import { CustomerCaseNotesTab } from "@/components/customers/CustomerCaseNotesTab";
 import { CustomerCashWalletTab } from "@/components/customers/CustomerCashWalletTab";
 import { CustomerDocumentsTab } from "@/components/customers/CustomerDocumentsTab";
+import { CustomerManualTransactionsTab } from "@/components/customers/CustomerManualTransactionsTab";
 import { CustomerFollowUpsTab } from "@/components/customers/CustomerFollowUpsTab";
 import { CustomerMedicalCertificatesTab } from "@/components/customers/CustomerMedicalCertificatesTab";
 import { CustomerPaymentsTab } from "@/components/customers/CustomerPaymentsTab";
@@ -57,9 +60,13 @@ import {
 	nationalityForCode,
 } from "@/lib/constants/countries";
 import type { CustomerLineItem } from "@/lib/services/appointment-line-items";
+import type { ManualTransactionWithRelations } from "@/lib/services/manual-transactions";
 import type { CustomerTimelineAppointment } from "@/lib/services/appointments";
 import type { CaseNoteWithContext } from "@/lib/services/case-notes";
 import type { CustomerDocumentWithRefs } from "@/lib/services/customer-documents";
+import type { LetterTemplate } from "@/lib/services/letter-templates";
+import type { FormTemplateWithSections } from "@/lib/services/form-templates";
+import type { FormResponse } from "@/lib/services/form-responses";
 import type {
 	CustomerServiceBalance,
 	CustomerServiceRedemption,
@@ -76,7 +83,6 @@ import type { OutletWithRoomCount, Room } from "@/lib/services/outlets";
 import type {
 	CancellationWithRelations,
 	PaymentWithRelations,
-	RefundNoteWithRelations,
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
 import type {
@@ -96,7 +102,6 @@ type Props = {
 	salesOrders: SalesOrderWithRelations[];
 	cancellations: CancellationWithRelations[];
 	payments: PaymentWithRelations[];
-	refundNotes: RefundNoteWithRelations[];
 	followUps: FollowUpWithRefs[];
 	documents: CustomerDocumentWithRefs[];
 	medicalCertificates: MedicalCertificateWithRefs[];
@@ -113,6 +118,10 @@ type Props = {
 	shifts: EmployeeShift[];
 	allOutlets: OutletWithRoomCount[];
 	allEmployees: EmployeeWithRelations[];
+	letterTemplates: LetterTemplate[];
+	formTemplates: FormTemplateWithSections[];
+	formResponses: FormResponse[];
+	manualTransactions: ManualTransactionWithRelations[];
 };
 
 type TabKey =
@@ -131,7 +140,8 @@ type TabKey =
 	| "payments"
 	| "services"
 	| "products"
-	| "cash-wallet";
+	| "cash-wallet"
+	| "manual-transactions";
 
 const TABS: { key: TabKey; label: string }[] = [
 	{ key: "timeline", label: "Timeline" },
@@ -150,6 +160,7 @@ const TABS: { key: TabKey; label: string }[] = [
 	{ key: "services", label: "Services" },
 	{ key: "products", label: "Products" },
 	{ key: "cash-wallet", label: "Cash Wallet" },
+	{ key: "manual-transactions", label: "Manual Transactions" },
 ];
 
 function computeAge(dob: string | null): string | null {
@@ -204,7 +215,6 @@ export function CustomerDetailView({
 	salesOrders,
 	cancellations,
 	payments,
-	refundNotes,
 	followUps,
 	documents,
 	medicalCertificates,
@@ -221,6 +231,10 @@ export function CustomerDetailView({
 	shifts,
 	allOutlets,
 	allEmployees,
+	letterTemplates,
+	formTemplates,
+	formResponses,
+	manualTransactions,
 }: Props) {
 	const path = useOutletPath();
 	const [activeTab, setActiveTab] = useState<TabKey>("timeline");
@@ -228,6 +242,7 @@ export function CustomerDetailView({
 		"history" | "outstanding"
 	>("history");
 	const [editing, setEditing] = useState(false);
+	const [cardCollapsed, setCardCollapsed] = useState(false);
 	const [creatingAppointment, setCreatingAppointment] = useState<{
 		startAt: string;
 		endAt: string;
@@ -362,6 +377,48 @@ export function CustomerDetailView({
 						</Tooltip>
 					</div>
 
+					{cardCollapsed ? (
+						<button
+							type="button"
+							onClick={() => setCardCollapsed(false)}
+							className="flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left shadow-sm transition hover:bg-muted/30"
+						>
+							<div className="relative size-9 shrink-0 overflow-hidden rounded-full border bg-muted">
+								{imageUrl ? (
+									// biome-ignore lint/performance/noImgElement: simple avatar
+									<img
+										src={imageUrl}
+										alt={displayName}
+										className="size-full object-cover"
+									/>
+								) : (
+									<div className="flex size-full items-center justify-center font-semibold text-muted-foreground text-xs">
+										{initials(displayName)}
+									</div>
+								)}
+							</div>
+							<div className="flex min-w-0 flex-1 flex-col">
+								<div className="flex items-center gap-1.5">
+									<span className="truncate font-semibold text-sm text-sky-800">
+										{displayName}
+									</span>
+									{customer.is_vip && (
+										<span className="flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+											<Crown className="size-3" />
+											VIP
+										</span>
+									)}
+								</div>
+								{customer.phone && (
+									<span className="text-[11px] text-muted-foreground tabular-nums">
+										{customer.phone}
+									</span>
+								)}
+							</div>
+							<ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+						</button>
+					) : (
+					<>
 					<div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
 						<div className="flex items-start gap-3">
 							<div className="flex flex-col items-center gap-1">
@@ -470,6 +527,20 @@ export function CustomerDetailView({
 									</div>
 								)}
 							</div>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon-sm"
+										className="shrink-0 self-start"
+										onClick={() => setCardCollapsed(true)}
+										aria-label="Collapse customer card"
+									>
+										<ChevronUp />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>Collapse</TooltipContent>
+							</Tooltip>
 						</div>
 
 						<div className="flex items-center justify-between text-[10px] text-muted-foreground">
@@ -624,6 +695,8 @@ export function CustomerDetailView({
 							</span>
 						</div>
 					</div>
+					</>
+					)}
 				</aside>
 
 				<main className="flex min-w-0 flex-1 flex-col gap-4">
@@ -651,7 +724,6 @@ export function CustomerDetailView({
 					) : activeTab === "payments" ? (
 						<CustomerPaymentsTab
 							payments={payments}
-							refundNotes={refundNotes}
 							outstandingSalesOrders={outstandingSalesOrders}
 							subTab={paymentsSubTab}
 							onSubTabChange={setPaymentsSubTab}
@@ -669,6 +741,29 @@ export function CustomerDetailView({
 							customerId={customer.id}
 							defaultUploaderId={defaultConsultantId}
 							documents={documents}
+							customer={{
+								name: [customer.first_name, customer.last_name]
+									.filter(Boolean)
+									.join(" "),
+								idNumber: customer.id_number ?? null,
+								age: customer.date_of_birth
+									? (() => {
+											const dob = new Date(customer.date_of_birth);
+											const now = new Date();
+											const years = now.getFullYear() - dob.getFullYear();
+											const months = now.getMonth() - dob.getMonth();
+											const adj =
+												months < 0 ||
+												(months === 0 && now.getDate() < dob.getDate())
+													? -1
+													: 0;
+											return `${years + adj} years old`;
+										})()
+									: null,
+							}}
+							letterTemplates={letterTemplates}
+							formTemplates={formTemplates}
+							formResponses={formResponses}
 						/>
 					) : activeTab === "medical-certificate" ? (
 						<CustomerMedicalCertificatesTab
@@ -691,6 +786,8 @@ export function CustomerDetailView({
 							wallet={wallet}
 							transactions={walletTransactions}
 						/>
+					) : activeTab === "manual-transactions" ? (
+						<CustomerManualTransactionsTab records={manualTransactions} />
 					) : (
 						<PlaceholderTab
 							label={TABS.find((t) => t.key === activeTab)?.label ?? ""}

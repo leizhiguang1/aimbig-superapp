@@ -18,6 +18,8 @@ import {
 	voidSalesOrderInputSchema,
 	type WalkInSaleInput,
 	walkInSaleInputSchema,
+	type WriteOffInput,
+	writeOffInputSchema,
 } from "@/lib/schemas/sales";
 import { assertPaymentFields } from "@/lib/services/payment-methods";
 import {
@@ -972,4 +974,30 @@ export async function getCashSummary(
 	);
 
 	return { cashMovement, paymentCollected, outstanding };
+}
+
+// ---------------------------------------------------------------------------
+// Write-off: clears outstanding balance without a real payment.
+// ---------------------------------------------------------------------------
+
+export type WriteOffOutstandingResult = {
+	payment_id: string;
+	invoice_no: string;
+	amount: number;
+};
+
+export async function writeOffOutstanding(
+	ctx: Context,
+	salesOrderId: string,
+	input: unknown,
+): Promise<WriteOffOutstandingResult> {
+	await assertSalesOrderInBrand(ctx, salesOrderId);
+	const parsed: WriteOffInput = writeOffInputSchema.parse(input);
+	const { data, error } = await ctx.db.rpc("write_off_outstanding", {
+		p_sales_order_id: salesOrderId,
+		p_reason: parsed.reason,
+		p_processed_by: (ctx.currentUser?.employeeId ?? null) as string,
+	});
+	if (error) throw new ValidationError(error.message || "Failed to write off outstanding");
+	return data as unknown as WriteOffOutstandingResult;
 }

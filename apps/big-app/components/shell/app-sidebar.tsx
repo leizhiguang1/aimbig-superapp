@@ -46,7 +46,6 @@ const baseNavItems: SidebarNavItemData[] = [
 	{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 	{ label: "Appointments", href: "/appointments", icon: Calendar },
 	{ label: "Customers", href: "/customers", icon: Users },
-	{ label: "Chats", href: "/chats", icon: MessageSquare },
 	{ label: "Sales", href: "/sales", icon: ShoppingCart },
 	{ label: "Roster", href: "/roster", icon: CalendarDays },
 	{ label: "Services", href: "/services", icon: Stethoscope },
@@ -62,8 +61,14 @@ const baseNavItems: SidebarNavItemData[] = [
 const baseWhatsappNavItems: SidebarNavItemData[] = [
 	{
 		label: "Inbox",
-		href: "/whatsapp",
+		href: "/chats",
 		icon: MessageCircle,
+		variant: "whatsapp",
+	},
+	{
+		label: "WhatsApp",
+		href: "/whatsapp",
+		icon: MessageSquare,
 		variant: "whatsapp",
 	},
 	{ label: "Contacts", href: "/contacts", icon: Contact, variant: "whatsapp" },
@@ -120,7 +125,7 @@ export function AppSidebar({ outletCode }: { outletCode: string }) {
 		<Sidebar collapsible="icon">
 			<SidebarHeader className="border-sidebar-border border-b">
 				<div className="flex min-h-12 items-center gap-2 py-2">
-					<SidebarTrigger className="size-9 shrink-0" />
+					<SidebarTrigger className="hidden size-9 shrink-0 md:flex" />
 					<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-primary to-sky-500 font-bold text-primary-foreground text-xs shadow-sm group-data-[collapsible=icon]:hidden">
 						KD
 					</div>

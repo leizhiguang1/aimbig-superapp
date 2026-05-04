@@ -6,18 +6,30 @@ import {
 	type Toast,
 } from "@/components/appointments/AppointmentToastStack";
 import { CustomerDocumentsPanel } from "@/components/customer-documents/CustomerDocumentsPanel";
+import type { CustomerMergeData } from "@/components/customer-documents/LetterEditorDialog";
 import type { CustomerDocumentWithRefs } from "@/lib/services/customer-documents";
+import type { LetterTemplate } from "@/lib/services/letter-templates";
+import type { FormTemplateWithSections } from "@/lib/services/form-templates";
+import type { FormResponse } from "@/lib/services/form-responses";
 
 type Props = {
 	customerId: string;
 	defaultUploaderId: string | null;
 	documents: CustomerDocumentWithRefs[];
+	customer: CustomerMergeData;
+	letterTemplates: LetterTemplate[];
+	formTemplates: FormTemplateWithSections[];
+	formResponses: FormResponse[];
 };
 
 export function CustomerDocumentsTab({
 	customerId,
 	defaultUploaderId,
 	documents,
+	customer,
+	letterTemplates,
+	formTemplates,
+	formResponses,
 }: Props) {
 	const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -43,6 +55,10 @@ export function CustomerDocumentsTab({
 				appointmentId={null}
 				defaultUploaderId={defaultUploaderId}
 				documents={documents}
+				customer={customer}
+				letterTemplates={letterTemplates}
+				formTemplates={formTemplates}
+				formResponses={formResponses}
 				onToast={showToast}
 			/>
 			<AppointmentToastStack toasts={toasts} onDismiss={dismissToast} />

@@ -34,6 +34,69 @@ a bulk-print affordance.
 
 **Deliberate non-goals** — Bulk PDF download, individual print-receipt layout distinct from invoice, LHDN e-invoice submission, and e-invoice filter functionality (the dropdown is purely cosmetic until the integration lands).
 
+## Write-off outstanding balance (2026-05-02)
+
+Clears a remaining outstanding balance without collecting real cash. The scenario: customer will never pay the remainder — bad debt, management goodwill, small rounding disagreement. Staff clicks "Write off" on the SO detail header and provides a written reason; the system settles the order immediately.
+
+### How the math works
+
+`sales_orders.outstanding` is a generated column: `total - amount_paid`. To zero it without a real payment we insert a synthetic payment row with `payment_mode = 'WRITEOFF'` for the exact outstanding amount, then update `amount_paid` to match `total`.
+
+```
+Before:  total = 800   amount_paid = 100   outstanding = 700
+RPC inserts payment(amount=700, mode=WRITEOFF)
+         total = 800   amount_paid = 800   outstanding = 0   ✓
+```
+
+Real cash collected = 100. Write-off = 700. The books balance because nothing disappears — the WRITEOFF row makes the difference explicit.
+
+**Reporting rule:** always filter `WHERE payment_mode != 'WRITEOFF'` when computing real cash collected (daily takings, commission base). The WRITEOFF rows are bad-debt / concession contra-entries, not revenue.
+
+### RPC `write_off_outstanding` (migration `sales_write_off_outstanding`)
+
+Signature:
+```sql
+write_off_outstanding(
+  p_sales_order_id uuid,
+  p_reason         text,   -- required, stored in payments.remarks
+  p_processed_by   uuid
+) returns json  -- { payment_id, invoice_no, amount }
+```
+
+Atomic steps:
+1. Lock + validate SO is not `cancelled`/`void` and `outstanding > 0.005`.
+2. `gen_invoice_no()` — produces a real INV-XXXXXX so the write-off appears in payment history with its own invoice number.
+3. Insert one `payments` row: `payment_mode = 'WRITEOFF'`, `amount = outstanding`, `remarks = p_reason`.
+4. `UPDATE sales_orders SET amount_paid = amount_paid + outstanding, status = 'completed'`.
+
+SECURITY DEFINER. No passcode gate in v1 (add via the same passcode pattern as void when required).
+
+### `WRITEOFF` payment method
+
+A built-in, **inactive** `payment_methods` row (`code = 'WRITEOFF'`, `is_active = false`) satisfies the FK from `payments.payment_mode`. It is seeded in the migration. Because `is_active = false`, it never appears in the Collect Payment or Record Payment method pickers. It is not deletable (is_builtin).
+
+### UI
+
+- **Button**: "Write off" — orange outline, appears next to "Record payment" whenever `outstanding > 0` and the SO is not cancelled.
+- **Dialog** ([WriteOffOutstandingDialog.tsx](../../components/sales/WriteOffOutstandingDialog.tsx)): shows the outstanding amount, requires a reason, one confirm button.
+- **Payment history**: the write-off appears as a normal payment row with the generated invoice number and "Write Off" badge. The row has no "Change" or "Revert" buttons (both blocked by `isWriteOff` flag).
+
+### Void after write-off
+
+Void is still **allowed** on a written-off order. The void RPC treats WRITEOFF payments exactly like wallet payments: non-refundable amounts are subtracted from the refund base before creating the RN.
+
+```
+Scenario: total=800, real cash paid=100, write-off=700
+Void (full, no admin fee):
+  v_writeoff_paid = 700
+  v_refund_amt = max(0, amount_paid(800) - wallet(0) - writeoff(700) - admin(0)) = 100
+  → RN created for MYR 100  ✓  (only real cash comes back)
+```
+
+The client-side preview in `VoidSalesOrderDialog` mirrors this formula via the `writeOffPaid` prop so the "return amount" shown to staff before they confirm is always accurate.
+
+**What void does NOT do to write-offs:** the WRITEOFF payment row is left in place (same as how void leaves wallet payment rows — the financial history is preserved). Only the SO status flips to `cancelled` and the CN/RN audit trail is created.
+
 ## Post-collection corrections on SO detail (2026-04-24)
 
 Lighter alternatives to full void for fixing mistakes made during Collect Payment.
@@ -216,6 +279,7 @@ Atomic steps inside the RPC's implicit transaction:
    to `unpaid` and demoted `status` from `completed` to `confirmed`, but
    that made the appointment lie about what actually occurred. The CN/RN
    rows carry the money-side truth instead.
+8. **Write-off amounts are excluded from the refund base** (2026-05-02, migration `void_sales_order_exclude_writeoff_from_refund`). `v_writeoff_paid` = sum of `payments` rows with `payment_mode = 'WRITEOFF'` on this SO. Excluded the same way `v_wallet_paid` is — they represent amounts never collected in real cash, so there is nothing to refund back.
 
 Any failure rolls everything back — including the passcode redemption,
 so the code stays reusable.

@@ -137,7 +137,15 @@ export function NewSaleDialog({ open, onOpenChange }: Props) {
 						</Button>
 					</div>
 				) : !data ? (
-					<div className="flex flex-col items-center justify-center gap-2 p-10 text-muted-foreground">
+					<div className="relative flex flex-col items-center justify-center gap-2 p-10 text-muted-foreground">
+						<button
+							type="button"
+							onClick={() => onOpenChange(false)}
+							aria-label="Close"
+							className="absolute top-2 right-2 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+						>
+							<X className="size-4" />
+						</button>
 						<Loader2 className="size-5 animate-spin" />
 						<div className="text-sm">Loading…</div>
 					</div>
@@ -658,8 +666,10 @@ function NewSaleBody({
 				closeDisabled={isPending}
 			/>
 
-			<div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1fr_360px]">
-				<div className="flex min-h-0 flex-col overflow-y-auto border-r bg-slate-50/40 px-5 pt-4 pb-10">
+			{/* Single scroll on mobile; independent panel scrolls on desktop */}
+			<div className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
+				<div className="flex min-h-full flex-col lg:h-full lg:flex-row">
+				<div className="flex flex-col border-b bg-slate-50/40 px-5 pt-4 pb-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:pb-10">
 					<div className="mb-2 grid grid-cols-[1fr_56px_96px_80px_24px] items-center gap-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-blue-600">
 						<span>Product/Service</span>
 						<span className="text-center">Qty</span>
@@ -794,7 +804,7 @@ function NewSaleBody({
 					</div>
 				</div>
 
-				<div className="flex min-h-0 flex-col overflow-y-auto bg-white px-5 py-4">
+				<div className="flex flex-col bg-white px-5 py-4 lg:w-[360px] lg:min-h-0 lg:shrink-0 lg:overflow-y-auto">
 					<PaymentSection
 						payments={payments.payments}
 						paymentMethods={data.paymentMethods}
@@ -822,7 +832,7 @@ function NewSaleBody({
 						</span>
 					</div>
 
-					<div className="mt-3 flex items-center justify-end gap-2">
+					<div className="mt-3 hidden items-center justify-end gap-2 lg:flex">
 						<TooltipProvider>
 							<Tooltip>
 								<TooltipTrigger asChild>
@@ -866,11 +876,67 @@ function NewSaleBody({
 					</div>
 
 					{formError && (
-						<div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+						<div className="mt-3 hidden rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 lg:block">
 							{formError}
 						</div>
 					)}
 				</div>
+				</div>
+			</div>
+
+			{/* Mobile sticky footer — total + submit CTA */}
+			<div className="shrink-0 border-t bg-white px-4 py-3 lg:hidden">
+				<div className="flex items-center justify-between gap-3">
+					<div>
+						<div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+							Total
+						</div>
+						<div className="text-lg font-semibold">RM {money(rounding.total)}</div>
+					</div>
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<span
+									className={cn(
+										"inline-flex",
+										disabled && !isPending && "cursor-not-allowed",
+									)}
+								>
+									<button
+										type="button"
+										onClick={handleSubmit}
+										disabled={disabled}
+										className="flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+									>
+										{isPending ? (
+											<Loader2 className="size-4 animate-spin" />
+										) : (
+											<svg
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												strokeWidth="3"
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												className="size-4"
+												aria-hidden="true"
+											>
+												<polyline points="20 6 9 17 4 12" />
+											</svg>
+										)}
+										{isPending ? "Processing…" : "Collect Payment"}
+									</button>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent>{blockerReason ?? "Collect payment"}</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+				</div>
+				{formError && (
+					<div className="mt-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+						{formError}
+					</div>
+				)}
 			</div>
 
 			<BillingItemPickerDialog
@@ -954,9 +1020,10 @@ function WalkInHeader({
 	const sumInvalid = filled.length > 0 && Math.abs(allocSum - 100) > 0.01;
 
 	return (
-		<div className="flex flex-wrap items-start justify-between gap-4 border-b bg-white px-6 py-3">
-			<div className="flex items-start gap-4">
-				<div className="flex flex-col">
+		<div className="shrink-0 border-b bg-white">
+			{/* Row 1: customer + total + close */}
+			<div className="flex items-start gap-3 px-5 pt-3 pb-2">
+				<div className="flex min-w-0 flex-1 flex-col">
 					<div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
 						New sale
 					</div>
@@ -965,19 +1032,19 @@ function WalkInHeader({
 							<button
 								type="button"
 								onClick={onOpenCustomerPicker}
-								className="group flex items-center gap-2 text-left"
+								className="group flex min-w-0 items-center gap-2 text-left"
 							>
-								<span className="text-lg font-semibold tracking-wide text-blue-600 group-hover:underline">
+								<span className="truncate text-lg font-semibold tracking-wide text-blue-600 group-hover:underline">
 									{(customerName ?? "Customer").toUpperCase()}
 								</span>
-								<span className="text-xs text-muted-foreground">
+								<span className="shrink-0 text-xs text-muted-foreground">
 									{customer.code}
 								</span>
 							</button>
 							<button
 								type="button"
 								onClick={onClearCustomer}
-								className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+								className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
 								aria-label="Clear customer"
 							>
 								<X className="size-3" />
@@ -997,9 +1064,27 @@ function WalkInHeader({
 						MYR {money(total)}
 					</div>
 				</div>
+
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								type="button"
+								onClick={onClose}
+								disabled={closeDisabled}
+								aria-label="Close"
+								className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+							>
+								<X className="size-4" />
+							</button>
+						</TooltipTrigger>
+						<TooltipContent>Close</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
 			</div>
 
-			<div className="flex items-end gap-4">
+			{/* Row 2: outlet + itemised toggle + employee allocation */}
+			<div className="flex flex-wrap items-end gap-x-4 gap-y-2 px-5 pb-3">
 				<label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
 					Outlet
 					<select
@@ -1016,9 +1101,7 @@ function WalkInHeader({
 				</label>
 
 				<div className="flex items-center gap-2">
-					<span className="text-xs text-muted-foreground">
-						Itemised Allocation?
-					</span>
+					<span className="text-xs text-muted-foreground">Itemised?</span>
 					<Toggle checked={itemized} onCheckedChange={onItemizedChange} />
 				</div>
 
@@ -1071,23 +1154,6 @@ function WalkInHeader({
 						</div>
 					)}
 				</div>
-
-				<TooltipProvider>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<button
-								type="button"
-								onClick={onClose}
-								disabled={closeDisabled}
-								aria-label="Close"
-								className="ml-2 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-							>
-								<X className="size-4" />
-							</button>
-						</TooltipTrigger>
-						<TooltipContent>Close</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
 			</div>
 		</div>
 	);

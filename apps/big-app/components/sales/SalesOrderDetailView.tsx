@@ -8,7 +8,6 @@ import {
 	FileText,
 	Pencil,
 	Printer,
-	Receipt,
 	Store,
 	Undo2,
 	Users,
@@ -18,13 +17,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CustomerIdentityCard } from "@/components/customers/CustomerIdentityCard";
 import { ChangePaymentMethodDialog } from "@/components/sales/ChangePaymentMethodDialog";
-import { IssueRefundDialog } from "@/components/sales/IssueRefundDialog";
 import { ReallocatePaymentsEditor } from "@/components/sales/ReallocatePaymentsEditor";
 import { PayOutstandingDialog } from "@/components/sales/PayOutstandingDialog";
 import { RevertLastPaymentDialog } from "@/components/sales/RevertLastPaymentDialog";
 import { SaleItemEmployeeAllocationDialog } from "@/components/sales/SaleItemEmployeeAllocationDialog";
 import { ViewInvoiceDialog } from "@/components/sales/ViewInvoiceDialog";
 import { VoidSalesOrderDialog } from "@/components/sales/VoidSalesOrderDialog";
+import { WriteOffOutstandingDialog } from "@/components/sales/WriteOffOutstandingDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Brand } from "@/lib/services/brands";
@@ -35,7 +34,6 @@ import type { Outlet } from "@/lib/services/outlets";
 import type {
 	PaymentAllocationForOrder,
 	PaymentWithProcessedBy,
-	RefundNoteWithRefs,
 	SaleItem,
 	SaleItemIncentiveRow,
 	SalesOrderWithRelations,
@@ -45,7 +43,6 @@ type Props = {
 	order: SalesOrderWithRelations;
 	items: SaleItem[];
 	payments: PaymentWithProcessedBy[];
-	refundNotes: RefundNoteWithRefs[];
 	allocations: PaymentAllocationForOrder[];
 	incentives: SaleItemIncentiveRow[];
 	employees: EmployeeWithRelations[];
@@ -148,7 +145,6 @@ export function SalesOrderDetailView({
 	order,
 	items,
 	payments,
-	refundNotes,
 	allocations,
 	incentives,
 	employees,
@@ -159,8 +155,8 @@ export function SalesOrderDetailView({
 }: Props) {
 	const path = useOutletPath();
 	const [voidOpen, setVoidOpen] = useState(false);
-	const [refundOpen, setRefundOpen] = useState(false);
 	const [recordPayOpen, setRecordPayOpen] = useState(false);
+	const [writeOffOpen, setWriteOffOpen] = useState(false);
 	const [invoiceOpen, setInvoiceOpen] = useState(Boolean(autoPrint));
 	const [reallocMode, setReallocMode] = useState(false);
 	const [changeMethodPayment, setChangeMethodPayment] =
@@ -177,7 +173,6 @@ export function SalesOrderDetailView({
 
 	const isCancellable =
 		order.status === "completed" || order.status === "draft";
-	const canRefund = order.status === "completed";
 	const isCancelled = order.status === "cancelled";
 	const outstanding = Number(order.outstanding ?? 0);
 	const canRecordPayment = !isCancelled && outstanding > 0.005;
@@ -223,12 +218,22 @@ export function SalesOrderDetailView({
 			return b.id.localeCompare(a.id);
 		});
 		const head = sorted[0];
-		return head.payment_mode === "wallet" ? null : head.id;
+		return head.payment_mode === "wallet" || head.payment_mode === "WRITEOFF"
+			? null
+			: head.id;
 	}, [payments]);
 
 	const consultantName = order.consultant
 		? fullName(order.consultant.first_name, order.consultant.last_name)
 		: null;
+
+	const writeOffPaid = useMemo(
+		() =>
+			payments
+				.filter((p) => p.payment_mode === "WRITEOFF")
+				.reduce((s, p) => s + Number(p.amount), 0),
+		[payments],
+	);
 
 	const canEditPayments = !isCancelled && payments.length > 0;
 	const canReallocate = canEditPayments;
@@ -283,6 +288,16 @@ export function SalesOrderDetailView({
 							Record payment
 						</Button>
 					)}
+					{canRecordPayment && (
+						<Button
+							variant="outline"
+							size="sm"
+							className="text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+							onClick={() => setWriteOffOpen(true)}
+						>
+							Write off
+						</Button>
+					)}
 					{canReallocate && !reallocMode && (
 						<Button
 							variant="outline"
@@ -291,33 +306,6 @@ export function SalesOrderDetailView({
 						>
 							<Pencil className="mr-2 size-4" />
 							Reallocate payments
-						</Button>
-					)}
-					{canRefund && (
-						<Button
-							variant="outline"
-							size="sm"
-							className="text-amber-700 hover:bg-amber-50 hover:text-amber-800"
-							onClick={() => setRefundOpen(true)}
-						>
-							<Undo2 className="mr-2 size-4" />
-							Refund
-						</Button>
-					)}
-					{canRefund && (
-						<Button
-							variant="outline"
-							size="sm"
-							disabled
-							className="relative text-purple-700"
-							title="Credit Note — in development (pending Cash Wallet)"
-						>
-							<Receipt className="mr-2 size-4" />
-							Credit Note
-							<span
-								aria-hidden
-								className="absolute -right-1 -top-1 size-1.5 rounded-full bg-amber-500 ring-1 ring-background"
-							/>
 						</Button>
 					)}
 					{isCancellable && (
@@ -434,15 +422,25 @@ export function SalesOrderDetailView({
 									0,
 								);
 								return (
-									<tr key={item.id} className="border-b last:border-b-0">
+									<tr
+										key={item.id}
+										className={`border-b last:border-b-0 ${item.is_voided ? "opacity-50" : ""}`}
+									>
 										<td className="px-4 py-2.5 align-top text-muted-foreground">
 											{idx + 1}
 										</td>
 										<td className="px-4 py-2.5 align-top">
-											<div className="font-medium">
-												{item.item_name}
+											<div className="flex items-center gap-2 font-medium">
+												<span className={item.is_voided ? "line-through" : ""}>
+													{item.item_name}
+												</span>
+												{item.is_voided && (
+													<span className="shrink-0 rounded border border-red-300 px-1 py-0.5 text-[10px] font-medium text-red-600 uppercase tracking-wide">
+														Voided
+													</span>
+												)}
 												{item.sku && (
-													<span className="ml-2 text-muted-foreground text-xs">
+													<span className="text-muted-foreground text-xs">
 														{item.sku}
 													</span>
 												)}
@@ -515,7 +513,7 @@ export function SalesOrderDetailView({
 												"—"
 											)}
 										</td>
-										<td className="px-4 py-2.5 text-right align-top font-medium tabular-nums">
+										<td className={`px-4 py-2.5 text-right align-top font-medium tabular-nums ${item.is_voided ? "line-through" : ""}`}>
 											{money(item.total ?? 0)}
 										</td>
 									</tr>
@@ -586,6 +584,7 @@ export function SalesOrderDetailView({
 							const pills = paymentFieldPills(p);
 							const isLast = p.id === revertablePaymentId;
 							const isWallet = p.payment_mode === "wallet";
+							const isWriteOff = p.payment_mode === "WRITEOFF";
 							return (
 								<div
 									key={p.id}
@@ -599,7 +598,7 @@ export function SalesOrderDetailView({
 											<Badge variant="outline" className="text-xs">
 												{paymentMethodName(p)}
 											</Badge>
-											{!isCancelled && !isWallet && (
+											{!isCancelled && !isWallet && !isWriteOff && (
 												<button
 													type="button"
 													onClick={() => setChangeMethodPayment(p)}
@@ -610,7 +609,7 @@ export function SalesOrderDetailView({
 													Change
 												</button>
 											)}
-											{isLast && !isCancelled && !isWallet && (
+											{isLast && !isCancelled && !isWallet && !isWriteOff && (
 												<button
 													type="button"
 													onClick={() => setRevertPayment(p)}
@@ -644,53 +643,6 @@ export function SalesOrderDetailView({
 								</div>
 							);
 						})}
-					</div>
-				</section>
-			)}
-
-			{/* Refunds */}
-			{refundNotes.length > 0 && (
-				<section>
-					<h3 className="mb-3 flex items-center gap-2 font-medium text-sm">
-						<Undo2 className="size-4" />
-						Refunds ({refundNotes.length})
-					</h3>
-					<div className="space-y-3">
-						{refundNotes.map((r) => (
-							<div
-								key={r.id}
-								className="flex items-start justify-between rounded-md border border-amber-200 bg-amber-50/40 p-4"
-							>
-								<div className="space-y-1">
-									<div className="flex items-center gap-2">
-										<span className="font-mono font-medium text-sm">
-											{r.rn_number}
-										</span>
-										{r.refund_method && (
-											<Badge variant="outline" className="text-xs">
-												{prettyCode(r.refund_method)}
-											</Badge>
-										)}
-										{r.cancellation_id === null && (
-											<Badge variant="secondary" className="text-[10px]">
-												Standalone
-											</Badge>
-										)}
-									</div>
-									<p className="text-muted-foreground text-xs">
-										{formatDateTime(r.refunded_at)}
-										{r.processed_by_employee &&
-											` · by ${fullName(r.processed_by_employee.first_name, r.processed_by_employee.last_name)}`}
-									</p>
-									{r.notes && (
-										<p className="text-muted-foreground text-xs">{r.notes}</p>
-									)}
-								</div>
-								<span className="font-medium text-amber-700 text-sm tabular-nums">
-									-MYR {money(r.amount)}
-								</span>
-							</div>
-						))}
 					</div>
 				</section>
 			)}
@@ -734,11 +686,13 @@ export function SalesOrderDetailView({
 				soNumber={order.so_number}
 				outletName={order.outlet?.name ?? null}
 				orderTotal={Number(order.total ?? 0)}
+				amountPaid={Number(order.amount_paid ?? 0)}
+				writeOffPaid={writeOffPaid}
 				items={items}
-				onSuccess={({ cnNumber, rnNumber, refundAmount }) =>
+				onSuccess={({ cnNumber, rnNumber, returnAmount }) =>
 					setFeedback({
 						type: "success",
-						message: `Voided. CN ${cnNumber} · RN ${rnNumber} · Refund MYR ${refundAmount.toFixed(2)}`,
+						message: `Voided. CN ${cnNumber} · RN ${rnNumber} · Return MYR ${returnAmount.toFixed(2)}`,
 					})
 				}
 				onError={(msg) => setFeedback({ type: "error", message: msg })}
@@ -758,21 +712,6 @@ export function SalesOrderDetailView({
 				outletName={outlet?.name ?? null}
 				appointmentRef={appointmentRef}
 				onSuccess={(msg) => setFeedback({ type: "success", message: msg })}
-				onError={(msg) => setFeedback({ type: "error", message: msg })}
-			/>
-
-			<IssueRefundDialog
-				open={refundOpen}
-				onOpenChange={setRefundOpen}
-				salesOrderId={order.id}
-				soNumber={order.so_number}
-				orderTotal={Number(order.total ?? 0)}
-				onSuccess={({ rnNumber, amount }) =>
-					setFeedback({
-						type: "success",
-						message: `Refund issued · ${rnNumber} · MYR ${amount.toFixed(2)}`,
-					})
-				}
 				onError={(msg) => setFeedback({ type: "error", message: msg })}
 			/>
 
@@ -827,6 +766,17 @@ export function SalesOrderDetailView({
 					onError={(msg) => setFeedback({ type: "error", message: msg })}
 				/>
 			)}
+
+			<WriteOffOutstandingDialog
+				open={writeOffOpen}
+				onOpenChange={setWriteOffOpen}
+				salesOrderId={order.id}
+				soNumber={order.so_number}
+				outstanding={outstanding}
+				appointmentRef={appointmentRef}
+				onSuccess={(msg) => setFeedback({ type: "success", message: msg })}
+				onError={(msg) => setFeedback({ type: "error", message: msg })}
+			/>
 
 			<ViewInvoiceDialog
 				open={invoiceOpen}

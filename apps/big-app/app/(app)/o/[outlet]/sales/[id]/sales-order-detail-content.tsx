@@ -12,7 +12,6 @@ import {
 	listIncentivesForOrder,
 	listPaymentAllocationsForOrder,
 	listPaymentsForOrder,
-	listRefundNotesForOrder,
 	listSaleItems,
 } from "@/lib/services/sales";
 import { outletPath } from "@/lib/outlet-path";
@@ -33,7 +32,6 @@ export async function SalesOrderDetailContent({
 			order,
 			items,
 			payments,
-			refundNotes,
 			allocations,
 			incentives,
 			employees,
@@ -41,7 +39,6 @@ export async function SalesOrderDetailContent({
 			getSalesOrder(ctx, id),
 			listSaleItems(ctx, id),
 			listPaymentsForOrder(ctx, id),
-			listRefundNotesForOrder(ctx, id),
 			listPaymentAllocationsForOrder(ctx, id),
 			listIncentivesForOrder(ctx, id),
 			listEmployees(ctx),
@@ -60,7 +57,6 @@ export async function SalesOrderDetailContent({
 				order={order}
 				items={items}
 				payments={payments}
-				refundNotes={refundNotes}
 				allocations={allocations}
 				incentives={incentives}
 				employees={employees.filter((e) => e.is_active)}

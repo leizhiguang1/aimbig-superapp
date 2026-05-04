@@ -215,3 +215,8 @@ export const replaceSaleItemIncentivesInputSchema = z.object({
 export type ReplaceSaleItemIncentivesInput = z.infer<
 	typeof replaceSaleItemIncentivesInputSchema
 >;
+
+export const writeOffInputSchema = z.object({
+	reason: z.string().trim().min(1, "Reason is required").max(500),
+});
+export type WriteOffInput = z.infer<typeof writeOffInputSchema>;

@@ -770,8 +770,11 @@ export type Database = {
           appointment_id: string | null
           created_at: string
           customer_id: string
+          doc_type: string
           file_name: string
           id: string
+          letter_body_html: string | null
+          letter_template_id: string | null
           mime_type: string
           size_bytes: number
           storage_path: string
@@ -782,8 +785,11 @@ export type Database = {
           appointment_id?: string | null
           created_at?: string
           customer_id: string
+          doc_type?: string
           file_name: string
           id?: string
+          letter_body_html?: string | null
+          letter_template_id?: string | null
           mime_type: string
           size_bytes: number
           storage_path: string
@@ -794,8 +800,11 @@ export type Database = {
           appointment_id?: string | null
           created_at?: string
           customer_id?: string
+          doc_type?: string
           file_name?: string
           id?: string
+          letter_body_html?: string | null
+          letter_template_id?: string | null
           mime_type?: string
           size_bytes?: number
           storage_path?: string
@@ -818,10 +827,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "customer_documents_letter_template_id_fkey"
+            columns: ["letter_template_id"]
+            isOneToOne: false
+            referencedRelation: "letter_templates"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "customer_documents_uploaded_by_id_fkey"
             columns: ["uploaded_by_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_form_responses: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          customer_id: string
+          form_name: string
+          form_template_id: string | null
+          id: string
+          sections: Json
+          signed_at: string | null
+          signed_by_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          customer_id: string
+          form_name: string
+          form_template_id?: string | null
+          id?: string
+          sections?: Json
+          signed_at?: string | null
+          signed_by_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          customer_id?: string
+          form_name?: string
+          form_template_id?: string | null
+          id?: string
+          sections?: Json
+          signed_at?: string | null
+          signed_by_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_form_responses_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_form_responses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_form_responses_form_template_id_fkey"
+            columns: ["form_template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1251,6 +1328,82 @@ export type Database = {
           },
         ]
       }
+      form_template_sections: {
+        Row: {
+          body_html: string | null
+          created_at: string
+          form_template_id: string
+          id: string
+          required: boolean
+          section_type: string
+          sort_order: number
+          title: string | null
+        }
+        Insert: {
+          body_html?: string | null
+          created_at?: string
+          form_template_id: string
+          id?: string
+          required?: boolean
+          section_type: string
+          sort_order?: number
+          title?: string | null
+        }
+        Update: {
+          body_html?: string | null
+          created_at?: string
+          form_template_id?: string
+          id?: string
+          required?: boolean
+          section_type?: string
+          sort_order?: number
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_template_sections_form_template_id_fkey"
+            columns: ["form_template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_templates: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_templates_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_brands: {
         Row: {
           created_at: string
@@ -1587,6 +1740,192 @@ export type Database = {
         }
         Relationships: []
       }
+      letter_templates: {
+        Row: {
+          body_html: string
+          brand_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          body_html?: string
+          brand_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          brand_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_templates_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manual_transaction_items: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_item_id: string | null
+          item_code: string | null
+          item_name: string
+          item_type: string
+          manual_transaction_id: string
+          quantity: number
+          service_id: string | null
+          total_price: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_item_id?: string | null
+          item_code?: string | null
+          item_name: string
+          item_type: string
+          manual_transaction_id: string
+          quantity?: number
+          service_id?: string | null
+          total_price?: number | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_item_id?: string | null
+          item_code?: string | null
+          item_name?: string
+          item_type?: string
+          manual_transaction_id?: string
+          quantity?: number
+          service_id?: string | null
+          total_price?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_transaction_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_transaction_items_manual_transaction_id_fkey"
+            columns: ["manual_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "manual_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_transaction_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manual_transactions: {
+        Row: {
+          brand_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          outlet_id: string
+          remarks: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          outlet_id: string
+          remarks?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          outlet_id?: string
+          remarks?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_transactions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_transactions_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_transactions_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medical_certificates: {
         Row: {
           appointment_id: string | null
@@ -1736,6 +2075,29 @@ export type Database = {
           wa_message_id?: string | null
         }
         Relationships: []
+      }
+      mt_counters: {
+        Row: {
+          last_seq: number
+          outlet_id: string
+        }
+        Insert: {
+          last_seq?: number
+          outlet_id: string
+        }
+        Update: {
+          last_seq?: number
+          outlet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mt_counters_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: true
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       outlet_customer_counters: {
         Row: {
@@ -2504,6 +2866,7 @@ export type Database = {
           discount: number
           id: string
           inventory_item_id: string | null
+          is_voided: boolean
           item_name: string
           item_type: string
           quantity: number
@@ -2522,6 +2885,7 @@ export type Database = {
           discount?: number
           id?: string
           inventory_item_id?: string | null
+          is_voided?: boolean
           item_name: string
           item_type?: string
           quantity: number
@@ -2540,6 +2904,7 @@ export type Database = {
           discount?: number
           id?: string
           inventory_item_id?: string | null
+          is_voided?: boolean
           item_name?: string
           item_type?: string
           quantity?: number
@@ -3910,6 +4275,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_manual_transaction: {
+        Args: { p_cancelled_by: string; p_mt_id: string; p_reason: string }
+        Returns: undefined
+      }
       collect_appointment_payment:
         | {
             Args: {
@@ -3991,6 +4360,16 @@ export type Database = {
           p_owner_last_name: string
           p_owner_role_id?: string
           p_subdomain: string
+        }
+        Returns: Json
+      }
+      create_manual_transaction: {
+        Args: {
+          p_created_by: string
+          p_customer_id: string
+          p_items: Json
+          p_outlet_id: string
+          p_remarks: string
         }
         Returns: Json
       }
@@ -4122,6 +4501,14 @@ export type Database = {
         Returns: string
       }
       wa_is_project_member: { Args: { p_project_id: string }; Returns: boolean }
+      write_off_outstanding: {
+        Args: {
+          p_processed_by: string
+          p_reason: string
+          p_sales_order_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       wa_channel_type:

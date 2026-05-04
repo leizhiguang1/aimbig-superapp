@@ -226,7 +226,12 @@ export const CATEGORIES: ConfigCategory[] = [
 			{ key: "coverage-payors", label: "Coverage Payors" },
 			{ key: "customer-tracking", label: "Customer Tracking" },
 			{ key: "dental-charting", label: "Dental Charting" },
-			{ key: "e-document", label: "E-Document" },
+			{
+				key: "e-documents",
+				label: "E-Documents",
+				implemented: true,
+				href: "/config/e-documents",
+			},
 			{ key: "lab-management", label: "Lab Management" },
 			{ key: "medical-certification", label: "Medical Certification" },
 			{ key: "medication", label: "Medication" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Info, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -38,11 +38,13 @@ type Props = {
 	soNumber: string;
 	outletName: string | null;
 	orderTotal: number;
+	amountPaid: number;
+	writeOffPaid?: number;
 	items: SaleItem[];
 	onSuccess?: (result: {
 		cnNumber: string;
 		rnNumber: string;
-		refundAmount: number;
+		returnAmount: number;
 	}) => void;
 	onError?: (message: string) => void;
 };
@@ -63,6 +65,8 @@ export function VoidSalesOrderDialog({
 	soNumber,
 	outletName,
 	orderTotal,
+	amountPaid,
+	writeOffPaid = 0,
 	items,
 	onSuccess,
 	onError,
@@ -74,7 +78,7 @@ export function VoidSalesOrderDialog({
 	);
 	const [reason, setReason] = useState<string>("");
 	const [passcode, setPasscode] = useState("");
-	const [refundMethod, setRefundMethod] = useState<string>("");
+	const [returnMethod, setReturnMethod] = useState<string>("");
 	const [includeAdminFee, setIncludeAdminFee] = useState(false);
 	const [adminFee, setAdminFee] = useState<string>("0");
 	const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -82,18 +86,23 @@ export function VoidSalesOrderDialog({
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [isPending, startTransition] = useTransition();
 
+	const nonVoidedItems = useMemo(
+		() => items.filter((i) => !i.is_voided),
+		[items],
+	);
+
 	useEffect(() => {
 		if (!open) return;
-		// Reset when the dialog opens.
 		setStep(1);
-		setSelectedItemIds(new Set(items.map((i) => i.id)));
+		// Pre-select all non-voided items by default
+		setSelectedItemIds(new Set(nonVoidedItems.map((i) => i.id)));
 		setReason("");
 		setPasscode("");
-		setRefundMethod("");
+		setReturnMethod("");
 		setIncludeAdminFee(false);
 		setAdminFee("0");
 		setSubmitError(null);
-	}, [open, items]);
+	}, [open, nonVoidedItems]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -105,20 +114,56 @@ export function VoidSalesOrderDialog({
 			.catch(() => setVoidReasons([]));
 	}, [open]);
 
-	const allSelected = items.length > 0 && selectedItemIds.size === items.length;
 	const adminFeeNum = Number.parseFloat(adminFee || "0") || 0;
 	const effectiveAdminFee = includeAdminFee ? Math.max(0, adminFeeNum) : 0;
-	const refundAmount = useMemo(
-		() => Math.max(0, orderTotal - effectiveAdminFee),
-		[orderTotal, effectiveAdminFee],
+
+	const selectedTotal = useMemo(
+		() =>
+			items
+				.filter((i) => selectedItemIds.has(i.id))
+				.reduce((sum, i) => sum + Number(i.total ?? 0) + Number(i.tax_amount ?? 0), 0),
+		[items, selectedItemIds],
 	);
 
-	const canAdvanceFromItems = allSelected && items.length > 0;
+	// Return amount mirrors the RPC formula:
+	//   real_cash = amount_paid - wallet_paid - writeoff_paid  (non-refundable amounts)
+	//   full void:   real_cash - admin
+	//   partial void: real_cash - (so_total - selected_grand) - admin
+	// writeOffPaid is the sum of WRITEOFF payment rows on this SO.
+	const returnAmount = useMemo(
+		() =>
+			Math.max(
+				0,
+				amountPaid - writeOffPaid - (orderTotal - selectedTotal) - effectiveAdminFee,
+			),
+		[amountPaid, writeOffPaid, orderTotal, selectedTotal, effectiveAdminFee],
+	);
+
+	const isFullVoid =
+		nonVoidedItems.length > 0 &&
+		selectedItemIds.size === nonVoidedItems.length;
+
+	const canAdvanceFromItems = selectedItemIds.size > 0;
 	const canSubmit =
 		reason !== "" &&
 		/^\d{4}$/.test(passcode) &&
-		refundMethod !== "" &&
+		(returnAmount === 0 || returnMethod !== "") &&
 		(!includeAdminFee || adminFeeNum >= 0);
+
+	const toggleItem = (id: string, checked: boolean) => {
+		setSelectedItemIds((prev) => {
+			const next = new Set(prev);
+			if (checked) next.add(id);
+			else next.delete(id);
+			return next;
+		});
+	};
+
+	const toggleAll = (checked: boolean) => {
+		setSelectedItemIds(
+			checked ? new Set(nonVoidedItems.map((i) => i.id)) : new Set(),
+		);
+	};
 
 	const submit = () => {
 		if (!canSubmit) return;
@@ -128,13 +173,17 @@ export function VoidSalesOrderDialog({
 				const result = await voidSalesOrderAction(salesOrderId, {
 					reason,
 					passcode,
-					refund_method: refundMethod,
+					refund_method: returnMethod || "",
 					include_admin_fee: includeAdminFee,
 					admin_fee: effectiveAdminFee,
 					sale_item_ids: Array.from(selectedItemIds),
 				});
 				onOpenChange(false);
-				onSuccess?.(result);
+				onSuccess?.({
+					cnNumber: result.cnNumber,
+					rnNumber: result.rnNumber,
+					returnAmount: result.returnAmount,
+				});
 				router.refresh();
 			} catch (e) {
 				const msg =
@@ -181,16 +230,23 @@ export function VoidSalesOrderDialog({
 					{step === 1 && (
 						<Step1Items
 							items={items}
+							nonVoidedItems={nonVoidedItems}
 							selectedIds={selectedItemIds}
-							orderTotal={orderTotal}
+							amountPaid={amountPaid}
+							selectedTotal={selectedTotal}
+							returnAmount={returnAmount}
+							onToggle={toggleItem}
+							onToggleAll={toggleAll}
 						/>
 					)}
 					{step === 2 && (
 						<Step2Confirm
 							soNumber={soNumber}
-							refundAmount={refundAmount}
-							orderTotal={orderTotal}
+							returnAmount={returnAmount}
+							selectedTotal={selectedTotal}
 							adminFee={effectiveAdminFee}
+							isFullVoid={isFullVoid}
+							selectedCount={selectedItemIds.size}
 						/>
 					)}
 					{step === 3 && (
@@ -203,15 +259,15 @@ export function VoidSalesOrderDialog({
 								setPasscode(v);
 								if (submitError) setSubmitError(null);
 							}}
-							refundMethod={refundMethod}
-							setRefundMethod={setRefundMethod}
+							returnMethod={returnMethod}
+							setReturnMethod={setReturnMethod}
 							paymentMethods={paymentMethods}
 							voidReasons={voidReasons}
 							includeAdminFee={includeAdminFee}
 							setIncludeAdminFee={setIncludeAdminFee}
 							adminFee={adminFee}
 							setAdminFee={setAdminFee}
-							refundAmount={refundAmount}
+							returnAmount={returnAmount}
 							disabled={isPending}
 						/>
 					)}
@@ -269,8 +325,10 @@ export function VoidSalesOrderDialog({
 										<Loader2 className="mr-2 size-4 animate-spin" />
 										Voiding…
 									</>
-								) : (
+								) : isFullVoid ? (
 									"Void order"
+								) : (
+									`Void ${selectedItemIds.size} item${selectedItemIds.size !== 1 ? "s" : ""}`
 								)}
 							</Button>
 						</>
@@ -283,76 +341,122 @@ export function VoidSalesOrderDialog({
 
 function Step1Items({
 	items,
+	nonVoidedItems,
 	selectedIds,
-	orderTotal,
+	amountPaid,
+	selectedTotal,
+	returnAmount,
+	onToggle,
+	onToggleAll,
 }: {
 	items: SaleItem[];
+	nonVoidedItems: SaleItem[];
 	selectedIds: Set<string>;
-	orderTotal: number;
+	amountPaid: number;
+	selectedTotal: number;
+	returnAmount: number;
+	onToggle: (id: string, checked: boolean) => void;
+	onToggleAll: (checked: boolean) => void;
 }) {
+	const allSelected =
+		nonVoidedItems.length > 0 &&
+		nonVoidedItems.every((i) => selectedIds.has(i.id));
+	const someSelected = nonVoidedItems.some((i) => selectedIds.has(i.id));
+
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-				<span className="font-semibold">
-					Per-item selection is in development.
-				</span>{" "}
-				All items on this sales order will be voided. Partial voids will land in
-				a later update.
-			</div>
 			<div className="rounded-md border">
 				<div className="grid grid-cols-[1fr_80px_120px_40px] items-center border-b bg-muted/30 px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase">
 					<div>Item</div>
 					<div className="text-right">Qty</div>
 					<div className="text-right">Total (MYR)</div>
-					<div />
+					<div className="flex justify-end">
+						<Checkbox
+							checked={allSelected ? true : someSelected ? "indeterminate" : false}
+							onCheckedChange={(v) => onToggleAll(v === true)}
+							aria-label="Select all items"
+						/>
+					</div>
 				</div>
 				<div className="divide-y">
-					{items.map((item) => (
-						<div
-							key={item.id}
-							className="grid grid-cols-[1fr_80px_120px_40px] items-center px-4 py-3 text-sm"
-						>
-							<div>
-								<div className="font-medium">{item.item_name}</div>
-								{item.sku && (
-									<div className="text-[11px] text-muted-foreground">
-										{item.sku}
-									</div>
-								)}
-							</div>
-							<div className="text-right tabular-nums">{item.quantity}</div>
-							<div className="text-right tabular-nums">
-								{money(Number(item.total ?? 0))}
-							</div>
-							<div className="flex justify-end">
-								<span
-									className="relative inline-flex"
-									title="Per-item selection — in development"
+					{items.map((item) => {
+						const itemGrandTotal =
+							Number(item.total ?? 0) + Number(item.tax_amount ?? 0);
+						if (item.is_voided) {
+							return (
+								<div
+									key={item.id}
+									className="grid grid-cols-[1fr_80px_120px_40px] items-center px-4 py-3 text-sm opacity-50"
 								>
+									<div>
+										<div className="flex items-center gap-2">
+											<span className="font-medium line-through">
+												{item.item_name}
+											</span>
+											<span className="rounded border border-red-300 px-1 py-0.5 text-[10px] font-medium text-red-600 uppercase tracking-wide">
+												Voided
+											</span>
+										</div>
+										{item.sku && (
+											<div className="text-[11px] text-muted-foreground">
+												{item.sku}
+											</div>
+										)}
+									</div>
+									<div className="text-right tabular-nums line-through">
+										{item.quantity}
+									</div>
+									<div className="text-right tabular-nums line-through">
+										{money(itemGrandTotal)}
+									</div>
+									<div />
+								</div>
+							);
+						}
+						return (
+							<div
+								key={item.id}
+								className="grid grid-cols-[1fr_80px_120px_40px] items-center px-4 py-3 text-sm"
+							>
+								<div>
+									<div className="font-medium">{item.item_name}</div>
+									{item.sku && (
+										<div className="text-[11px] text-muted-foreground">
+											{item.sku}
+										</div>
+									)}
+								</div>
+								<div className="text-right tabular-nums">{item.quantity}</div>
+								<div className="text-right tabular-nums">
+									{money(itemGrandTotal)}
+								</div>
+								<div className="flex justify-end">
 									<Checkbox
 										checked={selectedIds.has(item.id)}
-										disabled
-										aria-label="Item included in void (in development)"
+										onCheckedChange={(v) => onToggle(item.id, v === true)}
+										aria-label={`Void ${item.item_name}`}
 									/>
-									<span
-										aria-hidden
-										className="pointer-events-none absolute -right-1 -top-1 size-1.5 rounded-full bg-amber-500 ring-1 ring-background"
-									/>
-								</span>
+								</div>
 							</div>
-						</div>
-					))}
+						);
+					})}
 					{items.length === 0 && (
 						<div className="px-4 py-6 text-center text-muted-foreground text-sm">
 							No line items on this order.
 						</div>
 					)}
 				</div>
-				<div className="flex items-center justify-between border-t bg-muted/20 px-4 py-2.5 text-sm">
-					<span className="font-medium">Refundable amount</span>
-					<span className="font-semibold tabular-nums">
-						MYR {money(orderTotal)}
-					</span>
+				<div className="divide-y border-t bg-muted/20">
+					<div className="flex items-center justify-between px-4 py-2 text-sm">
+						<span className="text-muted-foreground">Amount paid</span>
+						<span className="tabular-nums">MYR {money(amountPaid)}</span>
+					</div>
+					<div className="flex items-center justify-between px-4 py-2.5 text-sm">
+						<span className="font-medium">Amount to return</span>
+						<span className="font-semibold tabular-nums text-red-700">
+							MYR {money(returnAmount)}
+						</span>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -361,36 +465,55 @@ function Step1Items({
 
 function Step2Confirm({
 	soNumber,
-	refundAmount,
-	orderTotal,
+	returnAmount,
+	selectedTotal,
 	adminFee,
+	isFullVoid,
+	selectedCount,
 }: {
 	soNumber: string;
-	refundAmount: number;
-	orderTotal: number;
+	returnAmount: number;
+	selectedTotal: number;
 	adminFee: number;
+	isFullVoid: boolean;
+	selectedCount: number;
 }) {
 	return (
 		<div className="flex flex-col items-center gap-4 py-4 text-center">
 			<AlertTriangle className="size-12 text-amber-500" />
 			<p className="font-semibold text-lg">
-				MYR {money(refundAmount)} will be returned to the customer.
+				{returnAmount > 0
+					? `MYR ${money(returnAmount)} will be returned to the customer.`
+					: "No amount will be returned to the customer."}
 			</p>
 			<div className="space-y-1 text-muted-foreground text-sm">
 				<p>The following will happen when you proceed:</p>
 				<ol className="mt-2 list-decimal space-y-1 pl-6 text-left">
 					<li>
-						<span className="font-medium">{soNumber}</span> will be tagged as{" "}
-						<span className="font-medium">Cancelled</span>.
+						{isFullVoid ? (
+							<>
+								<span className="font-medium">{soNumber}</span> will be tagged as{" "}
+								<span className="font-medium">Cancelled</span>.
+							</>
+						) : (
+							<>
+								<span className="font-medium">
+									{selectedCount} item{selectedCount !== 1 ? "s" : ""}
+								</span>{" "}
+								will be voided. The order will remain active.
+							</>
+						)}
 					</li>
+					{returnAmount > 0 && (
+						<li>
+							A Return Note (RN-XXXXXX) will be generated for{" "}
+							<span className="font-medium">MYR {money(returnAmount)}</span>
+							{adminFee > 0 && <> (after MYR {money(adminFee)} admin fee)</>}.
+						</li>
+					)}
 					<li>
-						A Refund Note (RN-XXXXXX) will be generated for{" "}
-						<span className="font-medium">MYR {money(refundAmount)}</span>.
-					</li>
-					<li>
-						A Cancellation Note (CN-XXXXXX) will be created for the full{" "}
-						<span className="font-medium">MYR {money(orderTotal)}</span>
-						{adminFee > 0 && <> (admin fee: MYR {money(adminFee)})</>}.
+						A Cancellation Note (CN-XXXXXX) will be created for{" "}
+						<span className="font-medium">MYR {money(selectedTotal)}</span>.
 					</li>
 					<li>Product stock movements will be reversed.</li>
 				</ol>
@@ -408,15 +531,15 @@ function Step3Authorize({
 	setReason,
 	passcode,
 	setPasscode,
-	refundMethod,
-	setRefundMethod,
+	returnMethod,
+	setReturnMethod,
 	paymentMethods,
 	voidReasons,
 	includeAdminFee,
 	setIncludeAdminFee,
 	adminFee,
 	setAdminFee,
-	refundAmount,
+	returnAmount,
 	disabled,
 }: {
 	outletName: string | null;
@@ -424,15 +547,15 @@ function Step3Authorize({
 	setReason: (v: string) => void;
 	passcode: string;
 	setPasscode: (v: string) => void;
-	refundMethod: string;
-	setRefundMethod: (v: string) => void;
+	returnMethod: string;
+	setReturnMethod: (v: string) => void;
 	paymentMethods: PaymentMethod[];
 	voidReasons: BrandConfigItem[];
 	includeAdminFee: boolean;
 	setIncludeAdminFee: (v: boolean) => void;
 	adminFee: string;
 	setAdminFee: (v: string) => void;
-	refundAmount: number;
+	returnAmount: number;
 	disabled: boolean;
 }) {
 	return (
@@ -480,28 +603,38 @@ function Step3Authorize({
 				</Select>
 			</div>
 
-			<div>
-				<Label htmlFor="refund-method">
-					Return MYR {money(refundAmount)} as{" "}
-					<span className="text-red-500">*</span>
-				</Label>
-				<Select
-					value={refundMethod}
-					onValueChange={setRefundMethod}
-					disabled={disabled}
-				>
-					<SelectTrigger id="refund-method" className="mt-1.5 w-full">
-						<SelectValue placeholder="Select refund method" />
-					</SelectTrigger>
-					<SelectContent>
-						{paymentMethods.map((pm) => (
-							<SelectItem key={pm.code} value={pm.code}>
-								{pm.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</div>
+			{returnAmount > 0 ? (
+				<div>
+					<Label htmlFor="return-method">
+						Return MYR {money(returnAmount)} as{" "}
+						<span className="text-red-500">*</span>
+					</Label>
+					<Select
+						value={returnMethod}
+						onValueChange={setReturnMethod}
+						disabled={disabled}
+					>
+						<SelectTrigger id="return-method" className="mt-1.5 w-full">
+							<SelectValue placeholder="Select return method" />
+						</SelectTrigger>
+						<SelectContent>
+							{paymentMethods.map((pm) => (
+								<SelectItem key={pm.code} value={pm.code}>
+									{pm.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+			) : (
+				<div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800 text-sm">
+					<Info className="mt-0.5 size-4 shrink-0" />
+					<span>
+						No cash return for this void. The customer's outstanding balance will
+						be reduced.
+					</span>
+				</div>
+			)}
 
 			<div className="rounded-md border p-3">
 				<div className="flex items-center gap-2">
@@ -531,7 +664,7 @@ function Step3Authorize({
 							className="mt-1 w-32 tabular-nums"
 						/>
 						<p className="mt-1 text-[11px] text-muted-foreground">
-							Deducted from the refund.
+							Deducted from the return amount.
 						</p>
 					</div>
 				)}

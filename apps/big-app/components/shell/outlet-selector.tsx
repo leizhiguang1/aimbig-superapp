@@ -93,11 +93,13 @@ export function OutletSelector({
 
 	if (outlets.length === 1) {
 		return (
-			<div className="flex h-9 items-center gap-2 rounded-md px-2 text-sm">
+			<div className="flex h-9 items-center gap-2 rounded-md px-2">
 				<OutletAvatar outlet={active} />
 				<div className="flex min-w-0 flex-col leading-tight">
-					<span className="truncate font-medium">{active.name}</span>
-					<span className="truncate text-[10px] text-muted-foreground">
+					<span className="line-clamp-2 max-w-[5rem] text-xs font-medium leading-snug lg:max-w-[10rem] lg:line-clamp-1 lg:text-sm">
+						{active.name}
+					</span>
+					<span className="hidden text-[10px] text-muted-foreground lg:block">
 						Workspace
 					</span>
 				</div>
@@ -124,10 +126,10 @@ export function OutletSelector({
 				>
 					<OutletAvatar outlet={active} />
 					<div className="flex min-w-0 flex-col items-start leading-tight">
-						<span className="max-w-[10rem] truncate font-medium text-sm">
+						<span className="line-clamp-2 max-w-[5rem] text-xs font-medium leading-snug lg:max-w-[10rem] lg:line-clamp-1 lg:text-sm">
 							{active.name}
 						</span>
-						<span className="text-[10px] text-muted-foreground">
+						<span className="hidden text-[10px] text-muted-foreground lg:block">
 							Active workspace
 						</span>
 					</div>

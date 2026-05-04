@@ -650,15 +650,15 @@ export function AppointmentDialog({
 
 							{!isBlock && (
 								<>
-									{/* Status — hidden for leads (they default to pending until
-									    converted). 'completed' is excluded here in any case — it
-									    only happens via Mark Complete FAB / Collect Payment RPC.
-									    See docs/modules/02-appointments.md. */}
-									{!isLead && (
+									{/* Status — hidden when creating (always starts as 'pending') and
+									    hidden for leads. 'completed' and 'cancelled' are excluded —
+									    both are terminal states reached via dedicated actions, not
+									    direct selection. See docs/modules/02-appointments.md. */}
+									{!isLead && !!appointment && (
 										<Field label="Status">
 											<div className="flex flex-wrap gap-1.5">
 												{APPOINTMENT_STATUSES.filter(
-													(s) => s !== "completed",
+													(s) => s !== "completed" && s !== "cancelled",
 												).map((s) => (
 													<StatusButton
 														key={s}

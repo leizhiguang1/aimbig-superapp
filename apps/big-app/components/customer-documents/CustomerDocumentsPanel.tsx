@@ -7,13 +7,20 @@ import {
 	Images,
 	Mail,
 	NotebookPen,
+	Pencil,
 	Plus,
+	Printer,
 	ScanLine,
 	Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import type { Toast } from "@/components/appointments/AppointmentToastStack";
+import {
+	LetterEditorDialog,
+	type CustomerMergeData,
+} from "@/components/customer-documents/LetterEditorDialog";
+import { FormFillDialog } from "@/components/customer-documents/FormFillDialog";
 import { DocumentPreviewDialog } from "@/components/customer-documents/DocumentPreviewDialog";
 import { UploadDocumentDialog } from "@/components/customer-documents/UploadDocumentDialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -34,6 +41,9 @@ import {
 	CUSTOMER_DOCUMENT_MIME_TYPES,
 } from "@/lib/schemas/customer-documents";
 import type { CustomerDocumentWithRefs } from "@/lib/services/customer-documents";
+import type { LetterTemplate } from "@/lib/services/letter-templates";
+import type { FormTemplateWithSections } from "@/lib/services/form-templates";
+import type { FormResponse } from "@/lib/services/form-responses";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +52,10 @@ type Props = {
 	appointmentId?: string | null;
 	defaultUploaderId: string | null;
 	documents: CustomerDocumentWithRefs[];
+	customer: CustomerMergeData;
+	letterTemplates: LetterTemplate[];
+	formTemplates: FormTemplateWithSections[];
+	formResponses: FormResponse[];
 	onToast: (message: string, variant?: Toast["variant"]) => void;
 };
 
@@ -70,6 +84,7 @@ function formatDateTime(iso: string): string {
 }
 
 function fileExtension(name: string, mime: string): string {
+	if (mime === "text/html") return "LETTER";
 	const dot = name.lastIndexOf(".");
 	if (dot >= 0 && dot < name.length - 1) {
 		return name.slice(dot + 1).toUpperCase();
@@ -78,7 +93,8 @@ function fileExtension(name: string, mime: string): string {
 	return slash >= 0 ? mime.slice(slash + 1).toUpperCase() : "FILE";
 }
 
-function fileKind(mime: string): "image" | "pdf" {
+function fileKind(mime: string): "image" | "pdf" | "letter" {
+	if (mime === "text/html") return "letter";
 	return mime === "application/pdf" ? "pdf" : "image";
 }
 
@@ -92,6 +108,10 @@ export function CustomerDocumentsPanel({
 	appointmentId = null,
 	defaultUploaderId,
 	documents,
+	customer,
+	letterTemplates,
+	formTemplates,
+	formResponses,
 	onToast,
 }: Props) {
 	const router = useRouter();
@@ -103,6 +123,9 @@ export function CustomerDocumentsPanel({
 	const [previewDoc, setPreviewDoc] = useState<CustomerDocumentWithRefs | null>(
 		null,
 	);
+	const [letterEditorOpen, setLetterEditorOpen] = useState(false);
+	const [editingLetter, setEditingLetter] = useState<CustomerDocumentWithRefs | null>(null);
+	const [formFillOpen, setFormFillOpen] = useState(false);
 
 	const refresh = () => router.refresh();
 
@@ -211,7 +234,18 @@ export function CustomerDocumentsPanel({
 			header: "Name",
 			sortable: true,
 			sortValue: (r) => r.file_name.toLowerCase(),
-			cell: (r) => <NameCell doc={r} onView={() => setPreviewDoc(r)} />,
+			cell: (r) =>
+				r.doc_type === "letter" ? (
+					<LetterNameCell
+						doc={r}
+						onEdit={() => {
+							setEditingLetter(r);
+							setLetterEditorOpen(true);
+						}}
+					/>
+				) : (
+					<NameCell doc={r} onView={() => setPreviewDoc(r)} />
+				),
 		},
 		{
 			key: "type",
@@ -219,7 +253,14 @@ export function CustomerDocumentsPanel({
 			sortable: true,
 			sortValue: (r) => fileExtension(r.file_name, r.mime_type),
 			cell: (r) => (
-				<span className="text-muted-foreground text-xs uppercase tracking-wide">
+				<span
+					className={cn(
+						"text-xs uppercase tracking-wide",
+						r.doc_type === "letter"
+							? "font-semibold text-rose-600"
+							: "text-muted-foreground",
+					)}
+				>
 					{fileExtension(r.file_name, r.mime_type)}
 				</span>
 			),
@@ -275,7 +316,12 @@ export function CustomerDocumentsPanel({
 		{
 			key: "actions",
 			header: <span className="sr-only">Actions</span>,
-			cell: (r) => <ActionsCell onDownload={() => handleDownload(r)} />,
+			cell: (r) =>
+				r.doc_type === "letter" ? (
+					<LetterActionsCell docId={r.id} />
+				) : (
+					<ActionsCell onDownload={() => handleDownload(r)} />
+				),
 			className: "w-24",
 			align: "center",
 		},
@@ -320,17 +366,20 @@ export function CustomerDocumentsPanel({
 					/>
 					<AddActionButton
 						label="Forms"
-						tooltip="Forms — coming soon"
+						tooltip="Fill a consent form"
 						color="amber"
 						icon={<NotebookPen className="size-4" />}
-						disabled
+						onClick={() => setFormFillOpen(true)}
 					/>
 					<AddActionButton
 						label="Letters"
-						tooltip="Letters — coming soon"
+						tooltip="Generate a letter for this customer"
 						color="rose"
 						icon={<Mail className="size-4" />}
-						disabled
+						onClick={() => {
+							setEditingLetter(null);
+							setLetterEditorOpen(true);
+						}}
 					/>
 					<AddActionButton
 						label="Collages"
@@ -375,7 +424,7 @@ export function CustomerDocumentsPanel({
 				open={deleteId !== null}
 				onOpenChange={(o) => !o && setDeleteId(null)}
 				title="Delete this document?"
-				description="The file will be removed from storage and can't be recovered."
+				description="The file will be removed and can't be recovered."
 				confirmLabel="Delete"
 				pending={pending}
 				onConfirm={handleDelete}
@@ -398,6 +447,38 @@ export function CustomerDocumentsPanel({
 				}}
 				onError={(msg) => onToast(msg, "error")}
 			/>
+
+			<LetterEditorDialog
+				open={letterEditorOpen}
+				onOpenChange={(o) => {
+					setLetterEditorOpen(o);
+					if (!o) setEditingLetter(null);
+				}}
+				customerId={customerId}
+				appointmentId={appointmentId}
+				customer={customer}
+				templates={letterTemplates}
+				editDoc={editingLetter}
+				onToast={onToast}
+			/>
+
+			<FormFillDialog
+				open={formFillOpen}
+				onOpenChange={setFormFillOpen}
+				customerId={customerId}
+				appointmentId={appointmentId}
+				formTemplates={formTemplates}
+				onToast={onToast}
+			/>
+
+			{/* Form responses */}
+			{formResponses.length > 0 && (
+				<FormResponsesSection
+					responses={formResponses}
+					appointmentId={appointmentId}
+					onToast={onToast}
+				/>
+			)}
 		</div>
 	);
 }
@@ -494,7 +575,7 @@ function NameCell({
 				)}
 			>
 				{hasThumb ? (
-					// eslint-disable-next-line @next/next/no-img-element -- signed URL, short TTL, not worth next/image
+					// eslint-disable-next-line @next/next/no-img-element -- signed URL, short TTL
 					<img
 						src={doc.preview_url as string}
 						alt={doc.file_name}
@@ -519,6 +600,64 @@ function NameCell({
 	);
 }
 
+function LetterNameCell({
+	doc,
+	onEdit,
+}: {
+	doc: CustomerDocumentWithRefs;
+	onEdit: () => void;
+}) {
+	return (
+		<div className="flex items-center gap-3">
+			{/* Letter icon thumbnail */}
+			<div className="flex size-20 shrink-0 items-center justify-center rounded-md border bg-rose-50 text-rose-600">
+				<Mail className="size-7" />
+			</div>
+			<div className="flex min-w-0 flex-col gap-1">
+				<span className="truncate font-medium text-sm" title={doc.file_name}>
+					{doc.file_name.toUpperCase()}
+				</span>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<button
+							type="button"
+							onClick={onEdit}
+							aria-label="Edit letter"
+							className="inline-flex w-fit items-center gap-1 rounded text-muted-foreground text-xs hover:text-foreground"
+						>
+							<Pencil className="size-3" />
+							Edit
+						</button>
+					</TooltipTrigger>
+					<TooltipContent>Edit letter content</TooltipContent>
+				</Tooltip>
+			</div>
+		</div>
+	);
+}
+
+function LetterActionsCell({ docId }: { docId: string }) {
+	return (
+		<div className="flex items-center justify-center gap-1">
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<button
+						type="button"
+						onClick={() =>
+							window.open(`/documents/letters/${docId}`, "_blank")
+						}
+						aria-label="Print letter"
+						className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+					>
+						<Printer className="size-4" />
+					</button>
+				</TooltipTrigger>
+				<TooltipContent side="left">Print / View</TooltipContent>
+			</Tooltip>
+		</div>
+	);
+}
+
 function ActionsCell({ onDownload }: { onDownload: () => void }) {
 	return (
 		<div className="flex items-center justify-center gap-1">
@@ -536,5 +675,100 @@ function ActionsCell({ onDownload }: { onDownload: () => void }) {
 				<TooltipContent side="left">Download</TooltipContent>
 			</Tooltip>
 		</div>
+	);
+}
+
+function FormResponsesSection({
+	responses,
+	appointmentId,
+	onToast,
+}: {
+	responses: FormResponse[];
+	appointmentId: string | null;
+	onToast: (msg: string, variant?: Toast["variant"]) => void;
+}) {
+	const router = useRouter();
+	const [deleteId, setDeleteId] = useState<string | null>(null);
+	const [pending, startTransition] = useTransition();
+
+	const handleDelete = () => {
+		if (!deleteId) return;
+		const id = deleteId;
+		startTransition(async () => {
+			try {
+				const { deleteFormResponseAction } = await import("@/lib/actions/form-responses");
+				await deleteFormResponseAction(id);
+				setDeleteId(null);
+				onToast("Form response deleted", "success");
+				router.refresh();
+			} catch (err) {
+				onToast(err instanceof Error ? err.message : "Could not delete", "error");
+			}
+		});
+	};
+
+	const visible = appointmentId
+		? responses.filter((r) => !r.appointment_id || r.appointment_id === appointmentId)
+		: responses;
+
+	if (visible.length === 0) return null;
+
+	return (
+		<>
+			<div className="rounded-md border">
+				<div className="border-b bg-muted/30 px-4 py-2">
+					<p className="font-medium text-sm">Submitted Forms</p>
+				</div>
+				<div className="divide-y">
+					{visible.map((resp) => {
+						const date = new Date(resp.created_at).toLocaleDateString("en-GB", {
+							day: "2-digit", month: "short", year: "numeric",
+						});
+						return (
+							<div key={resp.id} className="flex items-center justify-between px-4 py-3">
+								<div className="flex min-w-0 items-center gap-3">
+									<NotebookPen className="size-4 shrink-0 text-amber-600" />
+									<div className="flex min-w-0 flex-col gap-0.5">
+										<span className="font-medium text-sm">{resp.form_name}</span>
+										<span className="text-muted-foreground text-xs">
+											{date}
+											{resp.signed_by_name && ` · Signed: ${resp.signed_by_name}`}
+											{resp.appointment_id === appointmentId && appointmentId && (
+												<span className="ml-1.5 rounded bg-blue-600 px-1.5 py-px font-bold text-[9px] text-white uppercase tracking-wide">
+													This visit
+												</span>
+											)}
+										</span>
+									</div>
+								</div>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<button
+											type="button"
+											onClick={() => setDeleteId(resp.id)}
+											aria-label="Delete"
+											className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+										>
+											<Trash2 className="size-4" />
+										</button>
+									</TooltipTrigger>
+									<TooltipContent side="left">Delete response</TooltipContent>
+								</Tooltip>
+							</div>
+						);
+					})}
+				</div>
+			</div>
+
+			<ConfirmDialog
+				open={deleteId !== null}
+				onOpenChange={(o) => !o && setDeleteId(null)}
+				title="Delete this form response?"
+				description="This will permanently remove the submitted form response."
+				confirmLabel="Delete"
+				pending={pending}
+				onConfirm={handleDelete}
+			/>
+		</>
 	);
 }

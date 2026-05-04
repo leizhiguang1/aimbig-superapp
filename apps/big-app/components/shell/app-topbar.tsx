@@ -1,7 +1,8 @@
 "use client";
 
 import { Clock, Receipt, ShoppingCart, Users } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { ManualTransactionDialog } from "@/components/manual-transactions/ManualTransactionDialog";
 import { NewSaleDialog } from "@/components/sales/NewSaleDialog";
 import {
 	OutletSelector,
@@ -9,6 +10,7 @@ import {
 } from "@/components/shell/outlet-selector";
 import { UserMenu } from "@/components/shell/user-menu";
 import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
 	Tooltip,
 	TooltipContent,
@@ -34,8 +36,14 @@ export function AppTopbar({
 	hasPin: boolean;
 }) {
 	const [newSaleOpen, setNewSaleOpen] = useState(false);
+	const [mtOpen, setMtOpen] = useState(false);
+	const activeOutlet = useMemo(
+		() => outlets.find((o) => o.code === activeOutletCode) ?? null,
+		[outlets, activeOutletCode],
+	);
 	return (
 		<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur">
+			<SidebarTrigger className="md:hidden" />
 			<OutletSelector
 				outlets={outlets}
 				activeOutletCode={activeOutletCode}
@@ -75,6 +83,7 @@ export function AppTopbar({
 								size="icon"
 								className="size-9 cursor-pointer shadow-sm"
 								aria-label="Manual Transaction"
+								onClick={() => setMtOpen(true)}
 							>
 								<Receipt className="size-4" />
 							</Button>
@@ -106,6 +115,11 @@ export function AppTopbar({
 				</div>
 			</TooltipProvider>
 			<NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
+			<ManualTransactionDialog
+				open={mtOpen}
+				onOpenChange={setMtOpen}
+				outletId={activeOutlet?.id ?? null}
+			/>
 		</header>
 	);
 }

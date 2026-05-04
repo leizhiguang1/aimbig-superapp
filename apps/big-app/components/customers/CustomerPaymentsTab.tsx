@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/tooltip";
 import type {
 	PaymentWithRelations,
-	RefundNoteWithRelations,
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
 import { cn } from "@/lib/utils";
@@ -22,7 +21,6 @@ type SubTab = "history" | "outstanding";
 
 type Props = {
 	payments: PaymentWithRelations[];
-	refundNotes: RefundNoteWithRelations[];
 	outstandingSalesOrders: SalesOrderWithRelations[];
 	subTab: SubTab;
 	onSubTabChange: (tab: SubTab) => void;
@@ -35,7 +33,7 @@ const SUB_TABS = [
 
 type HistoryRow = {
 	id: string;
-	kind: "payment" | "refund";
+	kind: "payment";
 	occurredAt: string;
 	documentNo: string;
 	paymentId: string | null;
@@ -98,7 +96,6 @@ function statusBadgeClasses(status: string | null): string {
 
 export function CustomerPaymentsTab({
 	payments,
-	refundNotes,
 	outstandingSalesOrders,
 	subTab,
 	onSubTabChange,
@@ -118,7 +115,6 @@ export function CustomerPaymentsTab({
 			{subTab === "history" ? (
 				<HistoryView
 					payments={payments}
-					refundNotes={refundNotes}
 					onOpenSalesOrder={setOpenId}
 					onOpenReceipt={setReceiptPaymentId}
 				/>
@@ -146,49 +142,34 @@ export function CustomerPaymentsTab({
 	);
 }
 
-function buildHistoryRows(
-	payments: PaymentWithRelations[],
-	refundNotes: RefundNoteWithRelations[],
-): HistoryRow[] {
-	const paymentRows: HistoryRow[] = payments.map((p) => ({
-		id: `p-${p.id}`,
-		kind: "payment",
-		occurredAt: p.paid_at,
-		documentNo: p.invoice_no,
-		paymentId: p.id,
-		salesOrderId: p.sales_order?.id ?? null,
-		salesOrderNo: p.sales_order?.so_number ?? null,
-		salesOrderStatus: p.sales_order?.status ?? null,
-		amount: Number(p.amount ?? 0),
-	}));
-	const refundRows: HistoryRow[] = refundNotes.map((rn) => ({
-		id: `r-${rn.id}`,
-		kind: "refund",
-		occurredAt: rn.refunded_at,
-		documentNo: rn.rn_number,
-		paymentId: null,
-		salesOrderId: rn.sales_order?.id ?? null,
-		salesOrderNo: rn.sales_order?.so_number ?? null,
-		salesOrderStatus: rn.sales_order?.status ?? null,
-		amount: -Math.abs(Number(rn.amount ?? 0)),
-	}));
-	return [...paymentRows, ...refundRows].sort((a, b) =>
-		a.occurredAt < b.occurredAt ? 1 : a.occurredAt > b.occurredAt ? -1 : 0,
-	);
+function buildHistoryRows(payments: PaymentWithRelations[]): HistoryRow[] {
+	return payments
+		.map((p) => ({
+			id: `p-${p.id}`,
+			kind: "payment" as const,
+			occurredAt: p.paid_at,
+			documentNo: p.invoice_no,
+			paymentId: p.id,
+			salesOrderId: p.sales_order?.id ?? null,
+			salesOrderNo: p.sales_order?.so_number ?? null,
+			salesOrderStatus: p.sales_order?.status ?? null,
+			amount: Number(p.amount ?? 0),
+		}))
+		.sort((a, b) =>
+			a.occurredAt < b.occurredAt ? 1 : a.occurredAt > b.occurredAt ? -1 : 0,
+		);
 }
 
 function HistoryView({
 	payments,
-	refundNotes,
 	onOpenSalesOrder,
 	onOpenReceipt,
 }: {
 	payments: PaymentWithRelations[];
-	refundNotes: RefundNoteWithRelations[];
 	onOpenSalesOrder: (id: string) => void;
 	onOpenReceipt: (paymentId: string) => void;
 }) {
-	const rows = buildHistoryRows(payments, refundNotes);
+	const rows = buildHistoryRows(payments);
 
 	const columns: DataTableColumn<HistoryRow>[] = [
 		{

@@ -9,6 +9,7 @@ import {
 	createSignedUploadUrl,
 	deleteObject,
 } from "@/lib/services/storage";
+import type { CustomerLetterInput } from "@/lib/schemas/customer-documents";
 
 export async function requestCustomerDocumentUploadUrlAction(args: {
 	customerId: string;
@@ -50,9 +51,38 @@ export async function deleteCustomerDocumentAction(
 	const ctx = await getServerContext();
 	const { storage_path } =
 		await customerDocumentsService.deleteCustomerDocument(ctx, id);
-	await deleteObject(ctx, "documents", storage_path).catch(() => {
-		// orphan blob — the row is already gone, a cleanup pass can sweep later
-	});
+	if (storage_path) {
+		await deleteObject(ctx, "documents", storage_path).catch(() => {
+			// orphan blob — the row is already gone, a cleanup pass can sweep later
+		});
+	}
 	revalidatePath("/o/[outlet]/customers/[id]", "page");
 	if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+}
+
+export async function createCustomerLetterAction(
+	appointmentId: string | null,
+	input: CustomerLetterInput,
+) {
+	const ctx = await getServerContext();
+	const doc = await customerDocumentsService.createCustomerLetter(ctx, input);
+	revalidatePath("/o/[outlet]/customers/[id]", "page");
+	if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+	return doc;
+}
+
+export async function updateCustomerLetterAction(
+	appointmentId: string | null,
+	id: string,
+	letter_body_html: string,
+) {
+	const ctx = await getServerContext();
+	const doc = await customerDocumentsService.updateCustomerLetter(
+		ctx,
+		id,
+		letter_body_html,
+	);
+	revalidatePath("/o/[outlet]/customers/[id]", "page");
+	if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+	return doc;
 }

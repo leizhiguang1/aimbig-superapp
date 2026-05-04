@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CreditCard, Loader2, Pencil, Receipt, Undo2 } from "lucide-react";
+import { Ban, CreditCard, Loader2, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { redistribute } from "@/components/appointments/detail/collect-payment/helpers";
@@ -8,7 +8,6 @@ import type { Allocation } from "@/components/appointments/detail/collect-paymen
 import { EmployeePicker } from "@/components/employees/EmployeePicker";
 import { ChangePaymentMethodDialog } from "@/components/sales/ChangePaymentMethodDialog";
 import { CustomerIdentityCard } from "@/components/customers/CustomerIdentityCard";
-import { IssueRefundDialog } from "@/components/sales/IssueRefundDialog";
 import { PayOutstandingDialog } from "@/components/sales/PayOutstandingDialog";
 import { VoidSalesOrderDialog } from "@/components/sales/VoidSalesOrderDialog";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +35,6 @@ import {
 import type { EmployeeWithRelations } from "@/lib/services/employees";
 import type {
 	PaymentWithProcessedBy,
-	RefundNoteWithRefs,
 	SaleItem,
 	SaleItemIncentiveRow,
 	SalesOrderWithRelations,
@@ -57,7 +55,6 @@ type LoadState =
 			order: SalesOrderWithRelations;
 			items: SaleItem[];
 			payments: PaymentWithProcessedBy[];
-			refundNotes: RefundNoteWithRefs[];
 			incentives: SaleItemIncentiveRow[];
 			employees: EmployeeWithRelations[];
 	  }
@@ -125,7 +122,6 @@ export function SalesOrderDetailDialog({
 	const router = useRouter();
 	const [state, setState] = useState<LoadState>({ status: "idle" });
 	const [voidOpen, setVoidOpen] = useState(false);
-	const [refundOpen, setRefundOpen] = useState(false);
 	const [recordPayOpen, setRecordPayOpen] = useState(false);
 	const [changeMethodPayment, setChangeMethodPayment] =
 		useState<PaymentWithProcessedBy | null>(null);
@@ -264,7 +260,6 @@ export function SalesOrderDetailDialog({
 					order: res.order,
 					items: res.items,
 					payments: res.payments,
-					refundNotes: res.refundNotes,
 					incentives: res.incentives,
 					employees: res.employees,
 				});
@@ -285,7 +280,6 @@ export function SalesOrderDetailDialog({
 	const isCancellable =
 		order !== null &&
 		(order.status === "completed" || order.status === "draft");
-	const canRefund = order !== null && order.status === "completed";
 	const isCancelled = order?.status === "cancelled";
 	const appointmentRef = order?.appointment?.booking_ref ?? null;
 	const outstanding = Number(order?.outstanding ?? 0);
@@ -427,7 +421,6 @@ export function SalesOrderDetailDialog({
 								<RightPanel
 									order={state.order}
 									payments={state.payments}
-									refundNotes={state.refundNotes}
 									isCancelled={isCancelled}
 									onChangeMethod={setChangeMethodPayment}
 									onPayNow={() => {
@@ -472,36 +465,6 @@ export function SalesOrderDetailDialog({
 										Pay Now
 									</Button>
 								)}
-								{canRefund && (
-									<Button
-										variant="outline"
-										size="sm"
-										className="text-amber-700 hover:bg-amber-50 hover:text-amber-800"
-										onClick={() => {
-											setFeedback(null);
-											setRefundOpen(true);
-										}}
-									>
-										<Undo2 className="mr-2 size-4" />
-										Refund
-									</Button>
-								)}
-								{canRefund && (
-									<Button
-										variant="outline"
-										size="sm"
-										disabled
-										className="relative text-purple-700"
-										title="Credit Note — in development (pending Cash Wallet)"
-									>
-										<Receipt className="mr-2 size-4" />
-										Credit Note
-										<span
-											aria-hidden
-											className="absolute -right-1 -top-1 size-1.5 rounded-full bg-amber-500 ring-1 ring-background"
-										/>
-									</Button>
-								)}
 								{isCancellable && (
 									<Button
 										variant="outline"
@@ -531,27 +494,15 @@ export function SalesOrderDetailDialog({
 						soNumber={state.order.so_number}
 						outletName={state.order.outlet?.name ?? null}
 						orderTotal={Number(state.order.total ?? 0)}
+						amountPaid={Number(state.order.amount_paid ?? 0)}
+						writeOffPaid={state.payments
+							.filter((p) => p.payment_mode === "WRITEOFF")
+							.reduce((s, p) => s + Number(p.amount), 0)}
 						items={state.items}
-						onSuccess={({ cnNumber, rnNumber, refundAmount }) => {
+						onSuccess={({ cnNumber, rnNumber, returnAmount }) => {
 							setFeedback({
 								type: "success",
-								message: `Voided. CN ${cnNumber} · RN ${rnNumber} · Refund MYR ${refundAmount.toFixed(2)}`,
-							});
-							setReloadKey((k) => k + 1);
-							router.refresh();
-						}}
-						onError={(msg) => setFeedback({ type: "error", message: msg })}
-					/>
-					<IssueRefundDialog
-						open={refundOpen}
-						onOpenChange={setRefundOpen}
-						salesOrderId={state.order.id}
-						soNumber={state.order.so_number}
-						orderTotal={Number(state.order.total ?? 0)}
-						onSuccess={({ rnNumber, amount }) => {
-							setFeedback({
-								type: "success",
-								message: `Refund issued · ${rnNumber} · MYR ${amount.toFixed(2)}`,
+								message: `Voided. CN ${cnNumber} · RN ${rnNumber} · Return MYR ${returnAmount.toFixed(2)}`,
 							});
 							setReloadKey((k) => k + 1);
 							router.refresh();
@@ -714,9 +665,6 @@ function LeftPanel({
 								Edit Allocation
 							</Button>
 						)}
-						<PlaceholderPill tooltip="Refunds — Phase 2">
-							Refund
-						</PlaceholderPill>
 					</div>
 				</div>
 			</section>
@@ -954,14 +902,12 @@ function LineAllocEditor({
 function RightPanel({
 	order,
 	payments,
-	refundNotes,
 	isCancelled,
 	onChangeMethod,
 	onPayNow,
 }: {
 	order: SalesOrderWithRelations;
 	payments: PaymentWithProcessedBy[];
-	refundNotes: RefundNoteWithRefs[];
 	isCancelled: boolean;
 	onChangeMethod: (payment: PaymentWithProcessedBy) => void;
 	onPayNow: () => void;
@@ -1040,45 +986,6 @@ function RightPanel({
 					</div>
 				)}
 
-				{refundNotes.length > 0 && (
-					<div className="mt-5 border-t pt-3">
-						<h4 className="font-semibold text-amber-700 text-sm">
-							Refunds ({refundNotes.length}):
-						</h4>
-						<div className="mt-2 space-y-3">
-							{refundNotes.map((r) => (
-								<div key={r.id} className="text-sm">
-									<div className="flex items-start justify-between gap-2">
-										<div>
-											<div className="flex items-center gap-1.5">
-												<span className="font-semibold text-amber-700">
-													{r.rn_number}
-												</span>
-												{r.cancellation_id === null && (
-													<Badge variant="secondary" className="text-[9px]">
-														Standalone
-													</Badge>
-												)}
-											</div>
-											<p className="text-[11px] text-muted-foreground">
-												{formatPaymentDate(r.refunded_at)}
-												{r.refund_method && ` · ${r.refund_method}`}
-											</p>
-											{r.notes && (
-												<p className="mt-0.5 text-[11px] text-muted-foreground">
-													{r.notes}
-												</p>
-											)}
-										</div>
-										<span className="font-medium text-amber-700 tabular-nums">
-											-MYR {money(r.amount)}
-										</span>
-									</div>
-								</div>
-							))}
-						</div>
-					</div>
-				)}
 			</section>
 
 			<section className="rounded-md border bg-white p-4 shadow-sm">

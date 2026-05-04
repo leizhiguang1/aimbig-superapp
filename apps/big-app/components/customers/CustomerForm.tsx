@@ -310,6 +310,9 @@ export function CustomerFormDialog({
 	const [salutationOptions, setSalutationOptions] = useState<string[]>([
 		...SALUTATIONS,
 	]);
+	const [salutationItems, setSalutationItems] = useState<
+		{ code: string; label: string }[]
+	>([]);
 	const savedRef = useRef(false);
 
 	const form = useForm<CustomerInput>({
@@ -346,10 +349,10 @@ export function CustomerFormDialog({
 		}
 	}, [open, customer, form, defaultConsultantId, outlets, leadContext]);
 
-	// Auto-derive DOB + gender from Malaysian IC.
+	// Auto-derive DOB + gender + salutation from Malaysian IC.
 	// Re-runs whenever the IC value changes so edits always re-sync the
 	// derived fields. After this effect fires, the user can still manually
-	// override DOB/gender — and those edits stick until they touch the IC
+	// override any of them — and those edits stick until they touch the IC
 	// again.
 	useEffect(() => {
 		if (idType !== "ic" || !idNumber) return;
@@ -357,7 +360,10 @@ export function CustomerFormDialog({
 		if (!parsed.ok) return;
 		form.setValue("date_of_birth", parsed.dob, { shouldValidate: true });
 		form.setValue("gender", parsed.gender, { shouldValidate: true });
-	}, [idType, idNumber, form]);
+		const targetCode = parsed.gender === "male" ? "MR" : "MS";
+		const match = salutationItems.find((s) => s.code === targetCode);
+		if (match) form.setValue("salutation", match.label, { shouldValidate: true });
+	}, [idType, idNumber, form, salutationItems]);
 
 	// Brand-managed customer tag vocabulary. Loaded once per dialog open.
 	// Free-text values are still preserved — the datalist only suggests.
@@ -370,14 +376,23 @@ export function CustomerFormDialog({
 
 	// Brand-managed salutation list. Empty result → use the hardcoded
 	// fallback so the dropdown is never empty for new brands.
+	// salutationItems (with codes) drives IC gender auto-select.
 	useEffect(() => {
 		if (!open) return;
 		listActiveBrandConfigItemsAction("salutation")
 			.then((items) => {
-				const labels = items.map((i) => i.label);
-				setSalutationOptions(labels.length > 0 ? labels : [...SALUTATIONS]);
+				if (items.length > 0) {
+					setSalutationOptions(items.map((i) => i.label));
+					setSalutationItems(items.map((i) => ({ code: i.code, label: i.label })));
+				} else {
+					setSalutationOptions([...SALUTATIONS]);
+					setSalutationItems([]);
+				}
 			})
-			.catch(() => setSalutationOptions([...SALUTATIONS]));
+			.catch(() => {
+				setSalutationOptions([...SALUTATIONS]);
+				setSalutationItems([]);
+			});
 	}, [open]);
 
 	const icParse =

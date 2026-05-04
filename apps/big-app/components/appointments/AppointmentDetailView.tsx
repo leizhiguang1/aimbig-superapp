@@ -41,6 +41,9 @@ import type { BillingSettings } from "@/lib/services/billing-settings";
 import type { CaseNoteWithContext } from "@/lib/services/case-notes";
 import type { CustomerDocumentWithRefs } from "@/lib/services/customer-documents";
 import type { CustomerWithRelations } from "@/lib/services/customers";
+import type { LetterTemplate } from "@/lib/services/letter-templates";
+import type { FormTemplateWithSections } from "@/lib/services/form-templates";
+import type { FormResponse } from "@/lib/services/form-responses";
 import type {
 	EmployeeShift,
 	RosterEmployee,
@@ -62,6 +65,9 @@ type Props = {
 	caseNotes: CaseNoteWithContext[];
 	followUps: FollowUpWithRefs[];
 	customerDocuments: CustomerDocumentWithRefs[];
+	letterTemplates: LetterTemplate[];
+	formTemplates: FormTemplateWithSections[];
+	formResponses: FormResponse[];
 	customerLineItemsHistory: CustomerLineItem[];
 	customers: CustomerWithRelations[];
 	employees: RosterEmployee[];
@@ -90,6 +96,9 @@ export function AppointmentDetailView({
 	caseNotes,
 	followUps,
 	customerDocuments,
+	letterTemplates,
+	formTemplates,
+	formResponses,
 	customerLineItemsHistory,
 	customers,
 	employees,
@@ -330,6 +339,9 @@ export function AppointmentDetailView({
 						<DocumentsTab
 							appointment={appointment}
 							documents={customerDocuments}
+							letterTemplates={letterTemplates}
+							formTemplates={formTemplates}
+							formResponses={formResponses}
 							onToast={showToast}
 						/>
 					)}
