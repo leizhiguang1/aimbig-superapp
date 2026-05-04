@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getSocket } from "@/lib/wa-client";
 import type { QuickReply } from "@aimbig/wa-client";
+import type { Socket } from "socket.io-client";
 
 type SendAudioPayload = Blob | { audioBase64: string; mimetype: string };
 type SendImagePayload = {
@@ -49,12 +49,14 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 export function MessageInput({
+	socket,
 	onSend,
 	onSendAudio,
 	onSendImage,
 	onSendVideo,
 	onSendDocument,
 }: {
+	socket: Socket;
 	onSend: (text: string) => void;
 	onSendAudio?: (payload: SendAudioPayload) => void;
 	onSendImage?: (payload: SendImagePayload) => void;
@@ -148,18 +150,17 @@ export function MessageInput({
 	}, [menuOpen]);
 
 	useEffect(() => {
-		const sock = getSocket();
 		const load = () => {
-			sock.emit("get_quick_replies", (list: QuickReply[] | null) => {
+			socket.emit("get_quick_replies", (list: QuickReply[] | null) => {
 				if (Array.isArray(list)) setQuickReplies(list);
 			});
 		};
-		if (sock.connected) load();
-		else sock.on("connect", load);
+		if (socket.connected) load();
+		else socket.on("connect", load);
 		return () => {
-			sock.off("connect", load);
+			socket.off("connect", load);
 		};
-	}, []);
+	}, [socket]);
 
 	useEffect(() => {
 		// Match `/shortcut` at the start of an empty-or-only-shortcut buffer.

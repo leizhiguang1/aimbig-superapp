@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Search, X } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -8,6 +9,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import type { Automation } from "@aimbig/wa-client";
 import {
 	type WorkflowTemplate,
@@ -27,14 +29,48 @@ export function TemplatesGallery({
 	existing,
 	onPick,
 }: Props) {
+	const [search, setSearch] = useState("");
+
+	const filtered = search.trim()
+		? WORKFLOW_TEMPLATES.filter(
+				(t) =>
+					t.title.toLowerCase().includes(search.toLowerCase()) ||
+					t.desc.toLowerCase().includes(search.toLowerCase()),
+			)
+		: WORKFLOW_TEMPLATES;
+
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setSearch(""); }}>
 			<DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-3xl">
 				<DialogHeader className="border-b px-5 py-4">
 					<DialogTitle>Choose a template</DialogTitle>
+					<div className="relative mt-2">
+						<Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+						<Input
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							placeholder="Search templates…"
+							className="pl-9"
+						/>
+						{search && (
+							<button
+								type="button"
+								onClick={() => setSearch("")}
+								className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-muted"
+								aria-label="Clear"
+							>
+								<X className="size-3.5" />
+							</button>
+						)}
+					</div>
 				</DialogHeader>
 				<div className="grid grid-cols-1 gap-3 overflow-y-auto p-5 sm:grid-cols-2">
-					{WORKFLOW_TEMPLATES.map((tpl) => {
+					{filtered.length === 0 && (
+						<p className="col-span-2 py-8 text-center text-muted-foreground text-sm">
+							No templates match "{search}"
+						</p>
+					)}
+					{filtered.map((tpl) => {
 						const alreadyExists = existing.some(
 							(wf) => wf.name === tpl.workflow.name,
 						);

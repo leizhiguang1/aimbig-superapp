@@ -7,7 +7,8 @@ import { DuplicatesBanner } from "@/components/wa-contacts/DuplicatesBanner";
 import { MergeContactsDialog } from "@/components/wa-contacts/MergeContactsDialog";
 import { MergeUndoToast } from "@/components/wa-contacts/MergeUndoToast";
 import { TagFilterBar } from "@/components/wa-contacts/TagFilterBar";
-import { disposeSocket, getSocket } from "@/lib/wa-client";
+import { createProjectSocket, WA_CRM_URL } from "@/lib/wa-client";
+import type { Socket } from "socket.io-client";
 import type {
 	CrmContact,
 	CrmContactPatch,
@@ -21,7 +22,8 @@ type MergeRequest = {
 
 const UNDO_SECONDS = 10;
 
-export function ContactsClient() {
+export function ContactsClient({ outletId }: { outletId: string }) {
+	const socketRef = useRef<Socket | null>(null);
 	const [contacts, setContacts] = useState<CrmContact[]>([]);
 	const [connected, setConnected] = useState(false);
 	const [loaded, setLoaded] = useState(false);
@@ -36,10 +38,18 @@ export function ContactsClient() {
 	} | null>(null);
 	const undoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-	useEffect(() => () => disposeSocket(), []);
+	useEffect(() => {
+		const socket = createProjectSocket(WA_CRM_URL, outletId);
+		socketRef.current = socket;
+		return () => {
+			socket.disconnect();
+			socketRef.current = null;
+		};
+	}, [outletId]);
 
 	useEffect(() => {
-		const socket = getSocket();
+		const socket = socketRef.current;
+		if (!socket) return;
 
 		const onConnect = () => {
 			setConnected(true);
@@ -70,7 +80,7 @@ export function ContactsClient() {
 			socket.off("disconnect", onDisconnect);
 			socket.off("crm_update", onCrmUpdate);
 		};
-	}, []);
+	}, [outletId]);
 
 	useEffect(() => {
 		return () => {
@@ -79,7 +89,7 @@ export function ContactsClient() {
 	}, []);
 
 	const handleSave = useCallback((patch: CrmContactPatch) => {
-		getSocket().emit("update_crm_contact", patch);
+		socketRef.current?.emit("update_crm_contact", patch);
 	}, []);
 
 	const allTags = useMemo(() => {
@@ -109,7 +119,7 @@ export function ContactsClient() {
 				if (remaining <= 0) {
 					if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
 					undoIntervalRef.current = null;
-					getSocket().emit("merge_crm_contacts", {
+					socketRef.current?.emit("merge_crm_contacts", {
 						primaryJid,
 						secondaryJid,
 					});

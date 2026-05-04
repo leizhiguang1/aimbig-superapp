@@ -11,7 +11,7 @@ import {
 import { Info } from "lucide-react";
 import { BookingSuggestionBanner } from "./BookingSuggestionBanner";
 import { ContactInfoSheet } from "./ContactInfoSheet";
-import { getSocket, WA_CRM_URL } from "@/lib/wa-client";
+import { WA_CRM_URL } from "@/lib/wa-client";
 import { MessageInput } from "./MessageInput";
 import type {
 	BookingSuggestion,
@@ -22,6 +22,7 @@ import type {
 	ProfilePicsUpdate,
 	SendResult,
 } from "@aimbig/wa-client";
+import type { Socket } from "socket.io-client";
 
 const INITIAL_VISIBLE_MESSAGES = 100;
 const LOAD_MORE_STEP = 100;
@@ -219,11 +220,13 @@ export function ChatWindow({
 	chatName,
 	isGroup,
 	profilePics,
+	socket,
 }: {
 	jid: string;
 	chatName: string;
 	isGroup: boolean;
 	profilePics: ProfilePicsUpdate;
+	socket: Socket;
 }) {
 	const [messages, setMessages] = useState<FormattedMsg[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
@@ -248,8 +251,7 @@ export function ChatWindow({
 				setUnreadCount(0);
 				setAnimKey((k) => k + 1);
 			}
-			const socket = getSocket();
-			socket.emit(
+				socket.emit(
 				"get_messages",
 				{ jid },
 				(res: GetMessagesResult | FormattedMsg[]) => {
@@ -265,7 +267,7 @@ export function ChatWindow({
 				},
 			);
 		},
-		[jid],
+		[jid, socket],
 	);
 
 	useEffect(() => {
@@ -281,7 +283,6 @@ export function ChatWindow({
 	}, [unreadCount]);
 
 	useEffect(() => {
-		const socket = getSocket();
 		const onReconnect = () => fetchMessages(true);
 		socket.on("connect", onReconnect);
 		return () => {
@@ -290,7 +291,6 @@ export function ChatWindow({
 	}, [fetchMessages]);
 
 	useEffect(() => {
-		const socket = getSocket();
 		const handler = ({
 			jid: inJid,
 			messages: newMsgs,
@@ -302,10 +302,9 @@ export function ChatWindow({
 		return () => {
 			socket.off("messages_upsert", handler);
 		};
-	}, [jid]);
+	}, [jid, socket]);
 
 	useEffect(() => {
-		const socket = getSocket();
 		const handler = ({
 			jid: inJid,
 			msgId,
@@ -320,11 +319,10 @@ export function ChatWindow({
 		return () => {
 			socket.off("message_transcript", handler);
 		};
-	}, [jid]);
+	}, [jid, socket]);
 
 	useEffect(() => {
 		setBookingSuggestion(null);
-		const socket = getSocket();
 		const onSuggestion = (s: BookingSuggestion) => {
 			if (s.jid === jid) setBookingSuggestion(s);
 		};
@@ -337,10 +335,9 @@ export function ChatWindow({
 			socket.off("ai_booking_suggestion", onSuggestion);
 			socket.off("booking_suggestion_cleared", onCleared);
 		};
-	}, [jid]);
+	}, [jid, socket]);
 
 	useEffect(() => {
-		const socket = getSocket();
 		const findContact = (list: CrmContact[]) => {
 			const match = list.find((c) => c.jid === jid);
 			setCrmContact(match ?? null);
@@ -355,12 +352,12 @@ export function ChatWindow({
 		return () => {
 			socket.off("crm_update", onCrm);
 		};
-	}, [jid]);
+	}, [jid, socket]);
 
 	const dismissBooking = useCallback(() => {
 		setBookingSuggestion(null);
-		getSocket().emit("clear_booking_suggestion", { jid });
-	}, [jid]);
+		socket.emit("clear_booking_suggestion", { jid });
+	}, [jid, socket]);
 
 	useEffect(() => {
 		if (messages.length === 0) return;
@@ -456,7 +453,7 @@ export function ChatWindow({
 			};
 			setMessages((prev) => [...prev, optimistic]);
 			const timer = armSendTimeout(tempId, 30000);
-			getSocket().emit(
+			socket.emit(
 				"send_message",
 				{ jid, text },
 				(result: SendResult | undefined) => {
@@ -465,7 +462,7 @@ export function ChatWindow({
 				},
 			);
 		},
-		[jid, armSendTimeout, finalizeSend],
+		[jid, socket, armSendTimeout, finalizeSend],
 	);
 
 	const handleSendImage = useCallback(
@@ -494,7 +491,7 @@ export function ChatWindow({
 			};
 			setMessages((prev) => [...prev, optimistic]);
 			const timer = armSendTimeout(tempId);
-			getSocket().emit(
+			socket.emit(
 				"send_image",
 				{ jid, imageBase64, mimetype, caption },
 				(result: SendResult | undefined) => {
@@ -503,7 +500,7 @@ export function ChatWindow({
 				},
 			);
 		},
-		[jid, armSendTimeout, finalizeSend],
+		[jid, socket, armSendTimeout, finalizeSend],
 	);
 
 	const handleSendVideo = useCallback(
@@ -532,7 +529,7 @@ export function ChatWindow({
 			};
 			setMessages((prev) => [...prev, optimistic]);
 			const timer = armSendTimeout(tempId);
-			getSocket().emit(
+			socket.emit(
 				"send_video",
 				{ jid, videoBase64, mimetype, caption },
 				(result: SendResult | undefined) => {
@@ -541,7 +538,7 @@ export function ChatWindow({
 				},
 			);
 		},
-		[jid, armSendTimeout, finalizeSend],
+		[jid, socket, armSendTimeout, finalizeSend],
 	);
 
 	const handleSendDocument = useCallback(
@@ -573,7 +570,7 @@ export function ChatWindow({
 			};
 			setMessages((prev) => [...prev, optimistic]);
 			const timer = armSendTimeout(tempId);
-			getSocket().emit(
+			socket.emit(
 				"send_document",
 				{ jid, fileBase64, mimetype, fileName, caption },
 				(result: SendResult | undefined) => {
@@ -582,7 +579,7 @@ export function ChatWindow({
 				},
 			);
 		},
-		[jid, armSendTimeout, finalizeSend],
+		[jid, socket, armSendTimeout, finalizeSend],
 	);
 
 	const handleSendAudio = useCallback(
@@ -602,7 +599,7 @@ export function ChatWindow({
 
 			const emit = (audioBase64: string, mimetype: string) => {
 				const timer = armSendTimeout(tempId);
-				getSocket().emit(
+				socket.emit(
 					"send_audio",
 					{ jid, audioBase64, mimetype },
 					(result: SendResult | undefined) => {
@@ -644,7 +641,7 @@ export function ChatWindow({
 				);
 			}
 		},
-		[jid, armSendTimeout, finalizeSend],
+		[jid, socket, armSendTimeout, finalizeSend],
 	);
 
 	const visibleMessages = useMemo(
@@ -991,6 +988,7 @@ export function ChatWindow({
 			</div>
 
 			<MessageInput
+				socket={socket}
 				onSend={handleSend}
 				onSendAudio={handleSendAudio}
 				onSendImage={handleSendImage}

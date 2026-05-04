@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, X, Zap } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	ACTION_TYPES,
@@ -11,7 +10,6 @@ import type {
 	AutomationAction,
 	AutomationTrigger,
 } from "@aimbig/wa-client";
-import { AddActionMenu } from "./AddActionMenu";
 import {
 	type Path,
 	actionSummary,
@@ -29,7 +27,7 @@ type Props = {
 	actions: AutomationAction[];
 	selection: Selection;
 	onSelect: (s: Selection) => void;
-	onAddAction: (afterIdx: number, basePath: Path, type: string) => void;
+	onAddButtonClick: (afterIdx: number, basePath: Path) => void;
 	onRemoveAction: (path: Path) => void;
 };
 
@@ -38,31 +36,14 @@ type SegBranch = {
 	actions?: AutomationAction[];
 };
 
-function isAddingHere(
-	addingAt: { afterIdx: number; basePath: Path } | null,
-	afterIdx: number,
-	basePath: Path,
-): boolean {
-	if (!addingAt) return false;
-	return (
-		addingAt.afterIdx === afterIdx &&
-		JSON.stringify(addingAt.basePath) === JSON.stringify(basePath)
-	);
-}
-
 export function WorkflowCanvas({
 	trigger,
 	actions,
 	selection,
 	onSelect,
-	onAddAction,
+	onAddButtonClick,
 	onRemoveAction,
 }: Props) {
-	const [addingAt, setAddingAt] = useState<{
-		afterIdx: number;
-		basePath: Path;
-	} | null>(null);
-
 	const renderSequence = (
 		actionList: AutomationAction[],
 		basePath: Path,
@@ -72,7 +53,6 @@ export function WorkflowCanvas({
 		for (let i = 0; i <= actionList.length; i++) {
 			const action = actionList[i] as AutomationAction | undefined;
 			const thisPath = [...basePath, i];
-			const showAddHere = isAddingHere(addingAt, i - 1, basePath);
 
 			nodes.push(
 				<div
@@ -80,31 +60,17 @@ export function WorkflowCanvas({
 					className="flex flex-col items-center"
 				>
 					<div className="h-3 w-px bg-border" />
-					<AddActionMenu
-						open={showAddHere}
-						onOpenChange={(o) =>
-							setAddingAt(o ? { afterIdx: i - 1, basePath } : null)
-						}
-						trigger={
-							<button
-								type="button"
-								aria-label="Add action"
-								onClick={(e) => {
-									e.stopPropagation();
-									setAddingAt(showAddHere ? null : { afterIdx: i - 1, basePath });
-								}}
-								className={`flex size-7 items-center justify-center rounded-full border bg-card transition-colors hover:bg-muted ${
-									showAddHere ? "border-sky-500 ring-2 ring-sky-500/30" : ""
-								}`}
-							>
-								<Plus className="size-4" />
-							</button>
-						}
-						onPick={(type) => {
-							onAddAction(i - 1, basePath, type);
-							setAddingAt(null);
+					<button
+						type="button"
+						aria-label="Add action"
+						onClick={(e) => {
+							e.stopPropagation();
+							onAddButtonClick(i - 1, basePath);
 						}}
-					/>
+						className="flex size-7 items-center justify-center rounded-full border bg-card transition-colors hover:border-sky-500 hover:bg-sky-50 hover:text-sky-600"
+					>
+						<Plus className="size-4" />
+					</button>
 					<div className="h-3 w-px bg-border" />
 				</div>,
 			);
@@ -116,8 +82,7 @@ export function WorkflowCanvas({
 
 			if (action.type === "if_else") {
 				const segments =
-					(action as AutomationAction & { segments?: SegBranch[] }).segments ??
-					[];
+					(action as AutomationAction & { segments?: SegBranch[] }).segments ?? [];
 				const noBranch =
 					(action as AutomationAction & { noBranch?: AutomationAction[] })
 						.noBranch ?? [];
@@ -177,7 +142,11 @@ export function WorkflowCanvas({
 		<div className="flex flex-col items-center gap-0 overflow-y-auto bg-muted/30 px-6 py-8">
 			<NodeCard
 				icon={trigger?.type ? TRIGGER_TYPES[trigger.type]?.icon ?? "⚡" : "⚡"}
-				title={trigger?.type ? TRIGGER_TYPES[trigger.type]?.label ?? trigger.type : "Set a trigger"}
+				title={
+					trigger?.type
+						? TRIGGER_TYPES[trigger.type]?.label ?? trigger.type
+						: "Set a trigger"
+				}
 				subtitle={triggerSummaryFor(trigger)}
 				selected={selection?.kind === "trigger"}
 				onClick={() => onSelect({ kind: "trigger" })}

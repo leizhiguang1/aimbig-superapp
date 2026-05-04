@@ -23,6 +23,7 @@ import type {
 	AutomationTrigger,
 } from "@aimbig/wa-client";
 import { ActionConfig } from "./ActionConfig";
+import { ActionLibraryPanel } from "./ActionLibraryPanel";
 import { IfElseConfig } from "./IfElseConfig";
 import { SettingsTab } from "./SettingsTab";
 import { TriggerConfig } from "./TriggerConfig";
@@ -92,6 +93,8 @@ export function WorkflowBuilder({ workflow, onBack, onSave }: Props) {
 	const [future, setFuture] = useState<State[]>([]);
 	const [saving, setSaving] = useState(false);
 	const [savedTick, setSavedTick] = useState(false);
+	const [panelMode, setPanelMode] = useState<"pick-trigger" | "pick-action" | "config" | null>(null);
+	const [pendingAddAt, setPendingAddAt] = useState<{ afterIdx: number; basePath: Path } | null>(null);
 	const idRef = useRef<string | null>(workflow?.id ?? null);
 	const stateRef = useRef(state);
 	stateRef.current = state;
@@ -284,6 +287,42 @@ export function WorkflowBuilder({ workflow, onBack, onSave }: Props) {
 		});
 	};
 
+	const handleSelect = useCallback((sel: Selection) => {
+		setSelection(sel);
+		if (!sel) {
+			setPanelMode(null);
+		} else if (sel.kind === "trigger") {
+			setPanelMode(stateRef.current.trigger ? "config" : "pick-trigger");
+		} else {
+			setPanelMode("config");
+		}
+	}, []);
+
+	const handleAddButtonClick = useCallback((afterIdx: number, basePath: Path) => {
+		setPendingAddAt({ afterIdx, basePath });
+		setSelection(null);
+		setPanelMode("pick-action");
+	}, []);
+
+	const handlePickTrigger = useCallback((type: string) => {
+		setStateTracked((prev) => ({ ...prev, trigger: { type } }));
+		setSelection({ kind: "trigger" });
+		setPanelMode("config");
+	}, [setStateTracked]);
+
+	const handlePickAction = useCallback((type: string) => {
+		if (!pendingAddAt) return;
+		const { afterIdx, basePath } = pendingAddAt;
+		handleAddAction(afterIdx, basePath, type);
+		setPendingAddAt(null);
+		const insertIdx = afterIdx + 1;
+		const newPath: Path = basePath.length === 0 ? [insertIdx] : [...basePath, insertIdx];
+		setTimeout(() => {
+			setSelection({ kind: "action", path: newPath });
+			setPanelMode("config");
+		}, 30);
+	}, [pendingAddAt, handleAddAction]);
+
 	const handleSave = async () => {
 		setSaving(true);
 		const payload: Automation = {
@@ -413,59 +452,78 @@ export function WorkflowBuilder({ workflow, onBack, onSave }: Props) {
 							trigger={state.trigger}
 							actions={state.actions}
 							selection={selection}
-							onSelect={setSelection}
-							onAddAction={handleAddAction}
+							onSelect={handleSelect}
+							onAddButtonClick={handleAddButtonClick}
 							onRemoveAction={handleRemoveAction}
 						/>
 					</div>
-					{selection && (
-						<aside className="flex w-96 flex-col border-l bg-card">
+
+					{panelMode && (
+						<aside className="flex w-80 shrink-0 flex-col border-l bg-card">
 							<header className="flex items-center justify-between border-b px-4 py-3">
-								<div className="font-semibold text-sm">
-									{selection.kind === "trigger"
-										? "Configure trigger"
-										: editingAction
-											? `Configure ${ACTION_TYPES[editingAction.type]?.label ?? editingAction.type}`
-											: "Configure action"}
-								</div>
+								<span className="font-semibold text-sm">
+									{panelMode === "pick-trigger" && "Choose a trigger"}
+									{panelMode === "pick-action" && "Choose an action"}
+									{panelMode === "config" && selection?.kind === "trigger" && "Configure trigger"}
+									{panelMode === "config" && selection?.kind === "action" && (
+										editingAction
+											? (ACTION_TYPES[editingAction.type]?.label ?? editingAction.type)
+											: "Configure action"
+									)}
+								</span>
 								<Button
 									size="sm"
 									variant="ghost"
-									onClick={() => setSelection(null)}
+									className="h-7 px-2 text-xs"
+									onClick={() => {
+										setPanelMode(null);
+										setSelection(null);
+										setPendingAddAt(null);
+									}}
 								>
-									Close
+									✕
 								</Button>
 							</header>
-							<div className="flex-1 overflow-y-auto p-4">
-								{selection.kind === "trigger" && (
-									<TriggerConfig
-										trigger={state.trigger}
-										onChange={(t) => {
-											setStateTracked((prev) => ({ ...prev, trigger: t }));
-										}}
-									/>
-								)}
-								{selection.kind === "action" &&
-									editingAction &&
-									editingAction.type === "if_else" && (
-										<IfElseConfig
-											action={editingAction}
-											onChange={(updated) =>
-												updateActionAtPath(selection.path, updated)
+
+							{panelMode === "pick-trigger" && (
+								<ActionLibraryPanel mode="triggers" onPick={handlePickTrigger} />
+							)}
+
+							{panelMode === "pick-action" && (
+								<ActionLibraryPanel mode="actions" onPick={handlePickAction} />
+							)}
+
+							{panelMode === "config" && (
+								<div className="flex-1 overflow-y-auto p-4">
+									{selection?.kind === "trigger" && (
+										<TriggerConfig
+											trigger={state.trigger}
+											onChange={(t) =>
+												setStateTracked((prev) => ({ ...prev, trigger: t }))
 											}
 										/>
 									)}
-								{selection.kind === "action" &&
-									editingAction &&
-									editingAction.type !== "if_else" && (
-										<ActionConfig
-											action={editingAction}
-											onChange={(updated) =>
-												updateActionAtPath(selection.path, updated)
-											}
-										/>
-									)}
-							</div>
+									{selection?.kind === "action" &&
+										editingAction?.type === "if_else" && (
+											<IfElseConfig
+												action={editingAction}
+												onChange={(updated) =>
+													updateActionAtPath(selection.path, updated)
+												}
+											/>
+										)}
+									{selection?.kind === "action" &&
+										editingAction &&
+										editingAction.type !== "if_else" && (
+											<ActionConfig
+												action={editingAction}
+												onChange={(updated) =>
+													updateActionAtPath(selection.path, updated)
+												}
+											/>
+										)}
+								</div>
+							)}
 						</aside>
 					)}
 				</div>

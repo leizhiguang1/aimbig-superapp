@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatList } from "@/components/chats/ChatList";
 import { ChatWindow } from "@/components/chats/ChatWindow";
 import { QRScreen } from "@/components/chats/QRScreen";
-import { disposeSocket, getSocket } from "@/lib/wa-client";
+import { createProjectSocket, WA_CRM_URL } from "@/lib/wa-client";
 import type {
 	ConnectionStatus,
 	ConnectionUpdate,
@@ -12,11 +12,13 @@ import type {
 	PeerTenant,
 	ProfilePicsUpdate,
 } from "@aimbig/wa-client";
+import type { Socket } from "socket.io-client";
 import "@/components/chats/chats.css";
 
 type AppState = "connecting" | "qr" | "connected" | "logged_out";
 
-export function WhatsappClient() {
+export function WhatsappClient({ outletId }: { outletId: string }) {
+	const socketRef = useRef<Socket | null>(null);
 	const [appState, setAppState] = useState<AppState>("connecting");
 	const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 	const [chats, setChats] = useState<FormattedChat[]>([]);
@@ -28,8 +30,18 @@ export function WhatsappClient() {
 	const [linkedPhone, setLinkedPhone] = useState<string | null>(null);
 	const [lineLabel, setLineLabel] = useState<string | null>(null);
 
+	useEffect(() => {
+		const socket = createProjectSocket(WA_CRM_URL, outletId);
+		socketRef.current = socket;
+		return () => {
+			socket.disconnect();
+			socketRef.current = null;
+		};
+	}, [outletId]);
+
 	const refreshLinkedPhone = useCallback(() => {
-		const socket = getSocket();
+		const socket = socketRef.current;
+		if (!socket) return;
 		socket.emit("list_peer_tenants", (peers: PeerTenant[]) => {
 			if (!Array.isArray(peers)) return;
 			const self = peers.find((p) => p.isSelf);
@@ -41,13 +53,8 @@ export function WhatsappClient() {
 	}, []);
 
 	useEffect(() => {
-		return () => {
-			disposeSocket();
-		};
-	}, []);
-
-	useEffect(() => {
-		const socket = getSocket();
+		const socket = socketRef.current;
+		if (!socket) return;
 
 		const onConnect = () => {
 			setIsSocketConnected(true);
@@ -55,7 +62,6 @@ export function WhatsappClient() {
 			refreshLinkedPhone();
 		};
 		const onDisconnect = () => setIsSocketConnected(false);
-
 		const onConnectionUpdate = ({ status }: ConnectionUpdate) => {
 			if (status) setConnectionStatus(status);
 			if (status === "qr") setAppState("qr");
@@ -66,17 +72,14 @@ export function WhatsappClient() {
 			else if (status === "logged_out") setAppState("logged_out");
 			else if (status === "waiting_qr") socket.emit("request_qr");
 		};
-
 		const onQr = (dataUrl: string) => {
 			setQrDataUrl(dataUrl);
 			setAppState("qr");
 		};
-
 		const onChatsUpsert = (updatedChats: FormattedChat[]) => {
 			setChats(updatedChats);
 			if (updatedChats.length > 0) setAppState("connected");
 		};
-
 		const onProfilePicsUpdate = (pics: ProfilePicsUpdate) => {
 			setProfilePics((prev) => ({ ...prev, ...pics }));
 		};
@@ -98,7 +101,7 @@ export function WhatsappClient() {
 			socket.off("chats_upsert", onChatsUpsert);
 			socket.off("profile_pics_update", onProfilePicsUpdate);
 		};
-	}, [refreshLinkedPhone]);
+	}, [outletId, refreshLinkedPhone]);
 
 	let body: React.ReactNode;
 	if (appState === "qr") {
@@ -114,7 +117,7 @@ export function WhatsappClient() {
 					<button
 						type="button"
 						className="primary-btn"
-						onClick={() => getSocket().emit("request_qr")}
+						onClick={() => socketRef.current?.emit("request_qr")}
 					>
 						Scan QR to link a phone
 					</button>
@@ -148,6 +151,7 @@ export function WhatsappClient() {
 							chatName={selectedChat.name ?? selectedJid}
 							isGroup={selectedChat.isGroup ?? false}
 							profilePics={profilePics}
+							socket={socketRef.current!}
 						/>
 					) : (
 						<div className="no-chat-selected">

@@ -8,29 +8,31 @@ import { StatusManagerPanel } from "@/components/wa-settings/StatusManagerPanel"
 import { TagManagerPanel } from "@/components/wa-settings/TagManagerPanel";
 import { WALinesPanel } from "@/components/wa-settings/WALinesPanel";
 import { useMultiWA } from "@/components/chats/useMultiWA";
-import { getSocket, WA_CRM_URL } from "@/lib/wa-client";
+import { WA_CRM_URL } from "@/lib/wa-client";
 import type { CrmContact, WATeamMember } from "@aimbig/wa-client";
 
-const TEAM_KEY = "wa_team_members";
+function teamKey(outletId: string) {
+	return `wa_team_members_${outletId}`;
+}
 
-function loadTeam(): WATeamMember[] {
+function loadTeam(outletId: string): WATeamMember[] {
 	if (typeof window === "undefined") return [];
 	try {
-		const raw = window.localStorage.getItem(TEAM_KEY);
+		const raw = window.localStorage.getItem(teamKey(outletId));
 		return raw ? (JSON.parse(raw) as WATeamMember[]) : [];
 	} catch {
 		return [];
 	}
 }
 
-function saveTeam(team: WATeamMember[]) {
+function saveTeam(outletId: string, team: WATeamMember[]) {
 	if (typeof window === "undefined") return;
 	try {
-		window.localStorage.setItem(TEAM_KEY, JSON.stringify(team));
+		window.localStorage.setItem(teamKey(outletId), JSON.stringify(team));
 	} catch {}
 }
 
-export function WaSettingsClient() {
+export function WaSettingsClient({ outletId }: { outletId: string }) {
 	const {
 		accounts,
 		statusPerAccount,
@@ -40,13 +42,15 @@ export function WaSettingsClient() {
 		removeAccount,
 		requestQR,
 		logoutAccount,
-	} = useMultiWA({});
+		getPrimarySocket,
+	} = useMultiWA({ projectId: outletId });
 
-	const [team, setTeam] = useState<WATeamMember[]>(loadTeam);
+	const [team, setTeam] = useState<WATeamMember[]>(() => loadTeam(outletId));
 	const [contacts, setContacts] = useState<CrmContact[]>([]);
 
 	useEffect(() => {
-		const sock = getSocket();
+		const sock = getPrimarySocket();
+		if (!sock) return;
 		const onConnect = () => {
 			sock.emit("get_crm", (list: CrmContact[]) => {
 				if (Array.isArray(list)) setContacts(list);
@@ -62,26 +66,26 @@ export function WaSettingsClient() {
 			sock.off("connect", onConnect);
 			sock.off("crm_update", onCrmUpdate);
 		};
-	}, []);
+	}, [getPrimarySocket, outletId]);
 
 	const handleAddTeam = (name: string) => {
 		const next = [...team, { id: `m-${Date.now()}`, name }];
 		setTeam(next);
-		saveTeam(next);
+		saveTeam(outletId, next);
 	};
 
 	const handleRemoveTeam = (id: string) => {
 		const next = team.filter((m) => m.id !== id);
 		setTeam(next);
-		saveTeam(next);
+		saveTeam(outletId, next);
 	};
 
 	const handleRenameTag = (oldTag: string, newTag: string) => {
-		getSocket().emit("rename_crm_tag", { oldTag, newTag });
+		getPrimarySocket()?.emit("rename_crm_tag", { oldTag, newTag });
 	};
 
 	const handleDeleteTag = (tag: string) => {
-		getSocket().emit("delete_crm_tag", { tag });
+		getPrimarySocket()?.emit("delete_crm_tag", { tag });
 	};
 
 	return (

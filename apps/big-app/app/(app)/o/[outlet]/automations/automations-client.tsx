@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Search, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AutomationExecutionLogPanel } from "@/components/automations/AutomationExecutionLog";
 import { AutomationsList } from "@/components/automations/AutomationsList";
 import { FolderTabs } from "@/components/automations/FolderTabs";
@@ -10,50 +10,65 @@ import { TemplatesGallery } from "@/components/automations/TemplatesGallery";
 import { WorkflowBuilder } from "@/components/automations/builder/WorkflowBuilder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { disposeSocket, getSocket } from "@/lib/wa-client";
+import { createProjectSocket, WA_CRM_URL } from "@/lib/wa-client";
+import type { Socket } from "socket.io-client";
 import type {
 	Automation,
 	AutomationExecutionLog,
 	AutomationFolder,
 } from "@aimbig/wa-client";
 
-const FOLDER_KEY = "auto_folders";
+function folderKey(outletId: string) {
+	return `auto_folders_${outletId}`;
+}
 
-function loadLocalFolders(): AutomationFolder[] {
+function loadLocalFolders(outletId: string): AutomationFolder[] {
 	if (typeof window === "undefined") return [];
 	try {
-		const raw = window.localStorage.getItem(FOLDER_KEY);
+		const raw = window.localStorage.getItem(folderKey(outletId));
 		return raw ? (JSON.parse(raw) as AutomationFolder[]) : [];
 	} catch {
 		return [];
 	}
 }
 
-function saveLocalFolders(folders: AutomationFolder[]) {
+function saveLocalFolders(outletId: string, folders: AutomationFolder[]) {
 	if (typeof window === "undefined") return;
 	try {
-		window.localStorage.setItem(FOLDER_KEY, JSON.stringify(folders));
+		window.localStorage.setItem(folderKey(outletId), JSON.stringify(folders));
 	} catch {}
 }
 
-export function AutomationsClient() {
+export function AutomationsClient({ outletId }: { outletId: string }) {
+	const socketRef = useRef<Socket | null>(null);
 	const [automations, setAutomations] = useState<Automation[]>([]);
-	const [folders, setFolders] = useState<AutomationFolder[]>(loadLocalFolders);
+	const [folders, setFolders] = useState<AutomationFolder[]>(() =>
+		loadLocalFolders(outletId),
+	);
 	const [foldersLoaded, setFoldersLoaded] = useState(false);
 	const [connected, setConnected] = useState(false);
 	const [loaded, setLoaded] = useState(false);
 	const [activeFolder, setActiveFolder] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
+	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "draft">("all");
 	const [showNewDialog, setShowNewDialog] = useState(false);
 	const [showTemplates, setShowTemplates] = useState(false);
 	const [editing, setEditing] = useState<Automation | null>(null);
 	const [logPanelFor, setLogPanelFor] = useState<Automation | null>(null);
 	const [logs, setLogs] = useState<AutomationExecutionLog[]>([]);
 
-	useEffect(() => () => disposeSocket(), []);
+	useEffect(() => {
+		const socket = createProjectSocket(WA_CRM_URL, outletId);
+		socketRef.current = socket;
+		return () => {
+			socket.disconnect();
+			socketRef.current = null;
+		};
+	}, [outletId]);
 
 	useEffect(() => {
-		const socket = getSocket();
+		const socket = socketRef.current;
+		if (!socket) return;
 
 		const onConnect = () => {
 			setConnected(true);
@@ -105,15 +120,15 @@ export function AutomationsClient() {
 			socket.off("automation_folders_update", onFoldersUpdate);
 			socket.off("execution_log", onExecLog);
 		};
-	}, [logPanelFor]);
+	}, [outletId, logPanelFor]);
 
 	useEffect(() => {
 		if (!foldersLoaded) return;
-		saveLocalFolders(folders);
+		saveLocalFolders(outletId, folders);
 		if (connected) {
-			getSocket().emit("save_automation_folders", folders);
+			socketRef.current?.emit("save_automation_folders", folders);
 		}
-	}, [folders, foldersLoaded, connected]);
+	}, [outletId, folders, foldersLoaded, connected]);
 
 	const visibleAutomations = useMemo(() => {
 		let list = automations;
@@ -125,6 +140,8 @@ export function AutomationsClient() {
 			const ids = new Set(folder?.workflowIds ?? []);
 			list = list.filter((a) => ids.has(a.id));
 		}
+		if (statusFilter === "active") list = list.filter((a) => a.enabled);
+		else if (statusFilter === "draft") list = list.filter((a) => !a.enabled);
 		const q = search.trim().toLowerCase();
 		if (q) {
 			list = list.filter(
@@ -134,15 +151,15 @@ export function AutomationsClient() {
 			);
 		}
 		return list;
-	}, [automations, folders, activeFolder, search]);
+	}, [automations, folders, activeFolder, search, statusFilter]);
 
 	const handleToggle = useCallback((id: string, enabled: boolean) => {
-		getSocket().emit("toggle_automation", { id, enabled });
+		socketRef.current?.emit("toggle_automation", { id, enabled });
 	}, []);
 
 	const handleDelete = useCallback(
 		(id: string) => {
-			getSocket().emit("delete_automation", { id });
+			socketRef.current?.emit("delete_automation", { id });
 			setFolders((prev) =>
 				prev.map((f) => ({
 					...f,
@@ -160,7 +177,7 @@ export function AutomationsClient() {
 					!workflow.id || workflow.id === ""
 						? { ...workflow, id: undefined }
 						: workflow;
-				getSocket().emit(
+				socketRef.current?.emit(
 					"save_automation",
 					payload,
 					(res: { ok?: boolean; id?: string }) => {
@@ -179,7 +196,7 @@ export function AutomationsClient() {
 
 	const handleViewLog = useCallback((automation: Automation) => {
 		setLogPanelFor(automation);
-		getSocket().emit(
+		socketRef.current?.emit(
 			"get_execution_logs",
 			{ automationId: automation.id },
 			(entries: AutomationExecutionLog[]) => {
@@ -238,24 +255,46 @@ export function AutomationsClient() {
 			)}
 
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<div className="relative max-w-sm flex-1">
-					<Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-					<Input
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search workflows…"
-						className="pl-9"
-					/>
-					{search && (
-						<button
-							type="button"
-							onClick={() => setSearch("")}
-							className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-muted"
-							aria-label="Clear search"
-						>
-							<X className="size-3.5" />
-						</button>
-					)}
+				<div className="flex flex-1 flex-wrap items-center gap-2">
+					<div className="relative max-w-xs flex-1">
+						<Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+						<Input
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							placeholder="Search by name or trigger…"
+							className="pl-9"
+						/>
+						{search && (
+							<button
+								type="button"
+								onClick={() => setSearch("")}
+								className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-muted"
+								aria-label="Clear search"
+							>
+								<X className="size-3.5" />
+							</button>
+						)}
+					</div>
+					<div className="flex items-center rounded-md border bg-card p-0.5">
+						{(["all", "active", "draft"] as const).map((s) => (
+							<button
+								key={s}
+								type="button"
+								onClick={() => setStatusFilter(s)}
+								className={`rounded px-3 py-1 text-xs font-medium capitalize transition-colors ${
+									statusFilter === s
+										? "bg-foreground text-background"
+										: "text-muted-foreground hover:text-foreground"
+								}`}
+							>
+								{s === "all"
+									? `All (${automations.length})`
+									: s === "active"
+										? `Active (${automations.filter((a) => a.enabled).length})`
+										: `Draft (${automations.filter((a) => !a.enabled).length})`}
+							</button>
+						))}
+					</div>
 				</div>
 				<Button onClick={() => setShowNewDialog(true)}>
 					<Plus className="size-4" /> New workflow

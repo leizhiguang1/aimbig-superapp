@@ -182,8 +182,6 @@ export function AutomationsList({
 				data={automations}
 				columns={columns}
 				getRowKey={(a) => a.id}
-				searchKeys={["name"]}
-				searchPlaceholder="Search workflows…"
 				emptyMessage={
 					isLoading ? "Loading workflows…" : "No workflows match the filter."
 				}
