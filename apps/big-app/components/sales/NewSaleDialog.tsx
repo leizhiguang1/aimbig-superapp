@@ -582,6 +582,10 @@ function NewSaleBody({
 							? new Date(backdateValue).toISOString()
 							: null,
 				});
+				if ("error" in result) {
+					setFormError(result.error);
+					return;
+				}
 				setSuccessData({
 					salesOrderId: result.sales_order_id,
 					soNumber: result.so_number,

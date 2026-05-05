@@ -138,7 +138,9 @@ export function AppointmentCard({
 	const title = isBlock
 		? a.block_title || "Blocked"
 		: a.customer
-			? `${a.customer.first_name} ${a.customer.last_name ?? ""}`.trim()
+			? `${a.customer.salutation ?? ""} ${a.customer.first_name} ${a.customer.last_name ?? ""}`
+					.replace(/\s+/g, " ")
+					.trim()
 			: (a.lead_name ?? "Walk-in");
 
 	const idLine = isBlock

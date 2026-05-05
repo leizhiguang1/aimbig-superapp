@@ -53,17 +53,17 @@ export function ManageCategoriesSheet({
 		if (!name) return;
 		setError(null);
 		startTransition(async () => {
-			try {
-				const created = await createCategoryAction({
-					name,
-					sort_order: (categories.at(-1)?.sort_order ?? 0) + 10,
-					is_active: true,
-				});
-				setCategories((prev) => [...prev, created]);
-				setNewName("");
-			} catch (err) {
-				setError(err instanceof Error ? err.message : "Failed to add category");
+			const created = await createCategoryAction({
+				name,
+				sort_order: (categories.at(-1)?.sort_order ?? 0) + 10,
+				is_active: true,
+			});
+			if ("error" in created) {
+				setError(created.error);
+				return;
 			}
+			setCategories((prev) => [...prev, created]);
+			setNewName("");
 		});
 	};
 
@@ -72,35 +72,31 @@ export function ManageCategoriesSheet({
 		if (!trimmed || trimmed === category.name) return;
 		setError(null);
 		startTransition(async () => {
-			try {
-				const updated = await updateCategoryAction(category.id, {
-					name: trimmed,
-					sort_order: category.sort_order,
-					is_active: category.is_active,
-				});
-				setCategories((prev) =>
-					prev.map((c) => (c.id === updated.id ? updated : c)),
-				);
-			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Failed to rename category",
-				);
+			const updated = await updateCategoryAction(category.id, {
+				name: trimmed,
+				sort_order: category.sort_order,
+				is_active: category.is_active,
+			});
+			if ("error" in updated) {
+				setError(updated.error);
+				return;
 			}
+			setCategories((prev) =>
+				prev.map((c) => (c.id === updated.id ? updated : c)),
+			);
 		});
 	};
 
 	const confirmRemove = (category: ServiceCategory) => {
 		setError(null);
 		startTransition(async () => {
-			try {
-				await deleteCategoryAction(category.id);
-				setCategories((prev) => prev.filter((c) => c.id !== category.id));
-				setRemoving(null);
-			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Failed to remove category",
-				);
+			const result = await deleteCategoryAction(category.id);
+			if (result && "error" in result) {
+				setError(result.error);
+				return;
 			}
+			setCategories((prev) => prev.filter((c) => c.id !== category.id));
+			setRemoving(null);
 		});
 	};
 

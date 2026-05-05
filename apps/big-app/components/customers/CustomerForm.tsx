@@ -55,6 +55,7 @@ type Props = {
 	outlets: OutletWithRoomCount[];
 	employees: EmployeeWithRelations[];
 	defaultConsultantId: string | null;
+	defaultHomeOutletId?: string | null;
 	leadContext?: LeadContext | null;
 	onClose: () => void;
 	onCreated?: (customer: Customer) => void;
@@ -298,6 +299,7 @@ export function CustomerFormDialog({
 	outlets,
 	employees,
 	defaultConsultantId,
+	defaultHomeOutletId = null,
 	leadContext = null,
 	onClose,
 	onCreated,
@@ -332,7 +334,8 @@ export function CustomerFormDialog({
 			const base = fromCustomer(customer);
 			if (!customer) {
 				if (defaultConsultantId) base.consultant_id = defaultConsultantId;
-				if (outlets.length === 1) base.home_outlet_id = outlets[0].id;
+				if (defaultHomeOutletId) base.home_outlet_id = defaultHomeOutletId;
+				else if (outlets.length === 1) base.home_outlet_id = outlets[0].id;
 				if (leadContext?.prefill) {
 					Object.assign(base, leadContext.prefill);
 				}
@@ -347,7 +350,15 @@ export function CustomerFormDialog({
 			setServerError(null);
 			setSection("personal");
 		}
-	}, [open, customer, form, defaultConsultantId, outlets, leadContext]);
+	}, [
+		open,
+		customer,
+		form,
+		defaultConsultantId,
+		defaultHomeOutletId,
+		outlets,
+		leadContext,
+	]);
 
 	// Auto-derive DOB + gender + salutation from Malaysian IC.
 	// Re-runs whenever the IC value changes so edits always re-sync the
@@ -408,29 +419,35 @@ export function CustomerFormDialog({
 
 	const onSubmit = form.handleSubmit((values) => {
 		startTransition(async () => {
-			try {
-				if (customer) {
-					await updateCustomerAction(customer.id, values);
-				} else if (leadContext) {
-					const result = await convertLeadToCustomerAction(
-						leadContext.appointmentId,
-						{ ...values, id: pendingId ?? undefined },
-					);
-					onCreated?.(result.customer);
-				} else {
-					const created = await createCustomerAction({
-						...values,
-						id: pendingId ?? undefined,
-					});
-					onCreated?.(created);
+			if (customer) {
+				const result = await updateCustomerAction(customer.id, values);
+				if ("error" in result) {
+					setServerError(result.error);
+					return;
 				}
-				savedRef.current = true;
-				onClose();
-			} catch (err) {
-				setServerError(
-					err instanceof Error ? err.message : "Something went wrong",
+			} else if (leadContext) {
+				const result = await convertLeadToCustomerAction(
+					leadContext.appointmentId,
+					{ ...values, id: pendingId ?? undefined },
 				);
+				if ("error" in result) {
+					setServerError(result.error);
+					return;
+				}
+				onCreated?.(result.customer);
+			} else {
+				const result = await createCustomerAction({
+					...values,
+					id: pendingId ?? undefined,
+				});
+				if ("error" in result) {
+					setServerError(result.error);
+					return;
+				}
+				onCreated?.(result);
 			}
+			savedRef.current = true;
+			onClose();
 		});
 	});
 
@@ -999,10 +1016,12 @@ export function NewCustomerButton({
 	outlets,
 	employees,
 	defaultConsultantId,
+	defaultHomeOutletId = null,
 }: {
 	outlets: OutletWithRoomCount[];
 	employees: EmployeeWithRelations[];
 	defaultConsultantId: string | null;
+	defaultHomeOutletId?: string | null;
 }) {
 	const [open, setOpen] = useState(false);
 	return (
@@ -1014,6 +1033,7 @@ export function NewCustomerButton({
 				outlets={outlets}
 				employees={employees}
 				defaultConsultantId={defaultConsultantId}
+				defaultHomeOutletId={defaultHomeOutletId}
 				onClose={() => setOpen(false)}
 			/>
 		</>

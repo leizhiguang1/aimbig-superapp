@@ -55,6 +55,10 @@ export function WriteOffOutstandingDialog({
 					{ reason },
 					appointmentRef,
 				);
+				if ("error" in result) {
+					onError?.(result.error);
+					return;
+				}
 				onOpenChange(false);
 				setReason("");
 				onSuccess?.(

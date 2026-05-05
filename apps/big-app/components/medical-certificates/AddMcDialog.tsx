@@ -182,7 +182,11 @@ export function AddMcDialog({
 							has_half_day: halfDay,
 							reason: reason.trim() || undefined,
 						});
-						onCreated(result);
+						if ("error" in result) {
+						setError(result.error);
+						return;
+					}
+					onCreated(result);
 					} else {
 						const result = await createMedicalCertificateAction({
 							appointment_id: appointmentId,
@@ -195,7 +199,11 @@ export function AddMcDialog({
 							has_half_day: halfDay,
 							reason: reason.trim() || undefined,
 						});
-						onCreated(result);
+						if ("error" in result) {
+						setError(result.error);
+						return;
+					}
+					onCreated(result);
 					}
 					onClose();
 				} catch (err) {
@@ -223,6 +231,10 @@ export function AddMcDialog({
 						duration_hours: durationHours,
 						reason: reason.trim() || undefined,
 					});
+					if ("error" in result) {
+						setError(result.error);
+						return;
+					}
 					onCreated(result);
 				} else {
 					const result = await createMedicalCertificateAction({
@@ -237,6 +249,10 @@ export function AddMcDialog({
 						duration_hours: durationHours,
 						reason: reason.trim() || undefined,
 					});
+					if ("error" in result) {
+						setError(result.error);
+						return;
+					}
 					onCreated(result);
 				}
 				onClose();

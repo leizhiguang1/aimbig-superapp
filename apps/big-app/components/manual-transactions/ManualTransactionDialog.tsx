@@ -89,13 +89,15 @@ export function ManualTransactionDialog({
 
 	async function handleCreate(input: unknown) {
 		const result = await createManualTransactionAction(input);
+		if ("error" in result) throw new Error(result.error);
 		refreshList();
 		setView({ type: "detail", id: result.id });
 		return result;
 	}
 
 	async function handleCancel(id: string, input: unknown) {
-		await cancelManualTransactionAction(id, input);
+		const result = await cancelManualTransactionAction(id, input);
+		if ("error" in result) throw new Error(result.error);
 		refreshList();
 		setView({ type: "list" });
 	}

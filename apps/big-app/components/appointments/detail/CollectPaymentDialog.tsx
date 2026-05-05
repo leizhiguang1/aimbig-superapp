@@ -638,6 +638,11 @@ export function CollectPaymentDialog({
 							: null,
 					frontdesk_message: frontdeskMsg.trim() || null,
 				});
+				if ("error" in result) {
+					setFormError(result.error);
+					onError?.(result.error);
+					return;
+				}
 				onSuccess?.({
 					sales_order_id: result.sales_order_id,
 					so_number: result.so_number,

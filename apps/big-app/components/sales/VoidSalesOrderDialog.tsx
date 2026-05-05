@@ -42,8 +42,8 @@ type Props = {
 	writeOffPaid?: number;
 	items: SaleItem[];
 	onSuccess?: (result: {
-		cnNumber: string;
-		rnNumber: string;
+		cnNumber: string | null;
+		rnNumber: string | null;
 		returnAmount: number;
 	}) => void;
 	onError?: (message: string) => void;
@@ -178,6 +178,11 @@ export function VoidSalesOrderDialog({
 					admin_fee: effectiveAdminFee,
 					sale_item_ids: Array.from(selectedItemIds),
 				});
+				if ("error" in result) {
+					setSubmitError(result.error);
+					onError?.(result.error);
+					return;
+				}
 				onOpenChange(false);
 				onSuccess?.({
 					cnNumber: result.cnNumber,

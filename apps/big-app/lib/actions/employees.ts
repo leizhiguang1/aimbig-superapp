@@ -2,23 +2,26 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { toErr } from "@/lib/actions/_helpers";
 import { getServerContext } from "@/lib/context/server";
 import * as employeesService from "@/lib/services/employees";
+import type { Employee } from "@/lib/services/employees";
+
+export type EmployeeActionResult = { error: string } | Employee;
 
 export async function createEmployeeAction(
 	input: unknown,
 	password?: string,
 	pin?: string,
-) {
-	const ctx = await getServerContext();
-	const employee = await employeesService.createEmployee(
-		ctx,
-		input,
-		password,
-		pin,
-	);
-	revalidatePath("/o/[outlet]/employees", "page");
-	return employee;
+): Promise<EmployeeActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const employee = await employeesService.createEmployee(ctx, input, password, pin);
+		revalidatePath("/o/[outlet]/employees", "page");
+		return employee;
+	} catch (err) {
+		return toErr("[createEmployeeAction]", err);
+	}
 }
 
 export async function updateEmployeeAction(
@@ -26,33 +29,49 @@ export async function updateEmployeeAction(
 	input: unknown,
 	password?: string,
 	pin?: string,
-) {
-	const ctx = await getServerContext();
-	const employee = await employeesService.updateEmployee(
-		ctx,
-		id,
-		input,
-		password,
-		pin,
-	);
-	revalidatePath("/o/[outlet]/employees", "page");
-	return employee;
+): Promise<EmployeeActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const employee = await employeesService.updateEmployee(ctx, id, input, password, pin);
+		revalidatePath("/o/[outlet]/employees", "page");
+		return employee;
+	} catch (err) {
+		return toErr("[updateEmployeeAction]", err);
+	}
 }
 
-export async function deleteEmployeeAction(id: string) {
-	const ctx = await getServerContext();
-	await employeesService.deleteEmployee(ctx, id);
-	revalidatePath("/o/[outlet]/employees", "page");
+export async function deleteEmployeeAction(
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await employeesService.deleteEmployee(ctx, id);
+		revalidatePath("/o/[outlet]/employees", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteEmployeeAction]", err);
+	}
 }
 
 /** Returns a password-reset link the admin can copy and share. */
+export type ResetPasswordResult = { error: string } | { link: string };
+
 export async function resetPasswordAction(
 	employeeId: string,
-): Promise<string> {
-	const ctx = await getServerContext();
-	const headersList = await headers();
-	const origin = headersList.get("origin") ?? "";
-	return employeesService.generatePasswordResetLink(ctx, employeeId, origin);
+): Promise<ResetPasswordResult> {
+	try {
+		const ctx = await getServerContext();
+		const headersList = await headers();
+		const origin = headersList.get("origin") ?? "";
+		const link = await employeesService.generatePasswordResetLink(
+			ctx,
+			employeeId,
+			origin,
+		);
+		return { link };
+	} catch (err) {
+		return toErr("[resetPasswordAction]", err);
+	}
 }
 
 export type ChangeEmailResult = { error: string } | { ok: true };
@@ -66,7 +85,7 @@ export async function changeOwnEmailAction(
 		revalidatePath("/", "layout");
 		return { ok: true };
 	} catch (err) {
-		return { error: err instanceof Error ? err.message : "Something went wrong" };
+		return toErr("[changeOwnEmailAction]", err);
 	}
 }
 
@@ -80,7 +99,7 @@ export async function changeOwnPasswordAction(
 		await employeesService.changeOwnPassword(ctx, newPassword);
 		return { ok: true };
 	} catch (err) {
-		return { error: err instanceof Error ? err.message : "Something went wrong" };
+		return toErr("[changeOwnPasswordAction]", err);
 	}
 }
 
@@ -91,7 +110,8 @@ export async function verifyPinAction(
 	try {
 		const ctx = await getServerContext();
 		return await employeesService.verifyPin(ctx, employeeId, pin);
-	} catch {
+	} catch (err) {
+		console.error("[verifyPinAction]", err);
 		return false;
 	}
 }
@@ -106,6 +126,6 @@ export async function changeOwnPinAction(
 		await employeesService.changeOwnPin(ctx, newPin);
 		return { ok: true };
 	} catch (err) {
-		return { error: err instanceof Error ? err.message : "Something went wrong" };
+		return toErr("[changeOwnPinAction]", err);
 	}
 }

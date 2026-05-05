@@ -262,14 +262,12 @@ export function CustomersTable({
 					const target = deleting;
 					setDeleteError(null);
 					startTransition(async () => {
-						try {
-							await deleteCustomerAction(target.id);
-							setDeleting(null);
-						} catch (err) {
-							setDeleteError(
-								err instanceof Error ? err.message : "Failed to delete",
-							);
+						const result = await deleteCustomerAction(target.id);
+						if ("error" in result) {
+							setDeleteError(result.error);
+							return;
 						}
+						setDeleting(null);
 					});
 				}}
 			/>

@@ -108,8 +108,22 @@ How it actually works:
    or quote it to support — the table needs one. Otherwise skip it. Bias
    toward skipping; codes are easy to add in a follow-up migration, hard
    to remove without breaking things downstream.
-
-## Tech stack (don't swap without discussion)
+8. **No CHECK constraints that mirror a TS enum.** If a column's allowed
+   values are owned by app code (a `lib/schemas/*` Zod enum or a TS
+   `as const` array driving a dropdown), do NOT add a matching
+   `CHECK (col IN (...))` to the column. Zod at the service boundary is
+   the gate. Why: the two lists drift — when the TS list is widened, the
+   DB CHECK rejects the new value with a 400, which Next.js then surfaces
+   to the user as a generic "An error occurred in the Server Components
+   render" 500 (the real message is redacted in prod). The user did
+   nothing wrong; they just picked an option the dropdown offered. Many
+   of these vocabularies are also slated to become brand-configurable
+   (see `docs/modules/12-config.md`), at which point a static CHECK is
+   actively wrong. **Do** still add CHECK constraints for: numeric ranges
+   (`amount >= 0`), cross-column invariants (`end_at > start_at`,
+   `block_title IS NOT NULL when is_time_block`), format regexes
+   (`subdomain ~ '^[a-z]…'`), and JSON shape. Those are invariants Zod
+   can't fully express across rows.
 
 - **Phase 1 (now):** Next.js 16 App Router (fullstack), TypeScript strict
 - **Phase 2+ (later):** Next.js 16 frontend + NestJS backend, pnpm workspace.
@@ -178,6 +192,39 @@ a Next import, that move breaks. Fix it before merging.
    `ConflictError`, `UnauthorizedError` (from `@/lib/errors`). Never
    `throw new Error('string')`. Wrappers catch and map to HTTP codes or
    action-return types — services don't care about transport.
+
+   **Action-side wrapping is mandatory.** Every "use server" write action
+   wraps its body in try/catch and returns `{ error: string } | T` (or
+   `{ error: string } | { ok: true }` for void actions). Use the shared
+   `toErr` helper at [lib/actions/_helpers.ts](lib/actions/_helpers.ts):
+
+   ```ts
+   import { toErr } from "@/lib/actions/_helpers";
+   export type FooActionResult = { error: string } | Foo;
+   export async function createFooAction(input: unknown): Promise<FooActionResult> {
+     try {
+       const ctx = await getServerContext();
+       const foo = await fooService.create(ctx, input);
+       revalidatePath(...);
+       return foo;
+     } catch (err) {
+       return toErr("[createFooAction]", err);
+     }
+   }
+   ```
+
+   Why this matters: Next.js sanitizes uncaught Server Action errors in
+   production to "An error occurred in the Server Components render. The
+   specific message is omitted...". Users hit this on 2026-05-05 (twice —
+   employee email conflict, and appointment lead_source CHECK violation)
+   and got stuck dialogs with no actionable info. Wrapping preserves the
+   real `ValidationError` / `ConflictError` message all the way to the
+   form. Auth surfaces are an explicit exception (login/signup keep
+   generic errors per `feedback_auth_generic_errors.md`).
+
+   Client side: every awaited action result must check `"error" in result`
+   before reading data fields, and surface `result.error` via
+   `setServerError(...)` or a toast.
 
 6. **No denormalized text columns.** The v2 schema intentionally removed
    `customer_name`, `employee_name`, `outlet_name` from child tables. Always

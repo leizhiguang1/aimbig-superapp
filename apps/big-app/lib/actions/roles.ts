@@ -1,25 +1,50 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toErr } from "@/lib/actions/_helpers";
 import { getServerContext } from "@/lib/context/server";
 import * as rolesService from "@/lib/services/roles";
 
-export async function createRoleAction(input: unknown) {
-	const ctx = await getServerContext();
-	const role = await rolesService.createRole(ctx, input);
-	revalidatePath("/o/[outlet]/employees/roles", "page");
-	return role;
+export type RoleActionResult =
+	| { error: string }
+	| Awaited<ReturnType<typeof rolesService.createRole>>;
+
+export async function createRoleAction(
+	input: unknown,
+): Promise<RoleActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const role = await rolesService.createRole(ctx, input);
+		revalidatePath("/o/[outlet]/employees/roles", "page");
+		return role;
+	} catch (err) {
+		return toErr("[createRoleAction]", err);
+	}
 }
 
-export async function updateRoleAction(id: string, input: unknown) {
-	const ctx = await getServerContext();
-	const role = await rolesService.updateRole(ctx, id, input);
-	revalidatePath("/o/[outlet]/employees/roles", "page");
-	return role;
+export async function updateRoleAction(
+	id: string,
+	input: unknown,
+): Promise<RoleActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const role = await rolesService.updateRole(ctx, id, input);
+		revalidatePath("/o/[outlet]/employees/roles", "page");
+		return role;
+	} catch (err) {
+		return toErr("[updateRoleAction]", err);
+	}
 }
 
-export async function deleteRoleAction(id: string) {
-	const ctx = await getServerContext();
-	await rolesService.deleteRole(ctx, id);
-	revalidatePath("/o/[outlet]/employees/roles", "page");
+export async function deleteRoleAction(
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await rolesService.deleteRole(ctx, id);
+		revalidatePath("/o/[outlet]/employees/roles", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteRoleAction]", err);
+	}
 }

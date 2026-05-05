@@ -34,7 +34,7 @@ type Props = {
 	salesOrderId: string;
 	soNumber: string;
 	orderTotal: number;
-	onSuccess?: (result: { rnNumber: string; amount: number }) => void;
+	onSuccess?: (result: { rnNumber: string | null; amount: number }) => void;
 	onError?: (message: string) => void;
 };
 
@@ -91,6 +91,11 @@ export function IssueRefundDialog({
 					refund_method: refundMethod,
 					notes: notes.trim() || undefined,
 				});
+				if ("error" in result) {
+					setSubmitError(result.error);
+					onError?.(result.error);
+					return;
+				}
 				onOpenChange(false);
 				onSuccess?.(result);
 				router.refresh();

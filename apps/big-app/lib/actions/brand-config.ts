@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toErr } from "@/lib/actions/_helpers";
 import {
 	type BrandConfigCategory,
 	isBrandConfigCategory,
@@ -20,30 +21,61 @@ function revalidate() {
 	revalidatePath("/o/[outlet]/sales", "page");
 }
 
-export async function createBrandConfigItemAction(input: unknown) {
-	const ctx = await getServerContext();
-	const row = await brandConfigService.createBrandConfigItem(ctx, input);
-	revalidate();
-	return row;
+export type BrandConfigItemActionResult =
+	| { error: string }
+	| Awaited<ReturnType<typeof brandConfigService.createBrandConfigItem>>;
+
+export async function createBrandConfigItemAction(
+	input: unknown,
+): Promise<BrandConfigItemActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const row = await brandConfigService.createBrandConfigItem(ctx, input);
+		revalidate();
+		return row;
+	} catch (err) {
+		return toErr("[createBrandConfigItemAction]", err);
+	}
 }
 
-export async function updateBrandConfigItemAction(id: string, input: unknown) {
-	const ctx = await getServerContext();
-	const row = await brandConfigService.updateBrandConfigItem(ctx, id, input);
-	revalidate();
-	return row;
+export async function updateBrandConfigItemAction(
+	id: string,
+	input: unknown,
+): Promise<BrandConfigItemActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const row = await brandConfigService.updateBrandConfigItem(ctx, id, input);
+		revalidate();
+		return row;
+	} catch (err) {
+		return toErr("[updateBrandConfigItemAction]", err);
+	}
 }
 
-export async function archiveBrandConfigItemAction(id: string) {
-	const ctx = await getServerContext();
-	await brandConfigService.archiveBrandConfigItem(ctx, id);
-	revalidate();
+export async function archiveBrandConfigItemAction(
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await brandConfigService.archiveBrandConfigItem(ctx, id);
+		revalidate();
+		return { ok: true };
+	} catch (err) {
+		return toErr("[archiveBrandConfigItemAction]", err);
+	}
 }
 
-export async function deleteBrandConfigItemAction(id: string) {
-	const ctx = await getServerContext();
-	await brandConfigService.deleteBrandConfigItem(ctx, id);
-	revalidate();
+export async function deleteBrandConfigItemAction(
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await brandConfigService.deleteBrandConfigItem(ctx, id);
+		revalidate();
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteBrandConfigItemAction]", err);
+	}
 }
 
 // Client-safe fetch of the active rows for a category. Used by dialogs that

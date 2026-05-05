@@ -61,6 +61,11 @@ export function RevertLastPaymentDialog({
 					salesOrderId,
 					appointmentRef,
 				);
+				if ("error" in result) {
+					setSubmitError(result.error);
+					onError?.(result.error);
+					return;
+				}
 				onOpenChange(false);
 				onSuccess?.(
 					`Reverted ${result.invoiceNo} · MYR ${money(result.amount)} returned to outstanding`,

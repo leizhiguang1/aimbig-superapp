@@ -82,12 +82,14 @@ export function ImageUpload({
 
 		setUploading(true);
 		try {
-			const { token, path } = await requestMediaUploadUrlAction({
+			const issued = await requestMediaUploadUrlAction({
 				entity,
 				entityId,
 				filename: file.name,
 				mime: file.type,
 			});
+			if ("error" in issued) throw new Error(issued.error);
+			const { token, path } = issued;
 			const supabase = createClient();
 			const { error: upErr } = await supabase.storage
 				.from("media")

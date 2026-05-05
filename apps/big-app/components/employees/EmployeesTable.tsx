@@ -216,6 +216,7 @@ export function EmployeesTable({ employees, roles, positions, outlets }: Props) 
 				searchPlaceholder="Search employees…"
 				emptyMessage="No employees yet. Click “New employee” to create one."
 				minWidth={1100}
+				fillHeight
 			/>
 			<EmployeeFormDialog
 				open={!!editing}
@@ -243,14 +244,12 @@ export function EmployeesTable({ employees, roles, positions, outlets }: Props) 
 					const target = deleting;
 					setActionError(null);
 					startTransition(async () => {
-						try {
-							await deleteEmployeeAction(target.id);
-							setDeleting(null);
-						} catch (err) {
-							setActionError(
-								err instanceof Error ? err.message : "Failed to delete",
-							);
+						const result = await deleteEmployeeAction(target.id);
+						if ("error" in result) {
+							setActionError(result.error);
+							return;
 						}
+						setDeleting(null);
 					});
 				}}
 			/>

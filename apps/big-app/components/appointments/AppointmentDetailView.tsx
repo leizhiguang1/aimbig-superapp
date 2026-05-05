@@ -129,6 +129,16 @@ export function AppointmentDetailView({
 		noteId: string;
 		content: string;
 	} | null>(null);
+	// Tabs are mounted lazily but kept mounted afterwards so in-progress drafts
+	// (case-note text, billing items, frontdesk message…) survive tab switches.
+	// A page refresh still wipes them.
+	const [visitedTabs, setVisitedTabs] = useState<Set<DetailTabKey>>(
+		() => new Set(["overview"]),
+	);
+	const goToTab = useCallback((key: DetailTabKey) => {
+		setActiveTab(key);
+		setVisitedTabs((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+	}, []);
 
 	const hasCustomer = !appointment.is_time_block && !!appointment.customer_id;
 	const isCaseBillingTab = activeTab === "casenotes" || activeTab === "billing";
@@ -260,90 +270,106 @@ export function AppointmentDetailView({
 						)}
 					</div>
 
-					<DetailTabs activeTab={activeTab} onChange={setActiveTab} />
+					<DetailTabs activeTab={activeTab} onChange={goToTab} />
 
-					{activeTab === "overview" && (
-						<div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,26%)_1fr] lg:items-start">
-							<div className="flex flex-col gap-3">
-								<BookingInfoCard
-									appointment={appointment}
-									lineItems={lineItems}
-									salesOrderId={salesOrderId}
-								/>
-								<StatusChangeLogCard entries={statusLog} />
+					{visitedTabs.has("overview") && (
+						<TabPanel hidden={activeTab !== "overview"}>
+							<div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,26%)_1fr] lg:items-start">
+								<div className="flex flex-col gap-3">
+									<BookingInfoCard
+										appointment={appointment}
+										lineItems={lineItems}
+										salesOrderId={salesOrderId}
+									/>
+									<StatusChangeLogCard entries={statusLog} />
+								</div>
+								<div className="flex min-w-0 flex-col gap-3">
+									<ConsumablesCard lineItems={lineItems} services={services} />
+									<HandsOnIncentivesCard
+										appointmentId={appointment.id}
+										lineItems={lineItems}
+										incentives={incentives}
+										allEmployees={allEmployees}
+										onToast={showToast}
+									/>
+								</div>
 							</div>
-							<div className="flex min-w-0 flex-col gap-3">
-								<ConsumablesCard lineItems={lineItems} services={services} />
-								<HandsOnIncentivesCard
-									appointmentId={appointment.id}
-									lineItems={lineItems}
-									incentives={incentives}
-									allEmployees={allEmployees}
-									onToast={showToast}
-								/>
-							</div>
-						</div>
+						</TabPanel>
 					)}
 
-					{activeTab === "casenotes" && (
-						<CaseNotesTab
-							appointment={appointment}
-							caseNotes={caseNotes}
-							medicalCertificates={medicalCertificates}
-							onToast={showToast}
-							pendingEdit={pendingEdit}
-							onPendingEditHandled={() => setPendingEdit(null)}
-						/>
+					{visitedTabs.has("casenotes") && (
+						<TabPanel hidden={activeTab !== "casenotes"}>
+							<CaseNotesTab
+								appointment={appointment}
+								caseNotes={caseNotes}
+								medicalCertificates={medicalCertificates}
+								onToast={showToast}
+								pendingEdit={pendingEdit}
+								onPendingEditHandled={() => setPendingEdit(null)}
+							/>
+						</TabPanel>
 					)}
 
-					{activeTab === "billing" && (
-						<BillingTab
-							appointmentId={appointment.id}
-							entries={lineItems}
-							services={services}
-							products={products}
-							taxes={taxes}
-							frontdeskMessage={appointment.frontdesk_message}
-							isLead={!appointment.is_time_block && !appointment.customer_id}
-							isBlock={appointment.is_time_block}
-							customer={appointment.customer}
-							billingSettings={billingSettings}
-						/>
+					{visitedTabs.has("billing") && (
+						<TabPanel hidden={activeTab !== "billing"}>
+							<BillingTab
+								appointmentId={appointment.id}
+								entries={lineItems}
+								services={services}
+								products={products}
+								taxes={taxes}
+								frontdeskMessage={appointment.frontdesk_message}
+								isLead={!appointment.is_time_block && !appointment.customer_id}
+								isBlock={appointment.is_time_block}
+								customer={appointment.customer}
+								billingSettings={billingSettings}
+							/>
+						</TabPanel>
 					)}
 
-					{activeTab === "dental-assessment" && (
-						<PlaceholderPanel title="Dental assessment" variant="tab" />
+					{visitedTabs.has("dental-assessment") && (
+						<TabPanel hidden={activeTab !== "dental-assessment"}>
+							<PlaceholderPanel title="Dental assessment" variant="tab" />
+						</TabPanel>
 					)}
 
-					{activeTab === "periodontal-charting" && (
-						<PlaceholderPanel title="Periodontal charting" variant="tab" />
+					{visitedTabs.has("periodontal-charting") && (
+						<TabPanel hidden={activeTab !== "periodontal-charting"}>
+							<PlaceholderPanel title="Periodontal charting" variant="tab" />
+						</TabPanel>
 					)}
 
-					{activeTab === "followup" && (
-						<FollowUpTab
-							appointment={appointment}
-							followUps={followUps}
-							allEmployees={allEmployees}
-							outletCode={outletCode}
-							editingFollowUpId={editingFollowUpId}
-							onStartEdit={setEditingFollowUpId}
-							onToast={showToast}
-						/>
+					{visitedTabs.has("followup") && (
+						<TabPanel hidden={activeTab !== "followup"}>
+							<FollowUpTab
+								appointment={appointment}
+								followUps={followUps}
+								allEmployees={allEmployees}
+								outletCode={outletCode}
+								editingFollowUpId={editingFollowUpId}
+								onStartEdit={setEditingFollowUpId}
+								onToast={showToast}
+							/>
+						</TabPanel>
 					)}
 
-					{activeTab === "camera" && (
-						<PlaceholderPanel title="Camera" variant="tab" />
+					{visitedTabs.has("camera") && (
+						<TabPanel hidden={activeTab !== "camera"}>
+							<PlaceholderPanel title="Camera" variant="tab" />
+						</TabPanel>
 					)}
 
-					{activeTab === "documents" && (
-						<DocumentsTab
-							appointment={appointment}
-							documents={customerDocuments}
-							letterTemplates={letterTemplates}
-							formTemplates={formTemplates}
-							formResponses={formResponses}
-							onToast={showToast}
-						/>
+					{visitedTabs.has("documents") && (
+						<TabPanel hidden={activeTab !== "documents"}>
+							<DocumentsTab
+								appointment={appointment}
+								documents={customerDocuments}
+								letterTemplates={letterTemplates}
+								formTemplates={formTemplates}
+								formResponses={formResponses}
+								onToast={showToast}
+							/>
+						</TabPanel>
 					)}
 				</div>
 
@@ -358,7 +384,7 @@ export function AppointmentDetailView({
 								currentAppointmentLineItems={lineItems}
 								onToast={showToast}
 								onEditNote={(noteId, content) => {
-									setActiveTab("casenotes");
+									goToTab("casenotes");
 									setPendingEdit({ noteId, content });
 								}}
 							/>
@@ -394,6 +420,20 @@ export function AppointmentDetailView({
 			)}
 
 			<AppointmentToastStack toasts={toasts} onDismiss={dismissToast} />
+		</div>
+	);
+}
+
+function TabPanel({
+	hidden,
+	children,
+}: {
+	hidden: boolean;
+	children: React.ReactNode;
+}) {
+	return (
+		<div hidden={hidden} aria-hidden={hidden}>
+			{children}
 		</div>
 	);
 }

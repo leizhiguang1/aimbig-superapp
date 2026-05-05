@@ -97,30 +97,35 @@ export function LetterEditorDialog({
 		const name = selectedTemplate?.name ?? "Letter";
 
 		startTransition(async () => {
-			try {
-				if (editDoc) {
-					await updateCustomerLetterAction(appointmentId, editDoc.id, editorHtml);
-					onToast("Letter saved", "success");
-					router.refresh();
-					onOpenChange(false);
-				} else {
-					const doc = await createCustomerLetterAction(appointmentId, {
-						customer_id: customerId,
-						appointment_id: appointmentId,
-						letter_template_id: selectedId,
-						file_name: name,
-						letter_body_html: editorHtml,
-					});
-					onToast("Letter created", "success");
-					onOpenChange(false);
-					router.refresh();
-					window.open(`/documents/letters/${doc.id}`, "_blank");
-				}
-			} catch (err) {
-				onToast(
-					err instanceof Error ? err.message : "Could not save letter",
-					"error",
+			if (editDoc) {
+				const result = await updateCustomerLetterAction(
+					appointmentId,
+					editDoc.id,
+					editorHtml,
 				);
+				if ("error" in result) {
+					onToast(result.error, "error");
+					return;
+				}
+				onToast("Letter saved", "success");
+				router.refresh();
+				onOpenChange(false);
+			} else {
+				const doc = await createCustomerLetterAction(appointmentId, {
+					customer_id: customerId,
+					appointment_id: appointmentId,
+					letter_template_id: selectedId,
+					file_name: name,
+					letter_body_html: editorHtml,
+				});
+				if ("error" in doc) {
+					onToast(doc.error, "error");
+					return;
+				}
+				onToast("Letter created", "success");
+				onOpenChange(false);
+				router.refresh();
+				window.open(`/documents/letters/${doc.id}`, "_blank");
 			}
 		});
 	};

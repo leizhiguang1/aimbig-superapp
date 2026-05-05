@@ -365,31 +365,30 @@ export function EmployeeFormDialog({
 
 	const onSubmit = form.handleSubmit((values) => {
 		startTransition(async () => {
-			try {
-				const {
-					password,
-					password_confirm: _pc,
-					has_existing_auth: _hea,
+			const {
+				password,
+				password_confirm: _pc,
+				has_existing_auth: _hea,
+				pin,
+				...rest
+			} = values;
+			let result: Awaited<ReturnType<typeof createEmployeeAction>>;
+			if (employee) {
+				result = await updateEmployeeAction(employee.id, rest, password, pin);
+			} else {
+				const pw = rest.web_login_enabled ? password : undefined;
+				result = await createEmployeeAction(
+					{ ...rest, id: pendingId ?? undefined },
+					pw,
 					pin,
-					...rest
-				} = values;
-				if (employee) {
-					await updateEmployeeAction(employee.id, rest, password, pin);
-				} else {
-					const pw = rest.web_login_enabled ? password : undefined;
-					await createEmployeeAction(
-						{ ...rest, id: pendingId ?? undefined },
-						pw,
-						pin,
-					);
-				}
-				savedRef.current = true;
-				onClose();
-			} catch (err) {
-				setServerError(
-					err instanceof Error ? err.message : "Something went wrong",
 				);
 			}
+			if ("error" in result) {
+				setServerError(result.error);
+				return;
+			}
+			savedRef.current = true;
+			onClose();
 		});
 	});
 

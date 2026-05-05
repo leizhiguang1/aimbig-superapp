@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toErr } from "@/lib/actions/_helpers";
 import type { BrandSettingKey } from "@/lib/brand-config/settings";
 import { getServerContext } from "@/lib/context/server";
 import * as brandSettingsService from "@/lib/services/brand-settings";
@@ -12,11 +13,19 @@ function revalidate() {
 	revalidatePath("/o/[outlet]/appointments", "page");
 }
 
-export async function setBrandSettingAction(key: string, value: unknown) {
-	const ctx = await getServerContext();
-	const validKey: BrandSettingKey =
-		brandSettingsService.assertBrandSettingKey(key);
-	// biome-ignore lint/suspicious/noExplicitAny: runtime-keyed set, typed at write
-	await brandSettingsService.setBrandSetting(ctx, validKey, value as any);
-	revalidate();
+export async function setBrandSettingAction(
+	key: string,
+	value: unknown,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		const validKey: BrandSettingKey =
+			brandSettingsService.assertBrandSettingKey(key);
+		// biome-ignore lint/suspicious/noExplicitAny: runtime-keyed set, typed at write
+		await brandSettingsService.setBrandSetting(ctx, validKey, value as any);
+		revalidate();
+		return { ok: true };
+	} catch (err) {
+		return toErr("[setBrandSettingAction]", err);
+	}
 }

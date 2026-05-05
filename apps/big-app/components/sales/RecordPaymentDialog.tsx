@@ -145,6 +145,11 @@ export function RecordPaymentDialog({
 					},
 					appointmentRef,
 				);
+				if ("error" in result) {
+					setSubmitError(result.error);
+					onError?.(result.error);
+					return;
+				}
 				onOpenChange(false);
 				const tail =
 					result.newOutstanding > 0.005

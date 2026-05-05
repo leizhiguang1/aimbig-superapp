@@ -344,10 +344,12 @@ export function AppointmentDialog({
 		(values) => {
 			startTransition(async () => {
 				try {
-					if (appointment) {
-						await updateAppointmentAction(appointment.id, values);
-					} else {
-						await createAppointmentAction(values);
+					const result = appointment
+						? await updateAppointmentAction(appointment.id, values)
+						: await createAppointmentAction(values);
+					if (result && "error" in result) {
+						setServerError(result.error);
+						return;
 					}
 					onSuccess?.();
 					onClose();

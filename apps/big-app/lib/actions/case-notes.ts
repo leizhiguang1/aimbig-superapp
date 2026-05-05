@@ -1,34 +1,55 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toErr } from "@/lib/actions/_helpers";
 import { getServerContext } from "@/lib/context/server";
 import * as caseNotesService from "@/lib/services/case-notes";
 
+export type CaseNoteActionResult =
+	| { error: string }
+	| Awaited<ReturnType<typeof caseNotesService.createCaseNote>>;
+
 export async function createCaseNoteAction(
-	appointmentId: string,
+	_appointmentId: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const note = await caseNotesService.createCaseNote(ctx, input);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return note;
+): Promise<CaseNoteActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const note = await caseNotesService.createCaseNote(ctx, input);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return note;
+	} catch (err) {
+		return toErr("[createCaseNoteAction]", err);
+	}
 }
 
 export async function updateCaseNoteAction(
-	appointmentId: string,
+	_appointmentId: string,
 	id: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const note = await caseNotesService.updateCaseNote(ctx, id, input);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return note;
+): Promise<CaseNoteActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const note = await caseNotesService.updateCaseNote(ctx, id, input);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return note;
+	} catch (err) {
+		return toErr("[updateCaseNoteAction]", err);
+	}
 }
 
-export async function deleteCaseNoteAction(appointmentId: string, id: string) {
-	const ctx = await getServerContext();
-	await caseNotesService.deleteCaseNote(ctx, id);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+export async function deleteCaseNoteAction(
+	_appointmentId: string,
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.deleteCaseNote(ctx, id);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteCaseNoteAction]", err);
+	}
 }
 
 // Customer-scoped variants — same service calls, revalidate customer path
@@ -36,79 +57,128 @@ export async function deleteCaseNoteAction(appointmentId: string, id: string) {
 export async function createCustomerCaseNoteAction(
 	customerId: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const note = await caseNotesService.createCaseNote(ctx, input);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
-	return note;
+): Promise<CaseNoteActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const note = await caseNotesService.createCaseNote(ctx, input);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return note;
+	} catch (err) {
+		return toErr("[createCustomerCaseNoteAction]", err);
+	}
 }
 
 export async function updateCustomerCaseNoteAction(
 	customerId: string,
 	id: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const note = await caseNotesService.updateCaseNote(ctx, id, input);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
-	return note;
+): Promise<CaseNoteActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const note = await caseNotesService.updateCaseNote(ctx, id, input);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return note;
+	} catch (err) {
+		return toErr("[updateCustomerCaseNoteAction]", err);
+	}
 }
 
-export async function cancelCaseNoteAction(appointmentId: string, id: string) {
-	const ctx = await getServerContext();
-	await caseNotesService.cancelCaseNote(ctx, id);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+export async function cancelCaseNoteAction(
+	_appointmentId: string,
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.cancelCaseNote(ctx, id);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[cancelCaseNoteAction]", err);
+	}
 }
 
-export async function revertCaseNoteAction(appointmentId: string, id: string) {
-	const ctx = await getServerContext();
-	await caseNotesService.revertCaseNote(ctx, id);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+export async function revertCaseNoteAction(
+	_appointmentId: string,
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.revertCaseNote(ctx, id);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[revertCaseNoteAction]", err);
+	}
 }
 
 export async function setCaseNotePinAction(
-	appointmentId: string,
+	_appointmentId: string,
 	id: string,
 	pinned: boolean,
-) {
-	const ctx = await getServerContext();
-	await caseNotesService.setCaseNotePin(ctx, id, pinned);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.setCaseNotePin(ctx, id, pinned);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[setCaseNotePinAction]", err);
+	}
 }
 
 export async function deleteCustomerCaseNoteAction(
 	customerId: string,
 	id: string,
-) {
-	const ctx = await getServerContext();
-	await caseNotesService.deleteCaseNote(ctx, id);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.deleteCaseNote(ctx, id);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteCustomerCaseNoteAction]", err);
+	}
 }
 
 export async function cancelCustomerCaseNoteAction(
 	customerId: string,
 	id: string,
-) {
-	const ctx = await getServerContext();
-	await caseNotesService.cancelCaseNote(ctx, id);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.cancelCaseNote(ctx, id);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[cancelCustomerCaseNoteAction]", err);
+	}
 }
 
 export async function revertCustomerCaseNoteAction(
 	customerId: string,
 	id: string,
-) {
-	const ctx = await getServerContext();
-	await caseNotesService.revertCaseNote(ctx, id);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.revertCaseNote(ctx, id);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[revertCustomerCaseNoteAction]", err);
+	}
 }
 
 export async function setCustomerCaseNotePinAction(
 	customerId: string,
 	id: string,
 	pinned: boolean,
-) {
-	const ctx = await getServerContext();
-	await caseNotesService.setCaseNotePin(ctx, id, pinned);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await caseNotesService.setCaseNotePin(ctx, id, pinned);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[setCustomerCaseNotePinAction]", err);
+	}
 }

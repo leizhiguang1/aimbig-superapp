@@ -155,6 +155,10 @@ export function PrintReceiptDialog({ open, paymentId, onOpenChange }: Props) {
 					customer_name: customerName,
 					remarks: beingPaymentOf,
 				});
+				if ("error" in updated) {
+					setSaveError(updated.error);
+					return;
+				}
 				setData(updated);
 				applyDataToForm(updated);
 				setEditing(false);

@@ -1,164 +1,224 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toErr } from "@/lib/actions/_helpers";
 import { getServerContext } from "@/lib/context/server";
 import * as lineItemsService from "@/lib/services/appointment-line-items";
+import type {
+	AppointmentLineItem,
+	AppointmentLineItemIncentive,
+} from "@/lib/services/appointment-line-items";
+import type { Appointment } from "@/lib/services/appointments";
 import * as appointmentsService from "@/lib/services/appointments";
+import type { Tables } from "@/lib/supabase/types";
 
-export async function createAppointmentAction(input: unknown) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.createAppointment(ctx, input);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	return appointment;
+export type AppointmentActionResult = { error: string } | Appointment;
+
+export async function createAppointmentAction(
+	input: unknown,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.createAppointment(ctx, input);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[createAppointmentAction]", err);
+	}
 }
 
-export async function updateAppointmentAction(id: string, input: unknown) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.updateAppointment(
-		ctx,
-		id,
-		input,
-	);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+export async function updateAppointmentAction(
+	id: string,
+	input: unknown,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.updateAppointment(ctx, id, input);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[updateAppointmentAction]", err);
+	}
 }
 
-export async function rescheduleAppointmentAction(id: string, input: unknown) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.rescheduleAppointment(
-		ctx,
-		id,
-		input,
-	);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	return appointment;
+export async function rescheduleAppointmentAction(
+	id: string,
+	input: unknown,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.rescheduleAppointment(ctx, id, input);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[rescheduleAppointmentAction]", err);
+	}
 }
 
-export async function setAppointmentStatusAction(id: string, input: unknown) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.setAppointmentStatus(
-		ctx,
-		id,
-		input,
-	);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+export async function setAppointmentStatusAction(
+	id: string,
+	input: unknown,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.setAppointmentStatus(ctx, id, input);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[setAppointmentStatusAction]", err);
+	}
 }
 
-export async function markAppointmentCompletedAction(id: string) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.markAppointmentCompleted(
-		ctx,
-		id,
-	);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+export async function markAppointmentCompletedAction(
+	id: string,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.markAppointmentCompleted(ctx, id);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[markAppointmentCompletedAction]", err);
+	}
 }
 
-export async function revertCompletedAppointmentAction(id: string) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.revertCompletedAppointment(
-		ctx,
-		id,
-	);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+export async function revertCompletedAppointmentAction(
+	id: string,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.revertCompletedAppointment(ctx, id);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[revertCompletedAppointmentAction]", err);
+	}
 }
 
-export async function setAppointmentTagsAction(id: string, input: unknown) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.setAppointmentTags(
-		ctx,
-		id,
-		input,
-	);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+export async function setAppointmentTagsAction(
+	id: string,
+	input: unknown,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.setAppointmentTags(ctx, id, input);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[setAppointmentTagsAction]", err);
+	}
 }
 
 export async function collectAppointmentPaymentAction(
 	id: string,
 	paidVia: string,
-) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.setAppointmentPayment(ctx, id, {
-		payment_status: "paid",
-		paid_via: paidVia,
-	});
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.setAppointmentPayment(ctx, id, {
+			payment_status: "paid",
+			paid_via: paidVia,
+		});
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[collectAppointmentPaymentAction]", err);
+	}
 }
 
-export async function undoAppointmentPaymentAction(id: string) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.setAppointmentPayment(ctx, id, {
-		payment_status: "unpaid",
-		paid_via: null,
-	});
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+export async function undoAppointmentPaymentAction(
+	id: string,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.setAppointmentPayment(ctx, id, {
+			payment_status: "unpaid",
+			paid_via: null,
+		});
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[undoAppointmentPaymentAction]", err);
+	}
 }
 
 export async function setAppointmentPaymentRemarkAction(
 	id: string,
 	remark: string | null,
-) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.setAppointmentPaymentRemark(
-		ctx,
-		id,
-		{ payment_remark: remark },
-	);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.setAppointmentPaymentRemark(ctx, id, {
+			payment_remark: remark,
+		});
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[setAppointmentPaymentRemarkAction]", err);
+	}
 }
 
 export async function setAppointmentFollowUpAction(
 	id: string,
 	followUp: string | null,
-) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.setAppointmentFollowUp(
-		ctx,
-		id,
-		{ follow_up: followUp },
-	);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return appointment;
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.setAppointmentFollowUp(ctx, id, {
+			follow_up: followUp,
+		});
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[setAppointmentFollowUpAction]", err);
+	}
 }
 
-export async function cancelAppointmentAction(id: string, reason: string) {
-	const ctx = await getServerContext();
-	const appointment = await appointmentsService.cancelAppointment(ctx, id, {
-		reason,
-	});
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	if (appointment.customer_id)
-		revalidatePath(`/o/[outlet]/customers/${appointment.customer_id}`, "page");
-	return appointment;
+export async function cancelAppointmentAction(
+	id: string,
+	reason: string,
+): Promise<AppointmentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const appointment = await appointmentsService.cancelAppointment(ctx, id, { reason });
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		if (appointment.customer_id)
+			revalidatePath(`/o/[outlet]/customers/${appointment.customer_id}`, "page");
+		return appointment;
+	} catch (err) {
+		return toErr("[cancelAppointmentAction]", err);
+	}
 }
+
+export type ConvertLeadResult =
+	| { error: string }
+	| { customer: Tables<"customers">; linkedAppointments: number };
 
 export async function convertLeadToCustomerAction(
 	leadAppointmentId: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const result = await appointmentsService.convertLeadToCustomer(
-		ctx,
-		leadAppointmentId,
-		input,
-	);
-	revalidatePath("/o/[outlet]/appointments", "page");
-	revalidatePath("/o/[outlet]/customers", "page");
-	return result;
+): Promise<ConvertLeadResult> {
+	try {
+		const ctx = await getServerContext();
+		const result = await appointmentsService.convertLeadToCustomer(
+			ctx,
+			leadAppointmentId,
+			input,
+		);
+		revalidatePath("/o/[outlet]/appointments", "page");
+		revalidatePath("/o/[outlet]/customers", "page");
+		return result;
+	} catch (err) {
+		return toErr("[convertLeadToCustomerAction]", err);
+	}
 }
 
 // Saves the shared "Message to frontdesk" shown in BOTH the Billing tab
@@ -168,14 +228,19 @@ export async function convertLeadToCustomerAction(
 export async function saveFrontdeskMessageAction(
 	id: string,
 	message: string | null,
-) {
-	const ctx = await getServerContext();
-	const { error } = await ctx.db
-		.from("appointments")
-		.update({ frontdesk_message: message })
-		.eq("id", id);
-	if (error) throw new Error(error.message);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		const { error } = await ctx.db
+			.from("appointments")
+			.update({ frontdesk_message: message })
+			.eq("id", id);
+		if (error) throw new Error(error.message);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[saveFrontdeskMessageAction]", err);
+	}
 }
 
 // ─── Appointment line items ─────────────────────────────────────────────────
@@ -185,89 +250,121 @@ export async function listLineItemsAction(appointmentId: string) {
 	return lineItemsService.listLineItemsForAppointment(ctx, appointmentId);
 }
 
+export type LineItemActionResult = { error: string } | AppointmentLineItem;
+
 export async function createLineItemAction(
-	appointmentId: string,
+	_appointmentId: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const entry = await lineItemsService.createLineItem(ctx, input);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return entry;
+): Promise<LineItemActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const entry = await lineItemsService.createLineItem(ctx, input);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return entry;
+	} catch (err) {
+		return toErr("[createLineItemAction]", err);
+	}
 }
 
+export type LineItemsBulkActionResult = { error: string } | AppointmentLineItem[];
+
 export async function createLineItemsBulkAction(
-	appointmentId: string,
+	_appointmentId: string,
 	inputs: unknown[],
-) {
-	const ctx = await getServerContext();
-	const entries = await lineItemsService.createLineItemsBulk(ctx, inputs);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return entries;
+): Promise<LineItemsBulkActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const entries = await lineItemsService.createLineItemsBulk(ctx, inputs);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return entries;
+	} catch (err) {
+		return toErr("[createLineItemsBulkAction]", err);
+	}
 }
 
 export async function updateLineItemAction(
-	appointmentId: string,
+	_appointmentId: string,
 	id: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const entry = await lineItemsService.updateLineItem(ctx, id, input);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return entry;
+): Promise<LineItemActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const entry = await lineItemsService.updateLineItem(ctx, id, input);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return entry;
+	} catch (err) {
+		return toErr("[updateLineItemAction]", err);
+	}
 }
 
-export async function deleteLineItemAction(appointmentId: string, id: string) {
-	const ctx = await getServerContext();
-	await lineItemsService.deleteLineItem(ctx, id);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+export async function deleteLineItemAction(
+	_appointmentId: string,
+	id: string,
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await lineItemsService.deleteLineItem(ctx, id);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteLineItemAction]", err);
+	}
 }
 
 export async function cancelBillingForAppointmentAction(
-	currentAppointmentId: string,
+	_currentAppointmentId: string,
 	targetAppointmentId: string,
-) {
-	const ctx = await getServerContext();
-	await lineItemsService.cancelLineItemsForAppointment(
-		ctx,
-		targetAppointmentId,
-	);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await lineItemsService.cancelLineItemsForAppointment(ctx, targetAppointmentId);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[cancelBillingForAppointmentAction]", err);
+	}
 }
 
 export async function revertBillingForAppointmentAction(
-	currentAppointmentId: string,
+	_currentAppointmentId: string,
 	targetAppointmentId: string,
-) {
-	const ctx = await getServerContext();
-	await lineItemsService.revertLineItemsForAppointment(
-		ctx,
-		targetAppointmentId,
-	);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await lineItemsService.revertLineItemsForAppointment(ctx, targetAppointmentId);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[revertBillingForAppointmentAction]", err);
+	}
 }
 
 export async function cancelBillingForCustomerAction(
 	customerId: string,
 	targetAppointmentId: string,
-) {
-	const ctx = await getServerContext();
-	await lineItemsService.cancelLineItemsForAppointment(
-		ctx,
-		targetAppointmentId,
-	);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await lineItemsService.cancelLineItemsForAppointment(ctx, targetAppointmentId);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[cancelBillingForCustomerAction]", err);
+	}
 }
 
 export async function revertBillingForCustomerAction(
 	customerId: string,
 	targetAppointmentId: string,
-) {
-	const ctx = await getServerContext();
-	await lineItemsService.revertLineItemsForAppointment(
-		ctx,
-		targetAppointmentId,
-	);
-	revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await lineItemsService.revertLineItemsForAppointment(ctx, targetAppointmentId);
+		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[revertBillingForCustomerAction]", err);
+	}
 }
 
 export async function listPastLineItemsForCustomerAction(customerId: string) {
@@ -277,39 +374,57 @@ export async function listPastLineItemsForCustomerAction(customerId: string) {
 
 // ─── Incentives (hands-on attribution) ──────────────────────────────────────
 
+export type LineItemIncentiveActionResult =
+	| { error: string }
+	| AppointmentLineItemIncentive;
+
 export async function createLineItemIncentiveAction(
-	appointmentId: string,
+	_appointmentId: string,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const row = await lineItemsService.createIncentive(ctx, input);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return row;
+): Promise<LineItemIncentiveActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const row = await lineItemsService.createIncentive(ctx, input);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return row;
+	} catch (err) {
+		return toErr("[createLineItemIncentiveAction]", err);
+	}
 }
 
 export async function deleteLineItemIncentiveAction(
-	appointmentId: string,
+	_appointmentId: string,
 	id: string,
-) {
-	const ctx = await getServerContext();
-	await lineItemsService.deleteIncentive(ctx, id);
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		await lineItemsService.deleteIncentive(ctx, id);
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteLineItemIncentiveAction]", err);
+	}
 }
 
 export async function saveAllocationsForAppointmentAction(
-	appointmentId: string,
+	_appointmentId: string,
 	allocations: {
 		lineItemId: string;
 		employees: { employee_id: string; percent: number }[];
 	}[],
-) {
-	const ctx = await getServerContext();
-	for (const a of allocations) {
-		await lineItemsService.replaceIncentivesForLineItem(
-			ctx,
-			a.lineItemId,
-			a.employees,
-		);
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		for (const a of allocations) {
+			await lineItemsService.replaceIncentivesForLineItem(
+				ctx,
+				a.lineItemId,
+				a.employees,
+			);
+		}
+		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[saveAllocationsForAppointmentAction]", err);
 	}
-	revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 }

@@ -78,7 +78,6 @@ export function WhatsappClient({ outletId }: { outletId: string }) {
 		};
 		const onChatsUpsert = (updatedChats: FormattedChat[]) => {
 			setChats(updatedChats);
-			if (updatedChats.length > 0) setAppState("connected");
 		};
 		const onProfilePicsUpdate = (pics: ProfilePicsUpdate) => {
 			setProfilePics((prev) => ({ ...prev, ...pics }));

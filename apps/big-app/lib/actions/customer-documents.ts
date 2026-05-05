@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toErr } from "@/lib/actions/_helpers";
 import { getServerContext } from "@/lib/context/server";
+import type { CustomerLetterInput } from "@/lib/schemas/customer-documents";
 import * as customerDocumentsService from "@/lib/services/customer-documents";
 import {
 	buildCustomerDocumentPath,
@@ -9,7 +11,6 @@ import {
 	createSignedUploadUrl,
 	deleteObject,
 } from "@/lib/services/storage";
-import type { CustomerLetterInput } from "@/lib/schemas/customer-documents";
 
 export async function requestCustomerDocumentUploadUrlAction(args: {
 	customerId: string;
@@ -25,15 +26,23 @@ export async function requestCustomerDocumentUploadUrlAction(args: {
 	return createSignedUploadUrl(ctx, "documents", path);
 }
 
+export type CustomerDocumentActionResult =
+	| { error: string }
+	| Awaited<ReturnType<typeof customerDocumentsService.createCustomerDocument>>;
+
 export async function createCustomerDocumentAction(
 	appointmentId: string | null,
 	input: unknown,
-) {
-	const ctx = await getServerContext();
-	const doc = await customerDocumentsService.createCustomerDocument(ctx, input);
-	revalidatePath("/o/[outlet]/customers/[id]", "page");
-	if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return doc;
+): Promise<CustomerDocumentActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const doc = await customerDocumentsService.createCustomerDocument(ctx, input);
+		revalidatePath("/o/[outlet]/customers/[id]", "page");
+		if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return doc;
+	} catch (err) {
+		return toErr("[createCustomerDocumentAction]", err);
+	}
 }
 
 export async function getCustomerDocumentSignedUrlAction(
@@ -47,42 +56,59 @@ export async function getCustomerDocumentSignedUrlAction(
 export async function deleteCustomerDocumentAction(
 	appointmentId: string | null,
 	id: string,
-) {
-	const ctx = await getServerContext();
-	const { storage_path } =
-		await customerDocumentsService.deleteCustomerDocument(ctx, id);
-	if (storage_path) {
-		await deleteObject(ctx, "documents", storage_path).catch(() => {
-			// orphan blob — the row is already gone, a cleanup pass can sweep later
-		});
+): Promise<{ error: string } | { ok: true }> {
+	try {
+		const ctx = await getServerContext();
+		const { storage_path } =
+			await customerDocumentsService.deleteCustomerDocument(ctx, id);
+		if (storage_path) {
+			await deleteObject(ctx, "documents", storage_path).catch(() => {
+				// orphan blob — the row is already gone, a cleanup pass can sweep later
+			});
+		}
+		revalidatePath("/o/[outlet]/customers/[id]", "page");
+		if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return { ok: true };
+	} catch (err) {
+		return toErr("[deleteCustomerDocumentAction]", err);
 	}
-	revalidatePath("/o/[outlet]/customers/[id]", "page");
-	if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 }
+
+export type CustomerLetterActionResult =
+	| { error: string }
+	| Awaited<ReturnType<typeof customerDocumentsService.createCustomerLetter>>;
 
 export async function createCustomerLetterAction(
 	appointmentId: string | null,
 	input: CustomerLetterInput,
-) {
-	const ctx = await getServerContext();
-	const doc = await customerDocumentsService.createCustomerLetter(ctx, input);
-	revalidatePath("/o/[outlet]/customers/[id]", "page");
-	if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return doc;
+): Promise<CustomerLetterActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const doc = await customerDocumentsService.createCustomerLetter(ctx, input);
+		revalidatePath("/o/[outlet]/customers/[id]", "page");
+		if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return doc;
+	} catch (err) {
+		return toErr("[createCustomerLetterAction]", err);
+	}
 }
 
 export async function updateCustomerLetterAction(
 	appointmentId: string | null,
 	id: string,
 	letter_body_html: string,
-) {
-	const ctx = await getServerContext();
-	const doc = await customerDocumentsService.updateCustomerLetter(
-		ctx,
-		id,
-		letter_body_html,
-	);
-	revalidatePath("/o/[outlet]/customers/[id]", "page");
-	if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
-	return doc;
+): Promise<CustomerLetterActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const doc = await customerDocumentsService.updateCustomerLetter(
+			ctx,
+			id,
+			letter_body_html,
+		);
+		revalidatePath("/o/[outlet]/customers/[id]", "page");
+		if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
+		return doc;
+	} catch (err) {
+		return toErr("[updateCustomerLetterAction]", err);
+	}
 }
