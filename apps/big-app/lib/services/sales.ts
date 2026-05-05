@@ -117,6 +117,7 @@ export async function collectAppointmentPayment(
 	await assertAppointmentInBrand(ctx, appointmentId);
 	const parsed: CollectPaymentInput = collectPaymentInputSchema.parse(input);
 	await assertLineDiscountCaps(ctx, parsed.items);
+	await assertRequiredFullAllocations(ctx, parsed.items, parsed.allocations);
 	const normalizedPayments = await assertPaymentFields(ctx, parsed.payments);
 	// Only forward p_sold_at when the operator actually chose a backdate —
 	// the RPC column is timestamptz and rejects "" with
@@ -182,6 +183,7 @@ export async function collectWalkInSale(
 	await assertOutletInBrand(ctx, parsed.outlet_id);
 	await assertCustomerInBrand(ctx, parsed.customer_id);
 	await assertLineDiscountCaps(ctx, parsed.items);
+	await assertRequiredFullAllocations(ctx, parsed.items, parsed.allocations);
 	const normalizedPayments = await assertPaymentFields(ctx, parsed.payments);
 	const { data, error } = await ctx.db.rpc("collect_walkin_sale", {
 		p_customer_id: parsed.customer_id,
@@ -235,6 +237,64 @@ export async function collectWalkInSale(
 	if (!data)
 		throw new ValidationError("Collect walk-in sale returned no result");
 	return data as unknown as CollectPaymentResult;
+}
+
+// Server guard for the "Full payment required" rule. The UI's `requiresFullFor`
+// disables submit when a required-full line is under-allocated; this is the
+// matching server-side check so a non-UI client can't bypass it. Threshold is
+// pre-tax (qty*price - discount) — looser than the UI's tax-inclusive net, but
+// catches realistic bypasses (zero/near-zero allocations on required lines).
+async function assertRequiredFullAllocations(
+	ctx: Context,
+	items: CollectPaymentItem[],
+	allocations:
+		| { item_index: number; amount: number }[]
+		| null
+		| undefined,
+): Promise<void> {
+	if (!allocations || allocations.length === 0) return;
+	const serviceIds = Array.from(
+		new Set(
+			items.map((i) => i.service_id).filter((id): id is string => id != null),
+		),
+	);
+	const allowMap = new Map<string, boolean>();
+	if (serviceIds.length > 0) {
+		const { data, error } = await ctx.db
+			.from("services")
+			.select("id, allow_redemption_without_payment")
+			.eq("brand_id", assertBrandId(ctx))
+			.in("id", serviceIds);
+		if (error) throw new ValidationError(error.message);
+		for (const row of data ?? []) {
+			allowMap.set(row.id, !!row.allow_redemption_without_payment);
+		}
+	}
+	const allocByIndex = new Map<number, number>();
+	for (const a of allocations) {
+		allocByIndex.set(
+			a.item_index,
+			(allocByIndex.get(a.item_index) ?? 0) + a.amount,
+		);
+	}
+	items.forEach((item, idx) => {
+		const requiresFull =
+			item.item_type !== "service" ||
+			!item.service_id ||
+			!allowMap.get(item.service_id);
+		if (!requiresFull) return;
+		const lineNet = Math.max(
+			0,
+			item.quantity * item.unit_price - item.discount,
+		);
+		if (lineNet === 0) return;
+		const allocated = allocByIndex.get(idx) ?? 0;
+		if (allocated + 0.005 < lineNet) {
+			throw new ValidationError(
+				`"${item.item_name}" requires full payment (RM ${lineNet.toFixed(2)}); allocated only RM ${allocated.toFixed(2)}.`,
+			);
+		}
+	});
 }
 
 // Enforces per-service discount caps on a collect-payment payload. The UI

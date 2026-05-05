@@ -460,7 +460,9 @@ behaviour, which causes the "numbers jumping under my cursor" trap.
 5. **Required-full lines must be fully covered on partial pay.** If any
    required-full line has an allocation below its own net while
    `totalPaid < total`, submit is blocked. The Auto-allocate button exists
-   exactly to fix this.
+   exactly to fix this. Server-side mirror lives in
+   `assertRequiredFullAllocations` in [lib/services/sales.ts](../../lib/services/sales.ts)
+   — a non-UI client cannot bypass this rule.
 6. **Allocation sum equals paid amount.** On partial pay, the sum of the
    per-line Payment Allocation inputs must equal `totalPaid` exactly
    (±0.01). A running "Allocated / Paid" banner + the Auto-allocate helper

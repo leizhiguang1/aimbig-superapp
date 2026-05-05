@@ -71,7 +71,7 @@ export function RosterGrid({ outletId, weekStart, employees, shifts }: Props) {
 			<div className="overflow-x-auto rounded-md border bg-card">
 				<table className="w-full border-collapse text-sm">
 					<thead>
-						<tr className="border-b bg-muted/40">
+						<tr className="border-b bg-muted">
 							<th className="sticky left-0 z-10 min-w-44 border-r bg-muted px-3 py-2.5 text-left font-semibold text-muted-foreground text-xs uppercase tracking-wide">
 								Employee
 							</th>

@@ -172,7 +172,7 @@ export function ListView({
 									})}
 								</colgroup>
 								<thead>
-									<tr className="border-b bg-muted/20 text-left text-[11px] text-muted-foreground uppercase tracking-wide">
+									<tr className="border-b bg-muted text-left text-[11px] text-muted-foreground uppercase tracking-wide">
 										<th className="px-3 py-2">No.</th>
 										{displayKeys.map((k) => (
 											<th key={k} className="px-3 py-2">

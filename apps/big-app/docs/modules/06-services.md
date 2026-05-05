@@ -139,7 +139,7 @@ Inline CRUD list opened from a "Manage Categories" button on the services page. 
 | other_fees | numeric(10,2) | Yes | Default 0, CHECK ≥ 0. Additional fee beyond selling price. |
 | discount_cap | numeric | No | Nullable. Null = no cap. Range 0–100 (percent). |
 <!-- full_payment column removed in migration 0051_services_drop_full_payment (2026-04-17); the partial-payment rule now reads `allow_redemption_without_payment` only. -->
-| allow_redemption_without_payment | bool | Yes | Default true. |
+| allow_redemption_without_payment | bool | Yes | Default false (full payment required). Flipped from `true` → `false` on 2026-05-06 to match the form default, the kumoDent norm, and the spec text above. Existing rows backfilled from the kumoDent reference (75 false / 31 true). Migration: `services_full_payment_default_and_backfill`. |
 | allow_cash_price_range | bool | Yes | Default false. |
 | incentive_type | text | No | Holdover free-text column; not referenced by new code. |
 | ~~consumables~~ | ~~text~~ | — | **Dropped 2026-04-17.** Replaced by the `service_inventory_items` junction (service_id, inventory_item_id, default_quantity). Edited via the Consumables & Medications section of `ServiceForm`. |

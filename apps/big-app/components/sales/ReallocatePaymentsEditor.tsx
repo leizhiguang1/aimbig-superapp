@@ -163,7 +163,7 @@ export function ReallocatePaymentsEditor({
 			<div className="overflow-x-auto">
 				<table className="w-full min-w-[720px] text-sm">
 					<thead>
-						<tr className="border-b bg-muted/50">
+						<tr className="border-b bg-muted">
 							<th className="px-3 py-2 text-left font-medium text-muted-foreground">
 								Line
 							</th>

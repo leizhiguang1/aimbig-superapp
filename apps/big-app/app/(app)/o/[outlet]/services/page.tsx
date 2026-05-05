@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { ServicesPageShell } from '@/components/services/ServicesPageShell'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
 import { ServicesContent } from './services-content'
 
@@ -11,9 +12,11 @@ export default function ServicesPage() {
           Treatment catalog. Used as billing line items after a visit.
         </p>
       </div>
-      <Suspense fallback={<TableSkeleton columns={8} rows={8} showHeader={false} />}>
-        <ServicesContent />
-      </Suspense>
+      <ServicesPageShell>
+        <Suspense fallback={<TableSkeleton columns={8} rows={8} showHeader={false} />}>
+          <ServicesContent />
+        </Suspense>
+      </ServicesPageShell>
     </div>
   )
 }

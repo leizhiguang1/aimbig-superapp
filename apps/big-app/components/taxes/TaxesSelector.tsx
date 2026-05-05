@@ -34,7 +34,7 @@ export function TaxesSelector({ taxes, value, onChange }: Props) {
 	return (
 		<div className="overflow-hidden rounded-md border">
 			<table className="w-full text-sm">
-				<thead className="bg-muted/50">
+				<thead className="bg-muted">
 					<tr>
 						<th className="w-10 px-2 py-1.5" />
 						<th className="px-2 py-1.5 text-left font-medium">Name</th>

@@ -87,7 +87,7 @@ export function CustomerProductsTab({ lineItems }: Props) {
 		<div className="rounded-xl border bg-card shadow-sm">
 			<table className="w-full text-[13px]">
 				<thead>
-					<tr className="border-b bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
+					<tr className="border-b bg-muted text-[11px] uppercase tracking-wide text-muted-foreground">
 						<th className="px-3 py-2 text-left font-medium">Product</th>
 						<th className="px-3 py-2 text-right font-medium">Quantity</th>
 						<th className="px-3 py-2 text-right font-medium">Visits</th>

@@ -89,7 +89,7 @@ export function KBServicesSection({ services, onChange, dbServices = [] }: Props
 
 			<div className="overflow-hidden rounded-md border">
 				<table className="w-full text-sm">
-					<thead className="bg-muted/40 text-xs uppercase tracking-wide">
+					<thead className="bg-muted text-xs uppercase tracking-wide">
 						<tr>
 							<th className="px-3 py-2 text-left font-medium">Service</th>
 							<th className="px-3 py-2 text-left font-medium">Code</th>

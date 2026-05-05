@@ -1,12 +1,21 @@
 "use client";
 
-import { Check, ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { Check, ImageIcon, Pencil, Trash2, X } from "lucide-react";
 import { useState, useTransition } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { deleteServiceAction } from "@/lib/actions/services";
-import type { ServiceType } from "@/lib/schemas/services";
+import {
+	SERVICE_TYPE_LABELS,
+	type ServiceType,
+} from "@/lib/schemas/services";
 import type {
 	ServiceCategory,
 	ServiceWithCategory,
@@ -26,10 +35,17 @@ const TYPE_SHORT: Record<ServiceType, string> = {
 	non_retail: "S (NR)",
 };
 
+const TYPE_VARIANT: Record<ServiceType, "info" | "warning"> = {
+	retail: "info",
+	non_retail: "warning",
+};
+
 function formatDuration(minutes: number): string {
 	const h = Math.floor(minutes / 60);
 	const m = minutes % 60;
-	return `${String(h).padStart(2, "0")} Hour(s) ${String(m).padStart(2, "0")} Minute(s)`;
+	if (h === 0) return `${m}min`;
+	if (m === 0) return `${h}H`;
+	return `${h}H ${m}min`;
 }
 
 export function ServicesTable({
@@ -97,11 +113,24 @@ export function ServicesTable({
 			header: "Type",
 			sortable: true,
 			sortValue: (s) => s.type,
-			cell: (s) => (
-				<span className="text-muted-foreground">
-					{TYPE_SHORT[s.type as ServiceType] ?? s.type}
-				</span>
-			),
+			cell: (s) => {
+				const t = s.type as ServiceType;
+				const variant = TYPE_VARIANT[t];
+				const label = SERVICE_TYPE_LABELS[t];
+				if (!variant || !label) {
+					return <span className="text-muted-foreground">{s.type}</span>;
+				}
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Badge variant={variant} className="font-mono">
+								{TYPE_SHORT[t]}
+							</Badge>
+						</TooltipTrigger>
+						<TooltipContent>Service ({label})</TooltipContent>
+					</Tooltip>
+				);
+			},
 		},
 		{
 			key: "category",
@@ -194,12 +223,11 @@ export function ServicesTable({
 			key: "full_payment",
 			header: "Full Payment?",
 			align: "center",
-			// Derived from allow_redemption_without_payment — if a customer
-			// can redeem without paying in full, the line doesn't require
-			// full payment at Collection.
+			sortable: true,
+			sortValue: (s) => (s.allow_redemption_without_payment ? 0 : 1),
 			cell: (s) =>
 				s.allow_redemption_without_payment ? (
-					dash
+					<X className="mx-auto size-4 text-destructive" />
 				) : (
 					<Check className="mx-auto size-4 text-primary" />
 				),

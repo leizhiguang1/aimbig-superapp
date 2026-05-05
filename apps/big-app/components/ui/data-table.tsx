@@ -177,7 +177,7 @@ export function DataTable<T>({
 				>
 					<thead
 						className={cn(
-							"border-b border-accent bg-accent/60 text-accent-foreground",
+							"border-b border-accent text-accent-foreground",
 							fillHeight && "sticky top-0 z-10",
 						)}
 					>
@@ -194,7 +194,7 @@ export function DataTable<T>({
 									<th
 										key={col.key}
 										className={cn(
-											"px-3 py-2 font-medium",
+											"bg-accent px-3 py-2 font-medium",
 											alignCls,
 											col.headerClassName,
 										)}

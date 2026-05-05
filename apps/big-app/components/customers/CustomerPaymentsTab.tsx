@@ -366,7 +366,7 @@ function OutstandingView({
 			<div className="rounded-xl border bg-card shadow-sm">
 				<table className="w-full text-[13px]">
 					<thead>
-						<tr className="border-b bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
+						<tr className="border-b bg-muted text-[11px] uppercase tracking-wide text-muted-foreground">
 							<th className="px-3 py-2 text-left font-medium">Date</th>
 							<th className="px-3 py-2 text-left font-medium">Sales Order #</th>
 							<th className="px-3 py-2 text-right font-medium">Sales</th>
