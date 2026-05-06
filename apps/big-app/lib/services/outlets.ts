@@ -2,6 +2,7 @@ import type { Context } from "@/lib/context/types";
 import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import {
 	outletCreateSchema,
+	outletTimezoneSchema,
 	outletUpdateSchema,
 	roomInputSchema,
 } from "@/lib/schemas/outlets";
@@ -142,6 +143,23 @@ export async function updateOutlet(
 		.single();
 	if (error) throw new ValidationError(error.message);
 	if (!data) throw new NotFoundError(`Outlet ${id} not found`);
+	return data;
+}
+
+export async function setOutletTimezone(
+	ctx: Context,
+	input: unknown,
+): Promise<Outlet> {
+	const parsed = outletTimezoneSchema.parse(input);
+	const { data, error } = await ctx.db
+		.from("outlets")
+		.update({ timezone: parsed.timezone })
+		.eq("id", parsed.outlet_id)
+		.eq("brand_id", assertBrandId(ctx))
+		.select("*")
+		.single();
+	if (error) throw new ValidationError(error.message);
+	if (!data) throw new NotFoundError(`Outlet ${parsed.outlet_id} not found`);
 	return data;
 }
 

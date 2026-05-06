@@ -48,13 +48,6 @@ export async function updateBrand(
 			// subdomain is intentionally NOT updated here. Renames go through the
 			// dedicated rename flow in PR 4 (cooldown + history checks). The brand
 			// settings form shows it as read-only until then.
-			registered_name: nullable(parsed.registered_name),
-			registration_number: nullable(parsed.registration_number),
-			tax_id: nullable(parsed.tax_id),
-			address: nullable(parsed.address),
-			email: nullable(parsed.email),
-			website: nullable(parsed.website),
-			tagline: nullable(parsed.tagline),
 		})
 		.eq("id", ctx.brandId)
 		.select("*")

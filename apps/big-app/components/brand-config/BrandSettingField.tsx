@@ -1,7 +1,7 @@
 "use client";
 
-import { Info } from "lucide-react";
-import { useState, useTransition } from "react";
+import { Check, Info, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,6 +28,7 @@ type Props = {
 	settingKey: BrandSettingKey;
 	value: unknown;
 	layout?: "row" | "stacked";
+	disabled?: boolean;
 };
 
 // Renders the right control for a setting, driven by the registry's `input`
@@ -37,21 +38,36 @@ export function BrandSettingField({
 	settingKey,
 	value,
 	layout = "row",
+	disabled = false,
 }: Props) {
 	const def = getSettingDef(settingKey);
 	const [local, setLocal] = useState<unknown>(value);
 	const [pending, startTransition] = useTransition();
 	const [error, setError] = useState<string | null>(null);
+	const [savedAt, setSavedAt] = useState<number | null>(null);
+	const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const locked = disabled || pending;
+
+	useEffect(
+		() => () => {
+			if (savedTimer.current) clearTimeout(savedTimer.current);
+		},
+		[],
+	);
 
 	const commit = (next: unknown) => {
+		if (disabled) return;
 		setLocal(next);
 		setError(null);
 		startTransition(async () => {
-			try {
-				await setBrandSettingAction(settingKey, next);
-			} catch (err) {
-				setError(err instanceof Error ? err.message : "Save failed");
+			const result = await setBrandSettingAction(settingKey, next);
+			if (result && "error" in result) {
+				setError(result.error);
+				return;
 			}
+			if (savedTimer.current) clearTimeout(savedTimer.current);
+			setSavedAt(Date.now());
+			savedTimer.current = setTimeout(() => setSavedAt(null), 2500);
 		});
 	};
 
@@ -61,7 +77,7 @@ export function BrandSettingField({
 				return (
 					<Switch
 						checked={Boolean(local)}
-						disabled={pending}
+						disabled={locked}
 						onCheckedChange={commit}
 					/>
 				);
@@ -73,6 +89,7 @@ export function BrandSettingField({
 						min={def.input.min}
 						max={def.input.max}
 						step={def.input.step ?? 1}
+						disabled={locked}
 						className="w-32"
 						onChange={(e) => {
 							const v = e.target.value;
@@ -89,7 +106,7 @@ export function BrandSettingField({
 				return (
 					<Select
 						value={String(local)}
-						disabled={pending}
+						disabled={locked}
 						onValueChange={(v) => commit(v)}
 					>
 						<SelectTrigger className="w-48">
@@ -109,6 +126,7 @@ export function BrandSettingField({
 					<Input
 						value={typeof local === "string" ? local : ""}
 						placeholder={def.input.placeholder}
+						disabled={locked}
 						onChange={(e) => setLocal(e.target.value)}
 						onBlur={() => commit(local)}
 						className="w-64"
@@ -122,9 +140,30 @@ export function BrandSettingField({
 			<span className="text-muted-foreground text-xs">{def.input.unit}</span>
 		) : null;
 
+	const status = (() => {
+		if (error) return null;
+		if (pending)
+			return (
+				<span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+					<Loader2 className="size-3 animate-spin" />
+					Saving…
+				</span>
+			);
+		if (savedAt !== null)
+			return (
+				<span className="flex shrink-0 items-center gap-1 text-[11px] text-emerald-600">
+					<Check className="size-3.5" />
+					Saved
+				</span>
+			);
+		return null;
+	})();
+
 	if (layout === "row") {
-		return (
-			<div className="flex items-center gap-3 py-1">
+		const row = (
+			<div
+				className={`flex items-center gap-3 py-1${disabled ? " opacity-60" : ""}`}
+			>
 				{def.input.kind === "boolean" && control}
 				<span className="flex-1 text-sm">{def.label}</span>
 				{def.input.kind !== "boolean" && (
@@ -133,7 +172,13 @@ export function BrandSettingField({
 						{unit}
 					</div>
 				)}
-				{def.hint && (
+				{!disabled && status}
+				{disabled && (
+					<span className="shrink-0 rounded border border-dashed border-muted-foreground/40 px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase tracking-wide">
+						Planned
+					</span>
+				)}
+				{def.hint && !disabled && !status && (
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Info className="size-3.5 shrink-0 cursor-help text-muted-foreground" />
@@ -144,6 +189,15 @@ export function BrandSettingField({
 				{error && <span className="text-destructive text-xs">{error}</span>}
 			</div>
 		);
+		if (!disabled) return row;
+		return (
+			<Tooltip>
+				<TooltipTrigger asChild>{row}</TooltipTrigger>
+				<TooltipContent className="max-w-xs">
+					{def.hint ?? "Not wired up yet — shipping in a later pass."}
+				</TooltipContent>
+			</Tooltip>
+		);
 	}
 
 	return (
@@ -152,6 +206,7 @@ export function BrandSettingField({
 			<div className="flex items-center gap-2">
 				{control}
 				{unit}
+				{status}
 			</div>
 			{def.hint && <p className="text-muted-foreground text-xs">{def.hint}</p>}
 			{error && <p className="text-destructive text-xs">{error}</p>}

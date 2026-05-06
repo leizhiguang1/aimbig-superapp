@@ -1,5 +1,4 @@
 import { BrandSettingField } from "@/components/brand-config/BrandSettingField";
-import { PlaceholderBanner } from "@/components/config/PlaceholderBanner";
 import { SettingToggleRow } from "@/components/config/SettingToggleRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getServerContext } from "@/lib/context/server";
@@ -13,17 +12,9 @@ export async function SettingsTab() {
 		<div className="space-y-4">
 			<Card>
 				<CardHeader className="pb-3">
-					<CardTitle className="text-base">Appointment Settings</CardTitle>
+					<CardTitle className="text-base">Active</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-3">
-					<BrandSettingField
-						settingKey="appointment.default_slot_minutes"
-						value={settings["appointment.default_slot_minutes"]}
-					/>
-					<BrandSettingField
-						settingKey="appointment.allow_overbook"
-						value={settings["appointment.allow_overbook"]}
-					/>
 					<BrandSettingField
 						settingKey="appointment.hide_value_on_hover"
 						value={settings["appointment.hide_value_on_hover"]}
@@ -31,26 +22,46 @@ export async function SettingsTab() {
 				</CardContent>
 			</Card>
 
-			<PlaceholderBanner />
-			<Card>
-				<CardHeader className="pb-3">
-					<CardTitle className="text-base">Additional settings</CardTitle>
+			<Card className="border-dashed bg-muted/30">
+				<CardHeader className="pb-2">
+					<CardTitle className="text-base text-muted-foreground">
+						Coming soon
+					</CardTitle>
+					<p className="text-muted-foreground text-xs">
+						Listed for visibility — these activate as features ship.
+					</p>
 				</CardHeader>
 				<CardContent className="space-y-2">
+					<BrandSettingField
+						settingKey="appointment.default_slot_minutes"
+						value={settings["appointment.default_slot_minutes"]}
+						disabled
+					/>
+					<BrandSettingField
+						settingKey="appointment.allow_overbook"
+						value={settings["appointment.allow_overbook"]}
+						disabled
+					/>
+					<BrandSettingField
+						settingKey="appointment.booking_lead_hours"
+						value={settings["appointment.booking_lead_hours"]}
+						disabled
+					/>
+					<BrandSettingField
+						settingKey="appointment.enable_pin"
+						value={settings["appointment.enable_pin"]}
+						disabled
+					/>
+					<BrandSettingField
+						settingKey="appointment.disable_sounds"
+						value={settings["appointment.disable_sounds"]}
+						disabled
+					/>
+
 					<SettingToggleRow
 						label="Allow the selection of employees for Hands-On Incentive calculations"
 						hint="Lets staff assign multiple employees to an appointment for incentive tracking."
 						defaultChecked
-						disabled
-					/>
-					<SettingToggleRow
-						label="Disable sound effects when changing appointment status"
-						hint="Turns off the audio cue that plays when an appointment status changes."
-						disabled
-					/>
-					<SettingToggleRow
-						label="Enable PIN for Appointments"
-						hint="Requires a PIN code for certain appointment actions."
 						disabled
 					/>
 					<SettingToggleRow

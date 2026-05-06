@@ -26,7 +26,7 @@ export type CustomerIdentity = {
 	id_number?: string | null;
 	is_vip?: boolean | null;
 	is_staff?: boolean | null;
-	tag?: string | null;
+	tags?: string[] | null;
 };
 
 const SELECT_WITH_RELATIONS =
@@ -66,7 +66,9 @@ function normalize(input: unknown) {
 		external_code: nz(p.external_code),
 		is_vip: p.is_vip,
 		is_staff: p.is_staff,
-		tag: nz(p.tag),
+		tags: (p.tags ?? [])
+			.map((t) => t.trim())
+			.filter((t) => t.length > 0),
 		smoker: p.smoker ?? null,
 		drug_allergies: nz(p.drug_allergies),
 		medical_conditions: p.medical_conditions ?? [],

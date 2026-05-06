@@ -1,14 +1,8 @@
 "use client";
 
-import {
-	Crown,
-	IdCard,
-	Phone,
-	Sparkles,
-	UserCog,
-	UserRound,
-} from "lucide-react";
+import { Crown, IdCard, Phone, UserCog, UserRound } from "lucide-react";
 import Link from "next/link";
+import { CustomerTagBadges } from "@/components/customers/CustomerTagBadges";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useOutletPath } from "@/hooks/use-outlet-path";
 import type { CustomerIdentity } from "@/lib/services/customers";
@@ -78,8 +72,8 @@ export function CustomerIdentityCard({
 	const idNumber = customer?.id_number ?? null;
 	const isVip = customer?.is_vip ?? false;
 	const isStaff = customer?.is_staff ?? false;
-	const tag = customer?.tag ?? null;
-	const hasFlags = showFlags && (isVip || isStaff || Boolean(tag));
+	const tags = customer?.tags ?? [];
+	const hasFlags = showFlags && (isVip || isStaff || tags.length > 0);
 
 	const NameEl =
 		customer && link ? (
@@ -156,13 +150,7 @@ export function CustomerIdentityCard({
 								className="bg-sky-100 text-sky-800"
 							/>
 						)}
-						{tag && (
-							<FlagBadge
-								icon={<Sparkles className="size-3" />}
-								label={tag}
-								className="bg-violet-100 text-violet-800"
-							/>
-						)}
+						<CustomerTagBadges tags={tags} size="sm" withIcon />
 					</div>
 				)}
 			</div>

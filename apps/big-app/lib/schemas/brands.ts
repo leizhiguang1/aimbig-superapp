@@ -38,19 +38,6 @@ export const brandUpdateSchema = z.object({
 		)
 		.optional()
 		.or(z.literal("")),
-	registered_name: optionalText(160),
-	registration_number: optionalText(60),
-	tax_id: optionalText(60),
-	address: optionalText(500),
-	email: z
-		.string()
-		.trim()
-		.email("Enter a valid email")
-		.max(160)
-		.optional()
-		.or(z.literal("")),
-	website: optionalText(255),
-	tagline: optionalText(160),
 });
 
 export type BrandUpdateInput = z.infer<typeof brandUpdateSchema>;

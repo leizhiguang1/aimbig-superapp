@@ -135,7 +135,7 @@ export function CollectPaymentDialog({
 	const [isPending, startTransition] = useTransition();
 	const [isLoadingRepeat, startRepeatTransition] = useTransition();
 
-	const billing = useBillingLines(entries, services, taxes);
+	const billing = useBillingLines(entries, services, taxes, products);
 	const rounding = useRounding(billing.rawTotal);
 	const payments = usePayments(paymentMethods, rounding.total, open);
 	const payAlloc = usePaymentAllocations({
@@ -796,7 +796,7 @@ export function CollectPaymentDialog({
 														? (billing.serviceById.get(l.service_id) ?? null)
 														: null
 												}
-												capPct={billing.capFor(l.service_id)}
+												capPct={billing.capFor(l)}
 												requiresFullPay={billing.requiresFullFor(l)}
 												isExpanded={expandedIds.has(l.id)}
 												onToggleExpanded={() => toggleExpanded(l.id)}

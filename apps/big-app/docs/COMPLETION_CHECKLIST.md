@@ -54,12 +54,14 @@ governs every downstream read. Stabilize these first.
 - [ ] Pricing rules (time-of-day, promo)
 - [ ] Service category management polish
 
-### B3. Inventory (lightweight) — `docs/modules/07-inventory.md`
-- [ ] Product master
-- [ ] Stock movements (in / out / adjustment)
-- [ ] Deduction on sale (link product to service)
-- [ ] Low-stock surface on dashboard
-- [ ] Defer: wholesale, POs, supplier ledger
+### B3. Inventory — `docs/modules/07-inventory.md`  ✓ COMPLETE (incl. per-outlet)
+- [x] Product master — three-kind catalog (product / consumable / medication) shipped 2026-04-15; Brands / Categories / Suppliers / UoMs as full lookup tables
+- [x] Stock movements (in / out / adjustment) — `inventory_movements` ledger live since 2026-04-15. Live ledger view in Stock Details dialog (2026-05-06), outlet-scoped. Stock Adjustment dialog with kumodent-aligned reasons (2026-05-06)
+- [x] Deduction on sale (link product to service) — `service_inventory_items` BOM (2026-04-17) + `collect_appointment_payment` / `collect_walkin_sale` / `void_sales_order` RPCs deduct from `inventory_item_outlets.stock` per outlet and emit movements stamped with `outlet_id` (`sale`, `service_use`, `cancellation` reasons)
+- [x] Low-stock surface on dashboard — `LowStockCard` reads per-outlet stock_status from `inventory_item_outlets` (2026-05-06)
+- [x] **Per-outlet pricing + stock + alert + location + sellable** — `inventory_item_outlets` junction (2026-05-06). Item form's "Outlets" section + "Apply above prices, stocks to all outlets" master toggle, kumodent-style. Auto-seed triggers handle new items + new outlets
+- [x] `discount_cap` enforcement on sale — UI + service guard + DB trigger `sale_items_enforce_discount_cap` (2026-05-06)
+- [ ] Defer to dedicated workflow modules (Phase 2): Purchase Orders, Stock Request, Transfer Orders, Returned Stock, Coverage Payor, Loyalty BP/Points
 
 ### B4. Employees — `docs/modules/08-employees.md`
 - [ ] Employee PIN (login / clock-in auth)

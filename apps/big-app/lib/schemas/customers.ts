@@ -19,10 +19,6 @@ const optionalDate = z
 
 export const ID_TYPES = ["ic", "passport"] as const;
 export const GENDERS = ["male", "female"] as const;
-// Fallback list when a brand has no salutation rows configured in
-// brand_config_items. Once they add their first one (via /config/general),
-// the brand list takes over and this fallback stops being used.
-export const SALUTATIONS = ["Mr", "Ms", "Mrs", "Dr"] as const;
 export const SOURCES = [
 	"walk_in",
 	"friend_or_family",
@@ -49,7 +45,6 @@ export const SOURCE_LABEL: Record<(typeof SOURCES)[number], string> = {
 
 export type IdType = (typeof ID_TYPES)[number];
 export type Gender = (typeof GENDERS)[number];
-export type Salutation = (typeof SALUTATIONS)[number];
 export type Source = (typeof SOURCES)[number];
 
 // Malaysian IC: 12 digits, optional dashes YYMMDD-PB-###G
@@ -125,7 +120,9 @@ export const customerInputSchema = z
 		// Flags
 		is_vip: z.boolean(),
 		is_staff: z.boolean(),
-		tag: optionalText(80),
+		// Each entry is a brand_config_items.code (preferred) or a free-text
+		// label (rendered as a plain chip when no matching code exists).
+		tags: z.array(z.string().trim().min(1).max(80)).max(10),
 
 		// Medical
 		smoker: z.enum(SMOKER_OPTIONS).nullable().optional(),

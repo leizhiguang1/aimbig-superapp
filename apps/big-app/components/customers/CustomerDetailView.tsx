@@ -31,6 +31,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AppointmentDialog } from "@/components/appointments/AppointmentDialog";
+import { CustomerTagBadges } from "@/components/customers/CustomerTagBadges";
 import { CustomerCaseNotesTab } from "@/components/customers/CustomerCaseNotesTab";
 import { CustomerCashWalletTab } from "@/components/customers/CustomerCashWalletTab";
 import { CustomerDocumentsTab } from "@/components/customers/CustomerDocumentsTab";
@@ -473,12 +474,7 @@ export function CustomerDetailView({
 										{customer.gender}
 									</div>
 								)}
-								{customer.tag && (
-									<span className="flex w-fit items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700">
-										<Tag className="size-2.5" />
-										{customer.tag}
-									</span>
-								)}
+								<CustomerTagBadges tags={customer.tags} size="sm" withIcon className="w-fit" />
 								{(customer.address1 || customer.city || customer.state) && (
 									<div className="flex items-start gap-1 text-[11px] text-muted-foreground">
 										<MapPin className="mt-0.5 size-3 shrink-0" />

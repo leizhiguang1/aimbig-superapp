@@ -1,5 +1,6 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { CustomerTagsProvider } from "@/components/brand-config/CustomerTagsProvider";
 import { AppointmentNotificationsProvider } from "@/components/notifications/AppointmentNotificationsProvider";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { AppTopbar } from "@/components/shell/app-topbar";
@@ -7,9 +8,11 @@ import { NavProgress } from "@/components/shell/nav-progress";
 import type { OutletNavItem } from "@/components/shell/outlet-selector";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getServerContext } from "@/lib/context/server";
+import { outletPath } from "@/lib/outlet-path";
+import { listCustomerTags } from "@/lib/services/brand-config";
+import { getBrand } from "@/lib/services/brands";
 import { listOutlets } from "@/lib/services/outlets";
 import { mediaPublicUrl } from "@/lib/storage/urls";
-import { outletPath } from "@/lib/outlet-path";
 
 export default async function OutletScopedLayout({
 	children,
@@ -22,7 +25,11 @@ export default async function OutletScopedLayout({
 	const ctx = await getServerContext();
 	if (!ctx.brandId || !ctx.currentUser?.employeeId) redirect("/select-brand");
 
-	const outlets = await listOutlets(ctx);
+	const [outlets, brand, customerTags] = await Promise.all([
+		listOutlets(ctx),
+		getBrand(ctx),
+		listCustomerTags(ctx),
+	]);
 	const activeOutlets = outlets.filter((o) => o.is_active);
 	if (activeOutlets.length === 0) {
 		return (
@@ -63,9 +70,15 @@ export default async function OutletScopedLayout({
 
 	return (
 		<AppointmentNotificationsProvider outletId={current.id}>
+			<CustomerTagsProvider tags={customerTags}>
 			<NavProgress />
 			<SidebarProvider className="h-svh">
-				<AppSidebar outletCode={current.code} />
+				<AppSidebar
+					outletCode={current.code}
+					brandName={brand.name}
+					brandNickname={brand.nickname}
+					brandLogoUrl={mediaPublicUrl(brand.logo_url)}
+				/>
 				<SidebarInset className="min-w-0">
 					<AppTopbar
 						outlets={navOutlets}
@@ -81,6 +94,7 @@ export default async function OutletScopedLayout({
 					</main>
 				</SidebarInset>
 			</SidebarProvider>
+			</CustomerTagsProvider>
 		</AppointmentNotificationsProvider>
 	);
 }

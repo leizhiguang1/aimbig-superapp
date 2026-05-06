@@ -15,11 +15,6 @@ const requiredDate = z
 
 export const ID_TYPES = ["ic", "passport"] as const;
 export const GENDERS = ["male", "female", "other"] as const;
-// Fallback list when a brand has no salutation rows configured in
-// brand_config_items. Same list shared with customers; the moment the
-// brand adds their own first one, the fallback stops being used.
-export const SALUTATIONS = ["Dr", "Mr", "Mrs", "Ms"] as const;
-export type Salutation = string;
 export type Gender = (typeof GENDERS)[number];
 
 // Malaysian IC: 12 digits, optional dashes YYMMDD-PB-###G

@@ -83,7 +83,7 @@ column comes online, add an arm to `cascadeLiveRename`'s switch.
 |---|---|---|---|
 | `void_reason` | Void / cancel reasons | snapshot | **live** — `/config/sales?section=void-reasons` |
 | `appointment_tag` | Appointment tags | live | **live** — `/config/appointments?section=appointment-tag` |
-| `customer_tag` | Customer tag vocabulary | live | **live** — `/config/customers?section=tags` |
+| `customer_tag` | Customer tag vocabulary | live | **live** — admin at `/config/customers?section=tags`; consumed by [CustomerForm](../../components/customers/CustomerForm.tsx) (multi-select chip picker) and rendered everywhere via [CustomerTagsProvider](../../components/brand-config/CustomerTagsProvider.tsx) + [CustomerTagBadges](../../components/customers/CustomerTagBadges.tsx). `customers.tags text[]` stores codes (or free-text labels — those render as plain chips). |
 | `salutation` | Salutations | live | **live** — `/config/general?section=salutation` (wired 2026-04-27, default seed of Mr/Ms/Mrs/Dr per brand via migration `0093_seed_default_salutations`; customer + employee forms read this list with hardcoded fallback when empty) |
 | `customer_language` | Languages | live | registry only (TS) |
 | `customer_race` | Races | live | registry only (TS) |
@@ -91,9 +91,17 @@ column comes online, add an arm to `cascadeLiveRename`'s switch.
 | `customer_occupation` | Occupations | live | registry only (TS) |
 | `customer_source` | Customer sources | snapshot | registry only (TS) |
 | `customer_reminder_method` | Reminder methods | live | registry only (TS) |
-| `reason.stock_add` | Stock-add reasons | snapshot | registry only (TS) |
-| `reason.stock_reduce` | Stock-reduce reasons | snapshot | registry only (TS) |
-| `reason.appointment_cancel` | Appointment cancel reasons | snapshot | **live** — `/config/appointments?section=cancel-reasons` |
+| `reason.stock_add` | Add Stock | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** — [StockAdjustmentDialog](../../components/inventory/StockAdjustmentDialog.tsx) still reads `STOCK_ADJUSTMENT_REASONS` from [lib/schemas/inventory.ts](../../lib/schemas/inventory.ts) |
+| `reason.stock_reduce` | Reduce Stock | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** (same enum as above) |
+| `reason.stock_return` | Return Stock | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** (same enum as above) |
+| `reason.receipt` | Receipt Remark | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** |
+| `reason.attendance` | Attendance | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** (clock in/out module pending) |
+| `reason.appointment_consumable` | Appointment Consumable | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** |
+| `reason.appointment_cancel` | Cancel Appointment | snapshot | **live** — `/config/general?section=remarks` AND `/config/appointments?section=cancel-reasons`; consumed by [CancelAppointmentDialog](../../components/appointments/CancelAppointmentDialog.tsx) |
+| `reason.appointment_revert` | Revert Appointment | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** |
+| `reason.employee_edit` | Edit Employee | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** |
+| `reason.lead_unsuccessful` | Lead Unsuccessful | snapshot | admin UI live at `/config/general?section=remarks`; **consumer not wired** |
+| `lead_contact_preference` | Customer Lead List | live | admin UI live at `/config/general?section=remarks`; **consumer not wired** |
 
 ### Shape 1 — Lists in existing typed tables
 
@@ -110,12 +118,12 @@ column comes online, add an arm to `cascadeLiveRename`'s switch.
 
 | Key | Group | UI status |
 |---|---|---|
-| `appointment.default_slot_minutes` | appointment | **live** — read at RSC; not yet propagated to calendar layout |
-| `appointment.allow_overbook` | appointment | **live** — read at RSC; not yet propagated to conflict detection |
-| `appointment.hide_value_on_hover` | appointment | **live** — hover card hides value when true |
-| `appointment.booking_lead_hours` | appointment | registry only |
-| `appointment.enable_pin` | appointment | registry only |
-| `appointment.disable_sounds` | appointment | registry only |
+| `appointment.default_slot_minutes` | appointment | **preview** — shown in Coming Soon card on `/config/appointments?section=settings`; control disabled until calendar layout consumes it |
+| `appointment.allow_overbook` | appointment | **preview** — shown in Coming Soon card; control disabled until conflict detection consumes it |
+| `appointment.hide_value_on_hover` | appointment | **live** — hover card hides value when true (the only Active row in the Settings tab) |
+| `appointment.booking_lead_hours` | appointment | preview (registry only) |
+| `appointment.enable_pin` | appointment | preview (registry only) |
+| `appointment.disable_sounds` | appointment | preview (registry only) |
 | `security.password_expiry_days` | security | registry only |
 | `security.failed_login_limit` | security | registry only |
 | `billing.show_age_on_invoice` | billing | registry only |
@@ -326,7 +334,10 @@ in a screenshot, the content is inferred from the tab label and marked
 
 #### General (12.1)
 - **General** *(confirmed — 12.1.1)* — two-panel layout. Left: **Business Details** card with QR code at top (scan-with-mobile-app label), Business Name\*, Nickname\*, Business Contact\* (country flag + phone), Business Sub-Domain (text + `.aoikumo.com` suffix), Currency\* (dropdown), save button. Right: **Social Media** card with per-platform rows — platform icon, URL input, visibility toggle. Observed platforms: Facebook, Instagram, LinkedIn, Pinterest, Twitter, Website (http:// prefix), TripAdvisor (tripadvisor.com/ prefix), Lazada, Shopee. Save button at bottom-right
-- **Timezone** *(confirmed — 12.1.2)* — **Timezone Settings** table with columns Outlet ID, Outlet Name, Outlet Nickname, Time Zone (dropdown per outlet). Observed values: all three outlets set to `(UTC+08:00) Kuala Lumpur, Singapore`. Per-outlet timezone means the same server can service multiple geographies
+- **Timezone** *(confirmed — 12.1.2)* — **Timezone Settings** table with columns Outlet ID, Outlet Name, Outlet Nickname, Time Zone (dropdown per outlet). Observed values: all three outlets set to `(UTC+08:00) Kuala Lumpur, Singapore`. Per-outlet timezone means the same server can service multiple geographies.
+  - **Storage status (2026-05-06):** persisted on `outlets.timezone` (text, default `Asia/Kuala_Lumpur`). UI saves via `setOutletTimezoneAction` per row, autosave on Select change. Choices live in [lib/timezones.ts](../../lib/timezones.ts) (8 SEA-focused IANA values).
+  - **Consumption status: NOT yet wired.** Every date/time render in the app — Appointments calendar, Dashboard "today", Reports, Roster, Receipts, Invoices, MCs, Letters, `created_at` displays — currently formats in the browser's local timezone. The stored value is harmless until we route display through it.
+  - **When to wire it:** the day we onboard the first outlet outside UTC+8 (i.e. Bangkok/Jakarta or anything west of MY/SG/PH/HK). Until then it's invisible. Plan: add `lib/time/outlet-tz.ts` with `formatInOutletTz(date, tz)` + `outletTodayStart(tz)`, convert calendar header + dashboard "today" boundary first as the pattern, then incrementally roll through the other surfaces. The Config tab carries an in-UI banner pointing this out so customers don't expect immediate effect.
 - **Remarks** *(confirmed — 12.1.3)* — outlet selector dropdown at top. Then a multi-section page where each operational action type has its own mini-panel with: section title, toggle list of reason codes per code (name + on/off toggle + delete), and a `+` button to add a new reason code. Observed action types: **Add Stock** (From Store, From EM, New Stock From Supplier, Stock Adjustment), **Reduce Stock** (Damaged Items, Expired Stock, Staff Benefit, Sample, Wrong Delivery, Utility Remove), **Return Stock** (Damaged Stock), **Cancel Sales** (Duplicate Sales, Outlet Change, Duplicate Invoice, Return Back to Customer, Wrong Customer), **Receipt Return**, **Attendance** (Public Holiday), **Appointment Consumable** (No Line, Customer Registration For Botox), **Cancel Appointment** (Doctors Cancellation, Customer Cancelled, Doctors Not Available, Patient Not Selected, Wrong Discount), **Revert Appointment** (Not Appointment, Incorrect Staff Requires, Zero Sales), **Edit Employee** (Internal Use Only, Close To Due, Not Verified, Edit Employee Profile), **Lead Unsuccessful** (Engaged, Unreachable), **Customer Lead List** (Patient To Be Called, Patient To Be Messaged). Each group is toggled per outlet
 - **Salutation** *(confirmed — 12.1.4)* — **Salutation** table with `+` add button, columns Name + Status (toggle) + Delete. Observed rows: DR (active), MR (active), MRS (active), MS (active). Today these values are hardcoded in [lib/schemas/employees.ts](../../lib/schemas/employees.ts) and customer schemas — this table replaces that hardcoded enum
 - **Security** *(confirmed — 12.1.5)* — two-panel layout. Left: **Password Settings** card with inline-editable fields: Password Expiry (Days) (default 0 = disabled), Failed Login Attempts (default 0 = disabled). Right: **System Lock Duration** card with a single dropdown, observed options include `3 HOURS`

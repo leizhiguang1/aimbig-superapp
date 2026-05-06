@@ -16,6 +16,7 @@ import type {
 	InventoryUom,
 	Supplier,
 } from "@/lib/services/inventory";
+import type { Outlet } from "@/lib/services/outlets";
 import type { Tax } from "@/lib/services/taxes";
 import { ItemFormDialog } from "./ItemForm";
 
@@ -25,6 +26,7 @@ type Props = {
 	categories: InventoryCategory[];
 	suppliers: Supplier[];
 	taxes: Tax[];
+	outlets: Outlet[];
 };
 
 const CARDS: Array<{
@@ -107,6 +109,7 @@ export function AddItemButton(props: Props) {
 					categories={props.categories}
 					suppliers={props.suppliers}
 					taxes={props.taxes}
+					outlets={props.outlets}
 					onClose={() => setPickedKind(null)}
 				/>
 			)}

@@ -17,7 +17,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { updateBrandAction } from "@/lib/actions/brands";
 import {
 	type BrandUpdateInput,
@@ -102,13 +101,6 @@ function brandToValues(brand: Brand): BrandUpdateInput {
 		currency_code:
 			(brand.currency_code as BrandUpdateInput["currency_code"]) ?? "MYR",
 		subdomain: brand.subdomain ?? "",
-		registered_name: brand.registered_name ?? "",
-		registration_number: brand.registration_number ?? "",
-		tax_id: brand.tax_id ?? "",
-		address: brand.address ?? "",
-		email: brand.email ?? "",
-		website: brand.website ?? "",
-		tagline: brand.tagline ?? "",
 	};
 }
 
@@ -197,7 +189,9 @@ export function GeneralTab({ brand, rootDomainLabel }: GeneralTabProps) {
 
 						<div className="grid gap-3 sm:grid-cols-2">
 							<div className="space-y-1.5">
-								<Label htmlFor="biz-contact">Contact Phone</Label>
+								<Label htmlFor="biz-contact">
+									Business Contact <span className="text-destructive">*</span>
+								</Label>
 								<Input
 									id="biz-contact"
 									placeholder="+60123456789"
@@ -205,24 +199,7 @@ export function GeneralTab({ brand, rootDomainLabel }: GeneralTabProps) {
 								/>
 							</div>
 							<div className="space-y-1.5">
-								<Label htmlFor="biz-email">Email</Label>
-								<Input
-									id="biz-email"
-									type="email"
-									placeholder="hello@yourbrand.com"
-									{...form.register("email")}
-								/>
-								{form.formState.errors.email && (
-									<p className="text-destructive text-xs">
-										{form.formState.errors.email.message}
-									</p>
-								)}
-							</div>
-						</div>
-
-						<div className="grid gap-3 sm:grid-cols-2">
-							<div className="space-y-1.5">
-								<Label htmlFor="biz-subdomain">Sub-Domain</Label>
+								<Label htmlFor="biz-subdomain">Business Sub-Domain</Label>
 								<div className="flex">
 									<Input
 										id="biz-subdomain"
@@ -242,6 +219,9 @@ export function GeneralTab({ brand, rootDomainLabel }: GeneralTabProps) {
 									Rename subdomain…
 								</button>
 							</div>
+						</div>
+
+						<div className="grid gap-3 sm:grid-cols-2">
 							<div className="space-y-1.5">
 								<Label htmlFor="currency">
 									Currency <span className="text-destructive">*</span>
@@ -267,66 +247,6 @@ export function GeneralTab({ brand, rootDomainLabel }: GeneralTabProps) {
 										))}
 									</SelectContent>
 								</Select>
-							</div>
-						</div>
-
-						<div className="space-y-1.5">
-							<Label htmlFor="biz-address">Address</Label>
-							<Textarea
-								id="biz-address"
-								rows={2}
-								placeholder="Street, city, state, postcode, country"
-								{...form.register("address")}
-							/>
-						</div>
-
-						<div className="border-t pt-4">
-							<p className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-								Tax & Registration
-							</p>
-							<div className="grid gap-3 sm:grid-cols-2">
-								<div className="space-y-1.5">
-									<Label htmlFor="biz-reg-name">Registered Name</Label>
-									<Input
-										id="biz-reg-name"
-										placeholder="Legal entity name"
-										{...form.register("registered_name")}
-									/>
-								</div>
-								<div className="space-y-1.5">
-									<Label htmlFor="biz-reg-no">Registration No.</Label>
-									<Input
-										id="biz-reg-no"
-										placeholder="SSM / UEN"
-										{...form.register("registration_number")}
-									/>
-								</div>
-							</div>
-							<div className="mt-3 grid gap-3 sm:grid-cols-2">
-								<div className="space-y-1.5">
-									<Label htmlFor="biz-tax-id">Tax Registration No.</Label>
-									<Input
-										id="biz-tax-id"
-										placeholder="SST / GST / VAT"
-										{...form.register("tax_id")}
-									/>
-								</div>
-								<div className="space-y-1.5">
-									<Label htmlFor="biz-website">Website</Label>
-									<Input
-										id="biz-website"
-										placeholder="https://yourbrand.com"
-										{...form.register("website")}
-									/>
-								</div>
-							</div>
-							<div className="mt-3 space-y-1.5">
-								<Label htmlFor="biz-tagline">Tagline</Label>
-								<Input
-									id="biz-tagline"
-									placeholder="Optional — printed under the logo on receipts"
-									{...form.register("tagline")}
-								/>
 							</div>
 						</div>
 

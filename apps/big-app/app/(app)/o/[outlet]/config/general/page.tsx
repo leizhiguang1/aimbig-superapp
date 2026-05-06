@@ -13,6 +13,7 @@ import { TimezoneTab } from "@/components/config/general/TimezoneTab";
 import { getServerContext } from "@/lib/context/server";
 import { extractSubdomain, ROOT_DOMAIN } from "@/lib/multibrand/host";
 import { getBrand } from "@/lib/services/brands";
+import { listOutlets } from "@/lib/services/outlets";
 
 type PageProps = {
 	searchParams: Promise<{ section?: string }>;
@@ -25,8 +26,13 @@ export default async function GeneralPage({ searchParams }: PageProps) {
 
 	const active = resolveSection(category, section);
 
-	const brand =
-		active.key === "general" ? await getBrand(await getServerContext()) : null;
+	const ctx =
+		active.key === "general" || active.key === "timezone"
+			? await getServerContext()
+			: null;
+	const brand = ctx && active.key === "general" ? await getBrand(ctx) : null;
+	const outlets =
+		ctx && active.key === "timezone" ? await listOutlets(ctx) : [];
 
 	// Compute the root-domain label shown in the subdomain rename UI.
 	// Prefer the request host (defensive against NEXT_PUBLIC_ROOT_DOMAIN drift).
@@ -50,7 +56,7 @@ export default async function GeneralPage({ searchParams }: PageProps) {
 			{active.key === "general" && brand && (
 				<GeneralTab brand={brand} rootDomainLabel={rootDomainLabel} />
 			)}
-			{active.key === "timezone" && <TimezoneTab />}
+			{active.key === "timezone" && <TimezoneTab outlets={outlets} />}
 			{active.key === "remarks" && <RemarksTab />}
 			{active.key === "salutation" && <SalutationTab />}
 			{active.key === "security" && <SecurityTab />}

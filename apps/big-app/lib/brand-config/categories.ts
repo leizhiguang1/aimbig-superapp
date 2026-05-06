@@ -39,6 +39,24 @@ export type BrandConfigCategoryDef = {
 	// Cascade for live categories is implemented in
 	// lib/services/brand-config.ts (cascadeLiveRename).
 	storage: "live" | "snapshot";
+	// Where these items show up in the app. Surfaced as a tooltip on the
+	// admin card so brand admins know what they're editing, and so we can
+	// see at a glance which categories are "registry only" (CRUD works,
+	// but no consumer reads the list yet — the matching hardcoded enum is
+	// still the source of truth).
+	usage?: {
+		// One sentence: which UI surface picks from this list.
+		description: string;
+		// Whether a real consumer reads from brand_config_items today. False
+		// means the admin can edit the list but nothing in the app uses it
+		// yet — typically because the consumer still reads a hardcoded enum.
+		wired: boolean;
+		// Path to the dropdown/picker that consumes the list (when wired).
+		consumer?: string;
+		// The hardcoded TS enum this category is intended to replace (when
+		// not yet wired). Lets us audit the migration backlog.
+		replacesEnum?: string;
+	};
 };
 
 export const BRAND_CONFIG_CATEGORIES = {
@@ -49,6 +67,11 @@ export const BRAND_CONFIG_CATEGORIES = {
 		hasColor: false,
 		hint: "Reasons shown in the Void Sales Order flow.",
 		storage: "snapshot",
+		usage: {
+			description: "Reason picker shown in the Void Sales Order dialog.",
+			wired: true,
+			consumer: "components/sales/VoidSalesOrderDialog.tsx",
+		},
 	},
 	appointment_tag: {
 		label: "Appointment tags",
@@ -61,8 +84,14 @@ export const BRAND_CONFIG_CATEGORIES = {
 		label: "Customer tag vocabulary",
 		codeEditable: true,
 		hasColor: true,
-		hint: "Suggested tags for the customer profile. Free-text entries are still accepted.",
+		hint: "Color-coded tags shown on customer profiles, lists, and appointment cards. Free-text entries are still accepted (rendered as plain chips).",
 		storage: "live",
+		usage: {
+			description:
+				"Multi-select picker on the customer form; rendered as chips on every customer surface.",
+			wired: true,
+			consumer: "components/customers/CustomerForm.tsx",
+		},
 	},
 	salutation: {
 		label: "Salutations",
@@ -112,23 +141,137 @@ export const BRAND_CONFIG_CATEGORIES = {
 		storage: "live",
 	},
 	"reason.stock_add": {
-		label: "Stock-add reasons",
+		label: "Add Stock",
+		singularLabel: "Add-stock reason",
 		codeEditable: true,
 		hasColor: false,
 		storage: "snapshot",
+		usage: {
+			description:
+				"Reason picker shown when adjusting stock IN (receiving from supplier, transfer in, etc.).",
+			wired: false,
+			replacesEnum: "STOCK_ADJUSTMENT_REASONS in lib/schemas/inventory.ts",
+		},
 	},
 	"reason.stock_reduce": {
-		label: "Stock-reduce reasons",
+		label: "Reduce Stock",
+		singularLabel: "Reduce-stock reason",
 		codeEditable: true,
 		hasColor: false,
 		storage: "snapshot",
+		usage: {
+			description:
+				"Reason picker shown when adjusting stock OUT (damage, sample, staff use, etc.).",
+			wired: false,
+			replacesEnum: "STOCK_ADJUSTMENT_REASONS in lib/schemas/inventory.ts",
+		},
+	},
+	"reason.stock_return": {
+		label: "Return Stock",
+		singularLabel: "Return-stock reason",
+		codeEditable: true,
+		hasColor: false,
+		storage: "snapshot",
+		usage: {
+			description: "Reason picker shown when returning stock to a supplier.",
+			wired: false,
+			replacesEnum: "STOCK_ADJUSTMENT_REASONS in lib/schemas/inventory.ts",
+		},
+	},
+	"reason.receipt": {
+		label: "Receipt Remark",
+		singularLabel: "Receipt remark",
+		codeEditable: true,
+		hasColor: false,
+		storage: "snapshot",
+		usage: {
+			description: "Remark picker shown on the printed/e-mailed sales receipt.",
+			wired: false,
+		},
+	},
+	"reason.attendance": {
+		label: "Attendance",
+		singularLabel: "Attendance reason",
+		codeEditable: true,
+		hasColor: false,
+		storage: "snapshot",
+		usage: {
+			description:
+				"Reason picker shown on the employee clock in/out (attendance) flow.",
+			wired: false,
+		},
+	},
+	"reason.appointment_consumable": {
+		label: "Appointment Consumable",
+		singularLabel: "Consumable reason",
+		codeEditable: true,
+		hasColor: false,
+		storage: "snapshot",
+		usage: {
+			description:
+				"Reason picker shown when adding consumables to an appointment.",
+			wired: false,
+		},
 	},
 	"reason.appointment_cancel": {
-		label: "Appointment cancel reasons",
+		label: "Cancel Appointment",
 		singularLabel: "Cancel reason",
 		codeEditable: true,
 		hasColor: false,
 		storage: "snapshot",
+		usage: {
+			description: "Reason picker shown in the Cancel Appointment dialog.",
+			wired: true,
+			consumer: "components/appointments/CancelAppointmentDialog.tsx",
+		},
+	},
+	"reason.appointment_revert": {
+		label: "Revert Appointment",
+		singularLabel: "Revert reason",
+		codeEditable: true,
+		hasColor: false,
+		storage: "snapshot",
+		usage: {
+			description:
+				"Reason picker shown when reverting an appointment back to a previous status.",
+			wired: false,
+		},
+	},
+	"reason.employee_edit": {
+		label: "Edit Employee",
+		singularLabel: "Edit-employee reason",
+		codeEditable: true,
+		hasColor: false,
+		storage: "snapshot",
+		usage: {
+			description:
+				"Reason picker shown when an admin edits another employee's profile (audit trail).",
+			wired: false,
+		},
+	},
+	"reason.lead_unsuccessful": {
+		label: "Lead Unsuccessful",
+		singularLabel: "Lead-unsuccessful reason",
+		codeEditable: true,
+		hasColor: false,
+		storage: "snapshot",
+		usage: {
+			description:
+				"Reason picker shown when marking a customer lead as unsuccessful.",
+			wired: false,
+		},
+	},
+	lead_contact_preference: {
+		label: "Customer Lead List",
+		singularLabel: "Contact preference",
+		codeEditable: true,
+		hasColor: false,
+		storage: "live",
+		usage: {
+			description:
+				"Tag set for how a lead prefers to be contacted (call / message / etc.) on the lead list.",
+			wired: false,
+		},
 	},
 } as const satisfies Record<string, BrandConfigCategoryDef>;
 

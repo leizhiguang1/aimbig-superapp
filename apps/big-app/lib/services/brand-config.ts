@@ -60,6 +60,34 @@ export async function listActiveBrandConfigItems(
 	return listBrandConfigItems(ctx, category);
 }
 
+// Batched read for surfaces that render many categories side-by-side
+// (the Remarks admin tab is the canonical caller). One round-trip instead
+// of N — the RSC re-render after a toggle is the visible bottleneck.
+export async function listBrandConfigItemsByCategories(
+	ctx: Context,
+	categories: readonly BrandConfigCategory[],
+	opts?: { includeArchived?: boolean },
+): Promise<Record<string, BrandConfigItem[]>> {
+	if (categories.length === 0) return {};
+	const brandId = assertBrandId(ctx);
+	let query = ctx.db
+		.from("brand_config_items")
+		.select("*")
+		.eq("brand_id", brandId)
+		.in("category", categories as string[])
+		.order("sort_order", { ascending: true })
+		.order("label", { ascending: true });
+	if (!opts?.includeArchived) query = query.eq("is_active", true);
+	const { data, error } = await query;
+	if (error) throw new ValidationError(error.message);
+	const grouped: Record<string, BrandConfigItem[]> = {};
+	for (const c of categories) grouped[c] = [];
+	for (const row of data ?? []) {
+		(grouped[row.category] ??= []).push(row);
+	}
+	return grouped;
+}
+
 export async function createBrandConfigItem(
 	ctx: Context,
 	input: unknown,
@@ -218,10 +246,11 @@ async function cascadeLiveRename(
 				.eq("brand_id", brandId);
 			break;
 		}
-		// Other "live" categories don't have a write target on dependent
-		// rows yet (customer_tag/appointment_tag are still free-text in
-		// their owning columns; demographic columns aren't live). Add
-		// arms here as those modules come online.
+		// appointment_tag and customer_tag store codes (not labels) on
+		// their owning rows, so a label rename is picked up at render
+		// time via the Provider lookup — no cascade needed.
+		// Other "live" categories (demographic columns) aren't wired
+		// yet; add arms here as those modules come online.
 		default:
 			break;
 	}

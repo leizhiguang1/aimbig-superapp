@@ -28,11 +28,11 @@ import {
 	updateEmployeeAction,
 } from "@/lib/actions/employees";
 import { deleteMediaObjectAction } from "@/lib/actions/storage";
+import { SALUTATION_FALLBACK } from "@/lib/brand-config/fallbacks";
 import {
 	type EmployeeFormInput,
 	employeeFormSchema,
 	type Gender,
-	SALUTATIONS,
 } from "@/lib/schemas/employees";
 import type { EmployeeWithRelations } from "@/lib/services/employees";
 import type { OutletWithRoomCount } from "@/lib/services/outlets";
@@ -294,7 +294,7 @@ export function EmployeeFormDialog({
 	const [serverError, setServerError] = useState<string | null>(null);
 	const [pendingId, setPendingId] = useState<string | null>(null);
 	const [salutationOptions, setSalutationOptions] = useState<string[]>([
-		...SALUTATIONS,
+		...SALUTATION_FALLBACK,
 	]);
 	const savedRef = useRef(false);
 
@@ -342,15 +342,24 @@ export function EmployeeFormDialog({
 
 	// Brand-managed salutation list. Falls back to the hardcoded set when
 	// the brand has not added any of their own.
+	// For new employees, if EMPTY's hardcoded default ("Mr") isn't in the
+	// brand list, fall through to the first list item so the form doesn't
+	// open with an out-of-list value.
 	useEffect(() => {
 		if (!open) return;
 		listActiveBrandConfigItemsAction("salutation")
 			.then((items) => {
-				const labels = items.map((i) => i.label);
-				setSalutationOptions(labels.length > 0 ? labels : [...SALUTATIONS]);
+				const labels =
+					items.length > 0
+						? items.map((i) => i.label)
+						: [...SALUTATION_FALLBACK];
+				setSalutationOptions(labels);
+				if (!employee && !labels.includes(form.getValues("salutation"))) {
+					form.setValue("salutation", labels[0], { shouldValidate: true });
+				}
 			})
-			.catch(() => setSalutationOptions([...SALUTATIONS]));
-	}, [open]);
+			.catch(() => setSalutationOptions([...SALUTATION_FALLBACK]));
+	}, [open, employee, form]);
 
 	const icParse =
 		idType === "ic" && idNumber ? parseMalaysianIc(idNumber) : null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Package, Pencil, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -13,8 +13,9 @@ import {
 import { deleteInventoryItemAction } from "@/lib/actions/inventory";
 import {
 	type InventoryKind,
-	type InventoryStockStatus,
 	INVENTORY_STOCK_STATUS_LABELS,
+	INVENTORY_STOCK_STATUSES,
+	type InventoryStockStatus,
 } from "@/lib/schemas/inventory";
 import type {
 	InventoryBrand,
@@ -23,6 +24,8 @@ import type {
 	InventoryUom,
 	Supplier,
 } from "@/lib/services/inventory";
+import type { Outlet } from "@/lib/services/outlets";
+import { publicMediaUrl } from "@/lib/services/storage";
 import type { Tax } from "@/lib/services/taxes";
 import { cn } from "@/lib/utils";
 import { ItemFormDialog } from "./ItemForm";
@@ -93,6 +96,8 @@ type Props = {
 	categories: InventoryCategory[];
 	suppliers: Supplier[];
 	taxes: Tax[];
+	outlets: Outlet[];
+	activeOutletId: string | null;
 };
 
 export function ItemsTable({
@@ -102,13 +107,34 @@ export function ItemsTable({
 	categories,
 	suppliers,
 	taxes,
+	outlets,
+	activeOutletId,
 }: Props) {
 	const [editing, setEditing] = useState<InventoryItemWithRefs | null>(null);
 	const [stockDetails, setStockDetails] =
 		useState<InventoryItemWithRefs | null>(null);
 	const [deleting, setDeleting] = useState<InventoryItemWithRefs | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
+	const [statusFilter, setStatusFilter] = useState<InventoryStockStatus | "all">(
+		"all",
+	);
 	const [pending, startTransition] = useTransition();
+
+	const counts = useMemo(() => {
+		const c: Record<InventoryStockStatus, number> = { normal: 0, low: 0, out: 0 };
+		for (const i of items) {
+			const s = (i.stock_status ?? "normal") as InventoryStockStatus;
+			c[s] += 1;
+		}
+		return c;
+	}, [items]);
+
+	const filteredItems = useMemo(() => {
+		if (statusFilter === "all") return items;
+		return items.filter(
+			(i) => (i.stock_status ?? "normal") === statusFilter,
+		);
+	}, [items, statusFilter]);
 
 	const columns: DataTableColumn<InventoryItemWithRefs>[] = [
 		{
@@ -120,9 +146,9 @@ export function ItemsTable({
 				<div className="flex items-center gap-3">
 					<div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
 						{i.image_path ? (
-							// biome-ignore lint/performance/noImgElement: placeholder, Storage upload lands later
+							// biome-ignore lint/performance/noImgElement: Supabase Storage public URL, no Next.js image optimizer
 							<img
-								src={i.image_path}
+								src={publicMediaUrl(i.image_path) ?? undefined}
 								alt={i.name}
 								className="size-full object-cover"
 							/>
@@ -387,20 +413,48 @@ export function ItemsTable({
 		},
 	];
 
+	const toolbar = (
+		<div className="flex flex-wrap items-center gap-1.5">
+			<StatusChip
+				active={statusFilter === "all"}
+				onClick={() => setStatusFilter("all")}
+				label="All"
+				count={items.length}
+			/>
+			{INVENTORY_STOCK_STATUSES.map((s) => (
+				<StatusChip
+					key={s}
+					active={statusFilter === s}
+					onClick={() => setStatusFilter(s)}
+					label={INVENTORY_STOCK_STATUS_LABELS[s]}
+					count={counts[s]}
+					tone={s}
+				/>
+			))}
+		</div>
+	);
+
 	return (
 		<>
 			<DataTable
-				data={items}
+				data={filteredItems}
 				columns={columns}
 				getRowKey={(i) => i.id}
 				searchKeys={["name", "sku", "barcode"]}
 				searchPlaceholder="Search items…"
-				emptyMessage="No inventory items yet. Click “Add item” to create one."
+				emptyMessage={
+					statusFilter === "all"
+						? "No inventory items yet. Click “Add item” to create one."
+						: `No items in the “${INVENTORY_STOCK_STATUS_LABELS[statusFilter]}” status.`
+				}
 				minWidth={1900}
+				toolbar={toolbar}
 			/>
 			<StockDetailsDialog
 				open={!!stockDetails}
 				item={stockDetails}
+				outlets={outlets}
+				activeOutletId={activeOutletId}
 				onClose={() => setStockDetails(null)}
 			/>
 			{editing && (
@@ -414,6 +468,7 @@ export function ItemsTable({
 					categories={categories}
 					suppliers={suppliers}
 					taxes={taxes}
+					outlets={outlets}
 					onClose={() => setEditing(null)}
 				/>
 			)}
@@ -447,5 +502,38 @@ export function ItemsTable({
 				}}
 			/>
 		</>
+	);
+}
+
+function StatusChip({
+	active,
+	onClick,
+	label,
+	count,
+	tone,
+}: {
+	active: boolean;
+	onClick: () => void;
+	label: string;
+	count: number;
+	tone?: InventoryStockStatus;
+}) {
+	const activeTone = tone
+		? STATUS_PILL[tone]
+		: "bg-foreground text-background ring-foreground";
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={cn(
+				"inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium text-xs ring-1 ring-inset transition",
+				active
+					? activeTone
+					: "bg-background text-muted-foreground ring-border hover:bg-muted",
+			)}
+		>
+			{label}
+			<span className="tabular-nums opacity-70">{count}</span>
+		</button>
 	);
 }

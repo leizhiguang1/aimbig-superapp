@@ -1,7 +1,15 @@
 import { z } from "zod";
+import { SUPPORTED_TIMEZONE_VALUES } from "@/lib/timezones";
 
 const optionalText = (max: number) =>
 	z.string().trim().max(max).optional().or(z.literal(""));
+
+export const outletTimezoneSchema = z.object({
+	outlet_id: z.string().uuid(),
+	timezone: z.enum(SUPPORTED_TIMEZONE_VALUES),
+});
+
+export type OutletTimezoneInput = z.infer<typeof outletTimezoneSchema>;
 
 export const outletCreateSchema = z.object({
 	code: z

@@ -6,10 +6,14 @@ import {
 	consumableCreateSchema,
 	consumableUpdateSchema,
 	type InventoryItemCreateInput,
+	type InventoryItemOutletRow,
 	medicationCreateSchema,
 	medicationUpdateSchema,
 	productCreateSchema,
 	productUpdateSchema,
+	STOCK_ADJUSTMENT_LEDGER_REASON,
+	STOCK_ADJUSTMENT_REASON_LABELS,
+	stockAdjustmentInputSchema,
 	supplierInputSchema,
 	uomInputSchema,
 } from "@/lib/schemas/inventory";
@@ -25,6 +29,23 @@ export type InventoryUom = Tables<"inventory_uoms">;
 export type InventoryBrand = Tables<"inventory_brands">;
 export type InventoryCategory = Tables<"inventory_categories">;
 export type Supplier = Tables<"suppliers">;
+export type InventoryMovement = Tables<"inventory_movements">;
+export type InventoryItemOutlet = Tables<"inventory_item_outlets">;
+
+export type InventoryMovementWithRefs = InventoryMovement & {
+	created_by_employee: { id: string; first_name: string; last_name: string | null } | null;
+};
+
+export type LowStockItem = {
+	id: string;
+	sku: string;
+	name: string;
+	kind: string;
+	stock: number;
+	stock_alert_count: number;
+	stock_status: string;
+	stock_uom: { id: string; name: string } | null;
+};
 
 export type InventoryItemWithRefs = InventoryItem & {
 	brand: { id: string; name: string } | null;
@@ -34,6 +55,19 @@ export type InventoryItemWithRefs = InventoryItem & {
 	stock_uom: { id: string; name: string } | null;
 	use_uom: { id: string; name: string } | null;
 	tax_ids: string[];
+	outlets: InventoryItemOutlet[];
+	// When the query was scoped to a specific outlet, these are populated
+	// from that outlet's row in `inventory_item_outlets`. Reads not scoped
+	// to one outlet leave them at the legacy global values.
+	stock: number;
+	in_transit: number;
+	locked: number;
+	stock_alert_count: number;
+	stock_status: string;
+	cost_price: number;
+	selling_price: number;
+	location: string | null;
+	is_sellable: boolean;
 };
 
 const SELECT_WITH_REFS = `
@@ -44,17 +78,56 @@ const SELECT_WITH_REFS = `
 	purchasing_uom:inventory_uoms!inventory_items_purchasing_uom_id_fkey(id, name),
 	stock_uom:inventory_uoms!inventory_items_stock_uom_id_fkey(id, name),
 	use_uom:inventory_uoms!inventory_items_use_uom_id_fkey(id, name),
-	inventory_item_taxes(tax_id)
+	inventory_item_taxes(tax_id),
+	outlets:inventory_item_outlets(*)
 ` as const;
 
-function attachTaxIds(row: unknown): InventoryItemWithRefs {
-	const r = row as InventoryItemWithRefs & {
+// Collapses the per-outlet row for `outletId` (if any) onto the row's
+// stock-shaped fields so the items table / forms can read them directly.
+function shapeForOutlet(
+	row: unknown,
+	outletId: string | null,
+): InventoryItemWithRefs {
+	const r = row as InventoryItem & {
+		brand: { id: string; name: string } | null;
+		category: { id: string; name: string } | null;
+		supplier: { id: string; name: string } | null;
+		purchasing_uom: { id: string; name: string } | null;
+		stock_uom: { id: string; name: string } | null;
+		use_uom: { id: string; name: string } | null;
 		inventory_item_taxes: { tax_id: string }[] | null;
+		outlets: InventoryItemOutlet[] | null;
 	};
-	const { inventory_item_taxes, ...rest } = r;
+	const { inventory_item_taxes, outlets: rawOutlets, ...rest } = r;
+	const outlets = rawOutlets ?? [];
+	const active = outletId ? outlets.find((o) => o.outlet_id === outletId) : null;
+	const stock = active ? Number(active.stock) : Number(rest.stock);
+	const alert = active
+		? Number(active.stock_alert_count)
+		: Number(rest.stock_alert_count);
+	const status =
+		active?.stock_status ?? rest.stock_status ?? "normal";
 	return {
 		...rest,
+		brand: r.brand,
+		category: r.category,
+		supplier: r.supplier,
+		purchasing_uom: r.purchasing_uom,
+		stock_uom: r.stock_uom,
+		use_uom: r.use_uom,
 		tax_ids: (inventory_item_taxes ?? []).map((t) => t.tax_id),
+		outlets,
+		stock,
+		in_transit: active ? Number(active.in_transit) : Number(rest.in_transit),
+		locked: active ? Number(active.locked) : Number(rest.locked),
+		stock_alert_count: alert,
+		stock_status: status,
+		cost_price: active ? Number(active.cost_price) : Number(rest.cost_price),
+		selling_price: active
+			? Number(active.selling_price)
+			: Number(rest.selling_price),
+		location: active ? (active.location ?? null) : (rest.location ?? null),
+		is_sellable: active ? active.is_sellable : rest.is_sellable,
 	} as InventoryItemWithRefs;
 }
 
@@ -62,6 +135,7 @@ function attachTaxIds(row: unknown): InventoryItemWithRefs {
 
 export async function listInventoryItems(
 	ctx: Context,
+	outletId: string | null = null,
 ): Promise<InventoryItemWithRefs[]> {
 	const { data, error } = await ctx.db
 		.from("inventory_items")
@@ -69,29 +143,32 @@ export async function listInventoryItems(
 		.eq("brand_id", assertBrandId(ctx))
 		.order("name", { ascending: true });
 	if (error) throw new ValidationError(error.message);
-	return (data ?? []).map((row) => attachTaxIds(row));
+	return (data ?? []).map((row) => shapeForOutlet(row, outletId));
 }
 
 // Sellable products only — used by the appointment billing item picker.
-// Filters: kind='product', is_sellable=true, is_active=true.
+// Filters: kind='product', is_active=true. The is_sellable flag is now
+// per-outlet, so when an outletId is provided we filter on the outlet row.
 export async function listSellableProducts(
 	ctx: Context,
+	outletId: string | null = null,
 ): Promise<InventoryItemWithRefs[]> {
 	const { data, error } = await ctx.db
 		.from("inventory_items")
 		.select(SELECT_WITH_REFS)
 		.eq("brand_id", assertBrandId(ctx))
 		.eq("kind", "product")
-		.eq("is_sellable", true)
 		.eq("is_active", true)
 		.order("name", { ascending: true });
 	if (error) throw new ValidationError(error.message);
-	return (data ?? []).map((row) => attachTaxIds(row));
+	const shaped = (data ?? []).map((row) => shapeForOutlet(row, outletId));
+	return shaped.filter((r) => r.is_sellable);
 }
 
 export async function getInventoryItem(
 	ctx: Context,
 	id: string,
+	outletId: string | null = null,
 ): Promise<InventoryItemWithRefs> {
 	const { data, error } = await ctx.db
 		.from("inventory_items")
@@ -100,7 +177,55 @@ export async function getInventoryItem(
 		.eq("brand_id", assertBrandId(ctx))
 		.single();
 	if (error || !data) throw new NotFoundError(`Inventory item ${id} not found`);
-	return attachTaxIds(data);
+	return shapeForOutlet(data, outletId);
+}
+
+// Replaces every inventory_item_outlets row for this item with the given
+// payload. Used by create/update — the form is the source of truth for
+// per-outlet pricing & alert thresholds. Stock is intentionally NOT touched
+// here: it's mutated by the Stock Adjustment dialog and the sale RPCs, never
+// from the item edit form (which would be ambiguous and would bypass the
+// movement ledger). On create, we DO accept the form's initial stock since
+// no movement history exists yet.
+async function persistOutletRows(
+	ctx: Context,
+	itemId: string,
+	rows: InventoryItemOutletRow[],
+	options: { allowStockOverwrite: boolean },
+): Promise<void> {
+	if (rows.length === 0) return;
+	const cols: Array<keyof InventoryItemOutletRow> = options.allowStockOverwrite
+		? [
+				"cost_price",
+				"selling_price",
+				"stock",
+				"in_transit",
+				"locked",
+				"stock_alert_count",
+				"minimum_stock_level",
+				"location",
+				"is_sellable",
+			]
+		: [
+				"cost_price",
+				"selling_price",
+				"stock_alert_count",
+				"minimum_stock_level",
+				"location",
+				"is_sellable",
+			];
+	for (const row of rows) {
+		const patch: Partial<InventoryItemOutlet> = {};
+		for (const c of cols) {
+			(patch as Record<string, unknown>)[c] = row[c];
+		}
+		const { error } = await ctx.db
+			.from("inventory_item_outlets")
+			.update(patch)
+			.eq("item_id", itemId)
+			.eq("outlet_id", row.outlet_id);
+		if (error) throw new ValidationError(error.message);
+	}
 }
 
 function buildItemRow(parsed: InventoryItemCreateInput) {
@@ -125,6 +250,8 @@ function buildItemRow(parsed: InventoryItemCreateInput) {
 		stock_alert_count: parsed.stock_alert_count,
 		discount_cap: parsed.discount_cap,
 		location: parsed.location,
+		external_code: parsed.external_code,
+		image_path: parsed.image_path,
 	};
 
 	if (parsed.kind === "product") {
@@ -192,6 +319,14 @@ export async function createInventoryItem(
 			throw new ConflictError("An inventory item with that SKU already exists");
 		throw new ValidationError(error.message);
 	}
+	// Trigger seeds inventory_item_outlets with the global template values.
+	// If the form supplied per-outlet overrides, apply them now (initial
+	// stock allowed because no movement history exists yet).
+	if (parsed.outlets.length > 0) {
+		await persistOutletRows(ctx, data.id, parsed.outlets, {
+			allowStockOverwrite: true,
+		});
+	}
 	await setTaxesForInventoryItem(ctx, data.id, parsed.tax_ids);
 	return data;
 }
@@ -212,6 +347,7 @@ export async function updateInventoryItem(
 	} as InventoryItemCreateInput);
 	const { sku: _omit, ...updateRow } = row;
 	const brandId = assertBrandId(ctx);
+
 	const { data, error } = await ctx.db
 		.from("inventory_items")
 		.update(updateRow)
@@ -221,6 +357,17 @@ export async function updateInventoryItem(
 		.single();
 	if (error) throw new ValidationError(error.message);
 	if (!data) throw new NotFoundError(`Inventory item ${id} not found`);
+
+	// Per-outlet pricing/alert/location/sellable overrides — stock is left
+	// alone because the form's stock field becomes ambiguous once stock is
+	// per-outlet. Use the Stock Adjustment dialog to mutate stock with a
+	// reason; that path emits a proper movement row.
+	if (parsed.outlets.length > 0) {
+		await persistOutletRows(ctx, id, parsed.outlets, {
+			allowStockOverwrite: false,
+		});
+	}
+
 	await setTaxesForInventoryItem(ctx, id, parsed.tax_ids);
 	return data;
 }
@@ -528,4 +675,168 @@ export async function deleteSupplier(ctx: Context, id: string): Promise<void> {
 			);
 		throw new ValidationError(error.message);
 	}
+}
+
+// ---------- Stock adjustments ----------
+
+// Manual stock adjustment from the Stock Details dialog. Mirrors the kumodent
+// "Add new batch" flow but without batches (Phase 2). Targets a specific
+// outlet's row in inventory_item_outlets; emits an `inventory_movements`
+// row stamped with the same outlet_id so the per-item ledger filters cleanly.
+export async function recordStockMovement(
+	ctx: Context,
+	itemId: string,
+	outletId: string,
+	input: unknown,
+): Promise<InventoryItemOutlet> {
+	await assertNotCashWallet(ctx, itemId);
+	const parsed = stockAdjustmentInputSchema.parse(input);
+	await assertOutletInBrand(ctx, outletId);
+
+	const { data: prev, error: prevErr } = await ctx.db
+		.from("inventory_item_outlets")
+		.select("stock")
+		.eq("item_id", itemId)
+		.eq("outlet_id", outletId)
+		.maybeSingle();
+	if (prevErr) throw new ValidationError(prevErr.message);
+	if (!prev) {
+		throw new NotFoundError(
+			`Item is not stocked at this outlet — open the item's per-outlet panel and seed it first.`,
+		);
+	}
+
+	const signedDelta =
+		parsed.direction === "in" ? parsed.quantity : -parsed.quantity;
+	const newStock = Number(prev.stock) + signedDelta;
+	if (newStock < 0) {
+		throw new ValidationError(
+			`Cannot remove ${parsed.quantity} — only ${Number(prev.stock)} on hand at this outlet.`,
+		);
+	}
+
+	const ledgerReason = STOCK_ADJUSTMENT_LEDGER_REASON[parsed.reason];
+	const reasonLabel = STOCK_ADJUSTMENT_REASON_LABELS[parsed.reason];
+	const noteParts = [reasonLabel, parsed.notes].filter(Boolean) as string[];
+
+	const { data, error } = await ctx.db
+		.from("inventory_item_outlets")
+		.update({ stock: newStock })
+		.eq("item_id", itemId)
+		.eq("outlet_id", outletId)
+		.select("*")
+		.single();
+	if (error) throw new ValidationError(error.message);
+	if (!data) throw new NotFoundError(`Outlet stock row not found`);
+
+	const { error: mvErr } = await ctx.db.from("inventory_movements").insert({
+		item_id: itemId,
+		outlet_id: outletId,
+		delta: signedDelta,
+		reason: ledgerReason,
+		ref_type: "manual",
+		ref_id: null,
+		notes: noteParts.join(" · "),
+		created_by: ctx.currentUser?.employeeId ?? null,
+	});
+	if (mvErr) throw new ValidationError(mvErr.message);
+	return data;
+}
+
+async function assertOutletInBrand(
+	ctx: Context,
+	outletId: string,
+): Promise<void> {
+	const { data, error } = await ctx.db
+		.from("outlets")
+		.select("id")
+		.eq("id", outletId)
+		.eq("brand_id", assertBrandId(ctx))
+		.maybeSingle();
+	if (error) throw new ValidationError(error.message);
+	if (!data) throw new ValidationError("Unknown outlet for this brand");
+}
+
+// ---------- Movements ----------
+
+// Loaded on-demand by the StockDetails dialog. Brand scoping is enforced via
+// the parent inventory_items row. When `outletId` is supplied the ledger is
+// filtered to that outlet — matches the kumodent behaviour where each outlet
+// has its own movement history.
+export async function listMovementsForItem(
+	ctx: Context,
+	itemId: string,
+	outletId: string | null = null,
+): Promise<InventoryMovementWithRefs[]> {
+	await getInventoryItem(ctx, itemId);
+	let query = ctx.db
+		.from("inventory_movements")
+		.select(
+			"*, created_by_employee:employees!inventory_movements_created_by_fkey(id, first_name, last_name)",
+		)
+		.eq("item_id", itemId);
+	if (outletId) query = query.eq("outlet_id", outletId);
+	const { data, error } = await query
+		.order("created_at", { ascending: false })
+		.limit(500);
+	if (error) throw new ValidationError(error.message);
+	return (data ?? []) as unknown as InventoryMovementWithRefs[];
+}
+
+// ---------- Dashboard ----------
+
+// Per-outlet low-stock list. Reads inventory_item_outlets directly so the
+// dashboard for an outlet only sees items low/out at THAT outlet — what
+// staff actually need to restock locally. Cash Wallet is excluded.
+export async function listLowStockItems(
+	ctx: Context,
+	outletId: string,
+): Promise<LowStockItem[]> {
+	await assertOutletInBrand(ctx, outletId);
+	const { data, error } = await ctx.db
+		.from("inventory_item_outlets")
+		.select(
+			"stock, stock_alert_count, stock_status, item:inventory_items!inventory_item_outlets_item_id_fkey!inner(id, sku, name, kind, is_active, brand_id, stock_uom:inventory_uoms!inventory_items_stock_uom_id_fkey(id, name))",
+		)
+		.eq("outlet_id", outletId)
+		.in("stock_status", ["low", "out"]);
+	if (error) throw new ValidationError(error.message);
+	type Row = {
+		stock: number;
+		stock_alert_count: number;
+		stock_status: string;
+		item: {
+			id: string;
+			sku: string;
+			name: string;
+			kind: string;
+			is_active: boolean;
+			brand_id: string;
+			stock_uom: { id: string; name: string } | null;
+		};
+	};
+	const brandId = assertBrandId(ctx);
+	return (data as unknown as Row[])
+		.filter(
+			(r) =>
+				r.item.is_active &&
+				r.item.brand_id === brandId &&
+				r.item.sku !== "CASH_WALLET",
+		)
+		.map((r) => ({
+			id: r.item.id,
+			sku: r.item.sku,
+			name: r.item.name,
+			kind: r.item.kind,
+			stock: Number(r.stock),
+			stock_alert_count: Number(r.stock_alert_count),
+			stock_status: r.stock_status,
+			stock_uom: r.item.stock_uom,
+		}))
+		.sort((a, b) => {
+			if (a.stock_status !== b.stock_status) {
+				return a.stock_status === "out" ? -1 : 1;
+			}
+			return a.name.localeCompare(b.name);
+		});
 }

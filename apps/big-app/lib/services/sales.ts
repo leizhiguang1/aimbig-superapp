@@ -56,7 +56,7 @@ export type SalesOrderWithRelations = SalesOrder & {
 		id_number: string | null;
 		is_vip: boolean | null;
 		is_staff: boolean | null;
-		tag: string | null;
+		tags: string[] | null;
 	} | null;
 	consultant: {
 		id: string;
@@ -75,7 +75,7 @@ export type SalesOrderWithRelations = SalesOrder & {
 };
 
 const SALES_ORDER_SELECT =
-	"*, customer:customers!sales_orders_customer_id_fkey(id, code, first_name, last_name, profile_image_path, phone, id_number, is_vip, is_staff, tag), consultant:employees!sales_orders_consultant_id_fkey(id, first_name, last_name, profile_image_path), outlet:outlets!sales_orders_outlet_id_fkey(id, code, name), created_by_employee:employees!sales_orders_created_by_fkey(id, first_name, last_name, profile_image_path), appointment:appointments!sales_orders_appointment_id_fkey(id, booking_ref)";
+	"*, customer:customers!sales_orders_customer_id_fkey(id, code, first_name, last_name, profile_image_path, phone, id_number, is_vip, is_staff, tags), consultant:employees!sales_orders_consultant_id_fkey(id, first_name, last_name, profile_image_path), outlet:outlets!sales_orders_outlet_id_fkey(id, code, name), created_by_employee:employees!sales_orders_created_by_fkey(id, first_name, last_name, profile_image_path), appointment:appointments!sales_orders_appointment_id_fkey(id, booking_ref)";
 
 export async function listSalesOrders(
 	ctx: Context,
@@ -297,35 +297,68 @@ async function assertRequiredFullAllocations(
 	});
 }
 
-// Enforces per-service discount caps on a collect-payment payload. The UI
+// Enforces per-line discount caps on a collect-payment payload. The UI
 // clamps on blur, but the cap is a server invariant — never trust the client.
-// Cap is stored as a percent on services.discount_cap (null = no cap).
+// Caps live on services.discount_cap and inventory_items.discount_cap (both
+// percent, null = no cap). Mirrored inside the RPCs as a defense-in-depth
+// check for non-UI callers.
 async function assertLineDiscountCaps(
 	ctx: Context,
 	items: CollectPaymentItem[],
 ): Promise<void> {
+	const brandId = assertBrandId(ctx);
+
 	const serviceIds = Array.from(
 		new Set(
 			items.map((i) => i.service_id).filter((id): id is string => id != null),
 		),
 	);
-	if (serviceIds.length === 0) return;
-	const { data, error } = await ctx.db
-		.from("services")
-		.select("id, name, discount_cap")
-		.eq("brand_id", assertBrandId(ctx))
-		.in("id", serviceIds);
-	if (error) throw new ValidationError(error.message);
-	const capMap = new Map<string, number | null>();
-	for (const row of data ?? []) {
-		capMap.set(
-			row.id,
-			row.discount_cap == null ? null : Number(row.discount_cap),
-		);
+	const inventoryItemIds = Array.from(
+		new Set(
+			items
+				.map((i) => i.inventory_item_id)
+				.filter((id): id is string => id != null),
+		),
+	);
+
+	const serviceCapMap = new Map<string, number | null>();
+	if (serviceIds.length > 0) {
+		const { data, error } = await ctx.db
+			.from("services")
+			.select("id, discount_cap")
+			.eq("brand_id", brandId)
+			.in("id", serviceIds);
+		if (error) throw new ValidationError(error.message);
+		for (const row of data ?? []) {
+			serviceCapMap.set(
+				row.id,
+				row.discount_cap == null ? null : Number(row.discount_cap),
+			);
+		}
 	}
+
+	const itemCapMap = new Map<string, number | null>();
+	if (inventoryItemIds.length > 0) {
+		const { data, error } = await ctx.db
+			.from("inventory_items")
+			.select("id, discount_cap")
+			.eq("brand_id", brandId)
+			.in("id", inventoryItemIds);
+		if (error) throw new ValidationError(error.message);
+		for (const row of data ?? []) {
+			itemCapMap.set(
+				row.id,
+				row.discount_cap == null ? null : Number(row.discount_cap),
+			);
+		}
+	}
+
 	for (const item of items) {
-		if (!item.service_id) continue;
-		const capPct = capMap.get(item.service_id);
+		const capPct = item.service_id
+			? serviceCapMap.get(item.service_id)
+			: item.inventory_item_id
+				? itemCapMap.get(item.inventory_item_id)
+				: null;
 		if (capPct == null) continue;
 		const lineGross = Math.max(0, item.quantity * item.unit_price);
 		const capMyr = Math.round(lineGross * capPct) / 100;

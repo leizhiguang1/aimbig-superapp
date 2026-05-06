@@ -184,14 +184,25 @@ function NewSaleBody({
 		for (const s of data.services) map.set(s.id, s);
 		return map;
 	}, [data.services]);
+	const productById = useMemo(() => {
+		const map = new Map<string, InventoryItemWithRefs>();
+		for (const p of data.products) map.set(p.id, p);
+		return map;
+	}, [data.products]);
 
 	const capFor = useCallback(
-		(serviceId: string | null): number | null => {
-			if (!serviceId) return null;
-			const svc = serviceById.get(serviceId);
-			return svc?.discount_cap == null ? null : Number(svc.discount_cap);
+		(line: Line): number | null => {
+			if (line.service_id) {
+				const svc = serviceById.get(line.service_id);
+				return svc?.discount_cap == null ? null : Number(svc.discount_cap);
+			}
+			if (line.inventory_item_id) {
+				const it = productById.get(line.inventory_item_id);
+				return it?.discount_cap == null ? null : Number(it.discount_cap);
+			}
+			return null;
 		},
-		[serviceById],
+		[serviceById, productById],
 	);
 
 	const updateLine = useCallback(
@@ -213,7 +224,7 @@ function NewSaleBody({
 	);
 
 	const lineDiscounts = useMemo(
-		() => lines.map((l) => computeLineDiscount(l, capFor(l.service_id))),
+		() => lines.map((l) => computeLineDiscount(l, capFor(l))),
 		[lines, capFor],
 	);
 	const subtotal = useMemo(
@@ -724,7 +735,7 @@ function NewSaleBody({
 													? (serviceById.get(l.service_id) ?? null)
 													: null
 											}
-											capPct={capFor(l.service_id)}
+											capPct={capFor(l)}
 											requiresFullPay={requiresFullFor(l)}
 											isExpanded={expandedIds.has(l.id)}
 											onToggleExpanded={() => toggleExpanded(l.id)}

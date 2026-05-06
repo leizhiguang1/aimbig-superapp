@@ -1,4 +1,7 @@
-import { PlaceholderBanner } from "@/components/config/PlaceholderBanner";
+"use client";
+
+import { Info } from "lucide-react";
+import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Select,
@@ -15,27 +18,26 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { setOutletTimezoneAction } from "@/lib/actions/outlets";
+import type { Outlet } from "@/lib/services/outlets";
+import { SUPPORTED_TIMEZONES } from "@/lib/timezones";
 
-const TIMEZONES = [
-	{ value: "Asia/Kuala_Lumpur", label: "(UTC+08:00) Kuala Lumpur, Singapore" },
-	{ value: "Asia/Singapore", label: "(UTC+08:00) Singapore" },
-	{ value: "Asia/Manila", label: "(UTC+08:00) Manila" },
-	{ value: "Asia/Bangkok", label: "(UTC+07:00) Bangkok, Hanoi, Jakarta" },
-	{ value: "Asia/Tokyo", label: "(UTC+09:00) Tokyo, Osaka" },
-	{ value: "UTC", label: "(UTC+00:00) UTC" },
-];
+type RowOutlet = Pick<Outlet, "id" | "code" | "name" | "timezone">;
 
-// Placeholder outlets — will be real outlet rows once DB column lands
-const MOCK_OUTLETS = [
-	{ id: 1, name: "Main Outlet", nickname: "MAIN", timezone: "Asia/Kuala_Lumpur" },
-	{ id: 2, name: "Branch A", nickname: "BRA", timezone: "Asia/Kuala_Lumpur" },
-	{ id: 3, name: "Branch B", nickname: "BRB", timezone: "Asia/Kuala_Lumpur" },
-];
+type Status = "idle" | "saving" | "saved" | { error: string };
 
-export function TimezoneTab() {
+export function TimezoneTab({ outlets }: { outlets: RowOutlet[] }) {
 	return (
 		<div className="space-y-4">
-			<PlaceholderBanner />
+			<div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-muted-foreground text-sm">
+				<Info className="mt-0.5 size-4 shrink-0" />
+				<p>
+					Timezone is saved per outlet but not yet applied to displayed dates
+					and reports — all date and time UI currently renders in the browser's
+					local timezone. We'll roll display formatting through outlet timezone
+					in a later update.
+				</p>
+			</div>
 
 			<Card>
 				<CardHeader className="pb-3">
@@ -45,42 +47,79 @@ export function TimezoneTab() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className="w-16 pl-6">Outlet ID</TableHead>
+								<TableHead className="w-24 pl-6">Code</TableHead>
 								<TableHead>Outlet Name</TableHead>
-								<TableHead className="w-28">Nickname</TableHead>
 								<TableHead className="w-72 pr-6">Time Zone</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{MOCK_OUTLETS.map((outlet) => (
-								<TableRow key={outlet.id}>
-									<TableCell className="pl-6 font-medium">
-										{outlet.id}
-									</TableCell>
-									<TableCell className="font-medium">{outlet.name}</TableCell>
-									<TableCell className="text-muted-foreground">
-										{outlet.nickname}
-									</TableCell>
-									<TableCell className="pr-6">
-										<Select defaultValue={outlet.timezone}>
-											<SelectTrigger className="w-full">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{TIMEZONES.map((tz) => (
-													<SelectItem key={tz.value} value={tz.value}>
-														{tz.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</TableCell>
-								</TableRow>
+							{outlets.map((o) => (
+								<OutletTimezoneRow key={o.id} outlet={o} />
 							))}
 						</TableBody>
 					</Table>
 				</CardContent>
 			</Card>
 		</div>
+	);
+}
+
+function OutletTimezoneRow({ outlet }: { outlet: RowOutlet }) {
+	const [pending, startTransition] = useTransition();
+	const [status, setStatus] = useState<Status>("idle");
+	const [value, setValue] = useState(outlet.timezone);
+
+	const onChange = (next: string) => {
+		const previous = value;
+		setValue(next);
+		setStatus("saving");
+		startTransition(async () => {
+			const result = await setOutletTimezoneAction({
+				outlet_id: outlet.id,
+				timezone: next,
+			});
+			if ("error" in result) {
+				setValue(previous);
+				setStatus({ error: result.error });
+				return;
+			}
+			setStatus("saved");
+		});
+	};
+
+	return (
+		<TableRow>
+			<TableCell className="pl-6 font-mono text-xs">{outlet.code}</TableCell>
+			<TableCell className="font-medium">{outlet.name}</TableCell>
+			<TableCell className="pr-6">
+				<div className="flex items-center gap-2">
+					<Select value={value} onValueChange={onChange} disabled={pending}>
+						<SelectTrigger className="w-full">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{SUPPORTED_TIMEZONES.map((tz) => (
+								<SelectItem key={tz.value} value={tz.value}>
+									{tz.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<span className="w-16 shrink-0 text-xs">
+						{status === "saving" && (
+							<span className="text-muted-foreground">Saving…</span>
+						)}
+						{status === "saved" && (
+							<span className="text-emerald-600">Saved</span>
+						)}
+						{typeof status === "object" && (
+							<span className="text-destructive" title={status.error}>
+								Failed
+							</span>
+						)}
+					</span>
+				</div>
+			</TableCell>
+		</TableRow>
 	);
 }

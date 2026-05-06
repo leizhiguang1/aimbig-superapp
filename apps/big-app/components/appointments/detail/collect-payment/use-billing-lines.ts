@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AppointmentLineItem } from "@/lib/services/appointment-line-items";
+import type { InventoryItemWithRefs } from "@/lib/services/inventory";
 import type { ServiceWithCategory } from "@/lib/services/services";
 import type { Tax } from "@/lib/services/taxes";
 import {
@@ -15,6 +16,7 @@ export function useBillingLines(
 	entries: AppointmentLineItem[],
 	services: ServiceWithCategory[],
 	taxes: Tax[],
+	products: InventoryItemWithRefs[] = [],
 ) {
 	const [lines, setLines] = useState<Line[]>(() =>
 		entries.map((e) => toLine(e, services)),
@@ -37,10 +39,25 @@ export function useBillingLines(
 		return map;
 	}, [services]);
 
+	const capByProductId = useMemo(() => {
+		const map = new Map<string, number>();
+		for (const p of products) {
+			if (p.discount_cap != null) map.set(p.id, Number(p.discount_cap));
+		}
+		return map;
+	}, [products]);
+
 	const capFor = useCallback(
-		(serviceId: string | null): number | null =>
-			serviceId ? (capByServiceId.get(serviceId) ?? null) : null,
-		[capByServiceId],
+		(line: Pick<Line, "service_id" | "inventory_item_id">): number | null => {
+			if (line.service_id) {
+				return capByServiceId.get(line.service_id) ?? null;
+			}
+			if (line.inventory_item_id) {
+				return capByProductId.get(line.inventory_item_id) ?? null;
+			}
+			return null;
+		},
+		[capByServiceId, capByProductId],
 	);
 
 	const updateLine = useCallback(
@@ -61,7 +78,7 @@ export function useBillingLines(
 						return { ...r, discount_input: "" };
 					}
 					const gross = lineGross(r);
-					const capPct = capFor(r.service_id);
+					const capPct = capFor(r);
 					if (r.discount_type === "percent") {
 						const ceilingPct = capPct != null ? Math.min(100, capPct) : 100;
 						const next = Math.min(raw, ceilingPct);
@@ -90,7 +107,7 @@ export function useBillingLines(
 			setLines((rows) =>
 				rows.map((r) => {
 					if (r.item_type !== "service") return r;
-					const cap = capFor(r.service_id);
+					const cap = capFor(r);
 					const effective =
 						cap != null ? Math.min(percent, cap) : percent;
 					if (effective <= 0) return r;
@@ -129,7 +146,7 @@ export function useBillingLines(
 	);
 
 	const lineDiscounts = useMemo(
-		() => lines.map((l) => computeLineDiscount(l, capFor(l.service_id))),
+		() => lines.map((l) => computeLineDiscount(l, capFor(l))),
 		[lines, capFor],
 	);
 	const subtotal = useMemo(

@@ -982,7 +982,7 @@ export type Database = {
           smoker: string | null
           source: string | null
           state: string | null
-          tag: string | null
+          tags: string[]
           updated_at: string
         }
         Insert: {
@@ -1021,7 +1021,7 @@ export type Database = {
           smoker?: string | null
           source?: string | null
           state?: string | null
-          tag?: string | null
+          tags?: string[]
           updated_at?: string
         }
         Update: {
@@ -1060,7 +1060,7 @@ export type Database = {
           smoker?: string | null
           source?: string | null
           state?: string | null
-          tag?: string | null
+          tags?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -1449,6 +1449,72 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_item_outlets: {
+        Row: {
+          cost_price: number
+          created_at: string
+          in_transit: number
+          is_sellable: boolean
+          item_id: string
+          location: string | null
+          locked: number
+          minimum_stock_level: number
+          outlet_id: string
+          selling_price: number
+          stock: number
+          stock_alert_count: number
+          stock_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          cost_price?: number
+          created_at?: string
+          in_transit?: number
+          is_sellable?: boolean
+          item_id: string
+          location?: string | null
+          locked?: number
+          minimum_stock_level?: number
+          outlet_id: string
+          selling_price?: number
+          stock?: number
+          stock_alert_count?: number
+          stock_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cost_price?: number
+          created_at?: string
+          in_transit?: number
+          is_sellable?: boolean
+          item_id?: string
+          location?: string | null
+          locked?: number
+          minimum_stock_level?: number
+          outlet_id?: string
+          selling_price?: number
+          stock?: number
+          stock_alert_count?: number
+          stock_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_item_outlets_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_item_outlets_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_item_taxes: {
         Row: {
           created_at: string
@@ -1673,6 +1739,7 @@ export type Database = {
           id: string
           item_id: string
           notes: string | null
+          outlet_id: string | null
           reason: string
           ref_id: string | null
           ref_type: string | null
@@ -1684,6 +1751,7 @@ export type Database = {
           id?: string
           item_id: string
           notes?: string | null
+          outlet_id?: string | null
           reason: string
           ref_id?: string | null
           ref_type?: string | null
@@ -1695,6 +1763,7 @@ export type Database = {
           id?: string
           item_id?: string
           notes?: string | null
+          outlet_id?: string | null
           reason?: string
           ref_id?: string | null
           ref_type?: string | null
@@ -1712,6 +1781,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
             referencedColumns: ["id"]
           },
         ]
@@ -2153,6 +2229,7 @@ export type Database = {
           show_tax_number_on_invoice: boolean
           state: string | null
           tax_number: string | null
+          timezone: string
           updated_at: string
           wa_connection_id: string | null
           waze_name: string | null
@@ -2184,6 +2261,7 @@ export type Database = {
           show_tax_number_on_invoice?: boolean
           state?: string | null
           tax_number?: string | null
+          timezone?: string
           updated_at?: string
           wa_connection_id?: string | null
           waze_name?: string | null
@@ -2215,6 +2293,7 @@ export type Database = {
           show_tax_number_on_invoice?: boolean
           state?: string | null
           tax_number?: string | null
+          timezone?: string
           updated_at?: string
           wa_connection_id?: string | null
           waze_name?: string | null
@@ -4279,76 +4358,41 @@ export type Database = {
         Args: { p_cancelled_by: string; p_mt_id: string; p_reason: string }
         Returns: undefined
       }
-      collect_appointment_payment:
-        | {
-            Args: {
-              p_allocations?: Json
-              p_appointment_id: string
-              p_discount: number
-              p_frontdesk_message?: string
-              p_items: Json
-              p_payments: Json
-              p_processed_by: string
-              p_remarks: string
-              p_rounding: number
-              p_sold_at?: string
-              p_tax: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_allocations?: Json
-              p_appointment_id: string
-              p_discount: number
-              p_frontdesk_message?: string
-              p_incentives?: Json
-              p_items: Json
-              p_payments: Json
-              p_processed_by: string
-              p_remarks: string
-              p_rounding: number
-              p_sold_at?: string
-              p_tax: number
-            }
-            Returns: Json
-          }
-      collect_walkin_sale:
-        | {
-            Args: {
-              p_allocations?: Json
-              p_consultant_id: string
-              p_customer_id: string
-              p_discount: number
-              p_items: Json
-              p_outlet_id: string
-              p_payments: Json
-              p_processed_by: string
-              p_remarks: string
-              p_rounding: number
-              p_sold_at?: string
-              p_tax: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_allocations?: Json
-              p_consultant_id: string
-              p_customer_id: string
-              p_discount: number
-              p_incentives?: Json
-              p_items: Json
-              p_outlet_id: string
-              p_payments: Json
-              p_processed_by: string
-              p_remarks: string
-              p_rounding: number
-              p_sold_at?: string
-              p_tax: number
-            }
-            Returns: Json
-          }
+      collect_appointment_payment: {
+        Args: {
+          p_allocations?: Json
+          p_appointment_id: string
+          p_discount: number
+          p_frontdesk_message?: string
+          p_incentives?: Json
+          p_items: Json
+          p_payments: Json
+          p_processed_by: string
+          p_remarks: string
+          p_rounding: number
+          p_sold_at?: string
+          p_tax: number
+        }
+        Returns: Json
+      }
+      collect_walkin_sale: {
+        Args: {
+          p_allocations?: Json
+          p_consultant_id: string
+          p_customer_id: string
+          p_discount: number
+          p_incentives?: Json
+          p_items: Json
+          p_outlet_id: string
+          p_payments: Json
+          p_processed_by: string
+          p_remarks: string
+          p_rounding: number
+          p_sold_at?: string
+          p_tax: number
+        }
+        Returns: Json
+      }
       create_brand_atomic: {
         Args: {
           p_code: string
@@ -4713,3 +4757,4 @@ export const Constants = {
     },
   },
 } as const
+

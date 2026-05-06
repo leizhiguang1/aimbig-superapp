@@ -29,6 +29,21 @@ type Props = {
 	item?: BrandConfigItem | null;
 };
 
+const DEFAULT_COLOR = "#60a5fa";
+
+// Accepts "abc", "abcdef", "#abc", "#abcdef", "##abcdef" plus surrounding
+// whitespace. Anything else returns null. The native <input type="color">
+// only renders a non-black swatch when fed an exact "#rrggbb" string, so
+// we centralize the cleanup here instead of relying on the browser to
+// silently fall back.
+function normalizeHex(input: string): string | null {
+	const m = input.trim().match(/^#{0,2}([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+	if (!m) return null;
+	let h = m[1].toLowerCase();
+	if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+	return `#${h}`;
+}
+
 export function BrandConfigItemDialog({
 	open,
 	onClose,
@@ -38,7 +53,8 @@ export function BrandConfigItemDialog({
 	const def = getCategoryDef(category);
 	const isEdit = !!item;
 	const [label, setLabel] = useState("");
-	const [color, setColor] = useState("#60a5fa");
+	const [color, setColor] = useState(DEFAULT_COLOR);
+	const [colorText, setColorText] = useState(DEFAULT_COLOR);
 	const [serverError, setServerError] = useState<string | null>(null);
 	const [pending, startTransition] = useTransition();
 
@@ -47,27 +63,45 @@ export function BrandConfigItemDialog({
 		setServerError(null);
 		if (item) {
 			setLabel(item.label);
-			setColor(item.color ?? "#60a5fa");
+			const seeded = normalizeHex(item.color ?? "") ?? DEFAULT_COLOR;
+			setColor(seeded);
+			setColorText(seeded);
 		} else {
 			setLabel("");
-			setColor("#60a5fa");
+			setColor(DEFAULT_COLOR);
+			setColorText(DEFAULT_COLOR);
 		}
 	}, [open, item]);
 
+	const commitColorText = () => {
+		const next = normalizeHex(colorText);
+		if (next) {
+			setColor(next);
+			setColorText(next);
+		} else {
+			setColorText(color);
+		}
+	};
+
 	const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		const finalColor = def.hasColor
+			? (normalizeHex(colorText) ?? color)
+			: null;
+		if (def.hasColor && finalColor !== colorText) setColorText(finalColor!);
+		if (def.hasColor && finalColor !== color && finalColor) setColor(finalColor);
 		startTransition(async () => {
 			try {
 				if (isEdit && item) {
 					await updateBrandConfigItemAction(item.id, {
 						label,
-						color: def.hasColor ? color : null,
+						color: finalColor,
 					});
 				} else {
 					await createBrandConfigItemAction({
 						category,
 						label,
-						color: def.hasColor ? color : null,
+						color: finalColor,
 					});
 				}
 				onClose();
@@ -118,14 +152,19 @@ export function BrandConfigItemDialog({
 										id="bc-color"
 										type="color"
 										value={color}
-										onChange={(e) => setColor(e.target.value)}
+										onChange={(e) => {
+											setColor(e.target.value);
+											setColorText(e.target.value);
+										}}
 										className="h-9 w-12 cursor-pointer rounded border"
 									/>
 									<Input
-										value={color}
-										onChange={(e) => setColor(e.target.value)}
+										value={colorText}
+										onChange={(e) => setColorText(e.target.value)}
+										onBlur={commitColorText}
+										placeholder="#60a5fa"
 										className="font-mono"
-										maxLength={7}
+										maxLength={9}
 									/>
 								</div>
 							</div>

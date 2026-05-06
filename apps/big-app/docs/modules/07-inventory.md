@@ -1,11 +1,10 @@
 # Module: Inventory
 
-> Status: v1 build in progress (rebuild from earlier flat-table stub).
-> Migration `0034_inventory_rebuild` + seed `0035_inventory_seed` pending.
-> Originally a Phase 2 module — pulled forward as a CRUD-only catalog so
-> Services can link consumables and so the rest of the app has something
-> to point at. Stock movements, purchase orders, transfers, and
-> per-outlet stock are still deferred to Phase 2.
+> Status: v2 (per-outlet stock + pricing) **shipped 2026-05-06**.
+> The catalog, ledger, sale-deduction, and Stock Adjustment dialog all
+> operate per-outlet now. Purchase Orders, Stock Request, Transfer
+> Orders, and Returned Stock remain Phase 2 (they're each their own
+> workflow modules on top of `inventory_item_outlets`).
 
 ## Overview
 
@@ -88,10 +87,28 @@ extend it with a per-outlet column when `inventory_stocks` lands.
   writes them yet — see the "Stock buckets" note below)
 - **Stock Details dialog** — opened by clicking the stock cell in the items
   table. Read-only view showing the item's identity card, brand/supplier/
-  category, stat tiles (on-hand / in-transit / locked / low alert), and a
-  movement ledger placeholder. The movement rows and batch list render an
-  empty state in v1; the shape is wired up so the Phase 2
-  `inventory_movements` ledger drops straight in.
+  category, stat tiles (on-hand / in-transit / locked / low alert), and the
+  **live `inventory_movements` ledger** (wired 2026-05-06). Newest-first,
+  reconstructs running balance from current on-hand backwards. Movements
+  are loaded on dialog open via `listItemMovementsAction`. The batch panel
+  was removed — batches stay deferred to Phase 2 alongside per-outlet stock,
+  and the dialog shows the four stock-stat tiles in its place. A green "+"
+  button next to the "Stock Details" heading opens the **Stock adjustment**
+  dialog (see below).
+- **Stock adjustment dialog** — launched from the "+" button on Stock
+  Details. Mirrors the kumodent prototype's "Add new batch" affordance but
+  drops the batch concept (Phase 2). Fields: Direction (Add / Remove),
+  Quantity, Reason (4 options below), optional Notes. Validates the
+  projected on-hand can't go negative on Remove. Inserts a single
+  `inventory_movements` row and updates `inventory_items.stock` via the
+  `recordStockMovement` service. Reasons map onto our ledger vocabulary:
+
+  | Form reason (label) | Ledger `reason` |
+  |---|---|
+  | New stock from supplier | `restock` |
+  | Free stock in | `restock` |
+  | Found stock | `adjustment` |
+  | Stock adjustment | `adjustment` |
 - Sellable flag (the prototype's R/NR distinction)
 - Discount cap (column exists, not enforced by sales until Phase 2)
 - Active toggle (soft delete escape hatch)
@@ -100,13 +117,18 @@ extend it with a per-outlet column when `inventory_stocks` lands.
 
 ### Item-level features we deliberately defer
 
-- **Per-outlet pricing** — single price for v1, override table is
-  Phase 2. The prototype has a per-outlet table behind an "Apply above
-  prices, stocks to all outlets" master toggle.
-- **Per-outlet stock** — single global `stock` for v1, junction table in
-  Phase 2.
-- **Per-outlet location** (rack/row) — single global `location` text for
-  v1.
+- ~~Per-outlet pricing~~ — **shipped 2026-05-06.** Per-outlet
+  `cost_price` + `selling_price` live on `inventory_item_outlets`. Item
+  form Outlets section mirrors the prototype's "Apply above prices,
+  stocks to all outlets" master toggle.
+- ~~Per-outlet stock~~ — **shipped 2026-05-06.** `inventory_item_outlets`
+  is the source of truth for `stock`, `in_transit`, `locked`,
+  `stock_alert_count`, `minimum_stock_level`, `is_sellable`, `location`
+  per (item × outlet). The legacy `inventory_items.{stock,…}` columns
+  remain as a "default template" used only when seeding rows for new
+  outlets / new items.
+- ~~Per-outlet location~~ — **shipped 2026-05-06** as
+  `inventory_item_outlets.location`.
 - **Coverage Payor** (insurance panels) — entire concept deferred. The
   prototype has a Config → Clinical Feature → Coverage Payors module
   that defines insurance panels, then each item links to which panels
@@ -116,12 +138,17 @@ extend it with a per-outlet column when `inventory_stocks` lands.
   the e-invoice integration ships.
 - **Loyalty: BP Value + Points** — Beauty Points loyalty system.
   Deferred until loyalty module exists.
-- **Image upload** — column reserved (`image_path text` to a Storage
-  bucket), upload UI is Phase 2.
+- ~~Image upload~~ — **shipped 2026-05-06.** `image_path` writes via the
+  shared `ImageUpload` component (`media` bucket, `products` entity).
+  Item form renders the upload at the top of the General section
+  (visible after the row is created); items table thumbnails and Stock
+  Details dialog both render the public URL via
+  `publicMediaUrl(item.image_path)`.
 - **Barcode uniqueness + scanner integration** — `barcode` is plain
   nullable text, no unique constraint until POS lands.
-- **External Code** — column reserved, no integration to populate it
-  yet.
+- ~~External Code~~ — **shipped 2026-05-06.** `external_code` text
+  field on the item form (free text, max 120). No integration consumes
+  it yet — captured for accounting export.
 - **Medication "prescriber role" restriction** — column deferred until
   passcodes/role module wires permissions to UI.
 - **Medication "diagnosis tied" linkage** — depends on Phase 2
@@ -537,15 +564,37 @@ become meaningful as those modules ship.
   (e.g. one capsule = 0.5 doses).
 - Lookup deletions use `ON DELETE RESTRICT`. UI catches the
   `ConflictError` and explains which items still reference the lookup.
-- `discount_cap` exists but is **not enforced** by sales until Phase 2.
-  The column is reserved.
-- **Stock mutations happen via two paths in v1** (changed 2026-04-15):
-  1. **Manual edit form** — staff can still edit the `stock` column
-     directly on the item form. These writes do not currently log a
-     movement row (TODO: wrap the form write in a service method that
-     also inserts an `inventory_movements` row with `reason =
-     'adjustment'`; v1 ships without this to keep the edit UI simple).
-  2. **Collect Payment RPC** — `collect_appointment_payment` decrements
+- `discount_cap` is enforced on every sale line as of 2026-05-06 via three
+  layers (defense in depth):
+  1. **UI** — `capPct` resolved from `services.discount_cap` *or*
+     `inventory_items.discount_cap` in `NewSaleDialog` and the
+     appointment `useBillingLines` hook; on-blur clamp + "apply max"
+     button respect it.
+  2. **Service guard** — `assertLineDiscountCaps` in
+     [lib/services/sales.ts](../../lib/services/sales.ts) loads both
+     vocabularies in one pass per `collectAppointmentPayment` /
+     `collectWalkInSale` call; throws a typed `ValidationError` on
+     violation.
+  3. **DB trigger** — `sale_items_enforce_discount_cap` on
+     `public.sale_items BEFORE INSERT` mirrors the same check so any
+     non-service caller (manual SQL, future RPCs, ad-hoc admin tools)
+     still hits the cap.
+- **Stock mutations happen via three paths in v1** (changed 2026-04-15,
+  expanded 2026-05-06):
+  1. **Manual edit form** — staff can edit the `stock` column directly on
+     the item form. As of 2026-05-06, `updateInventoryItem` reads the
+     previous `stock`, applies the update, computes the delta, and inserts
+     an `inventory_movements` row with `reason = 'adjustment'`,
+     `ref_type = 'manual'`, `created_by = ctx.currentUser.employeeId` when
+     the value actually changed. No movement is written if `stock` was
+     unchanged. Useful for "set to specific value".
+  2. **Stock adjustment dialog** — `recordStockMovement` service called
+     from the "+" button on Stock Details. Signed delta with one of four
+     prototype-aligned reasons (see Screens & Views above). Routes onto
+     ledger `reason` `restock` (supplier / free) or `adjustment` (found /
+     generic) with `ref_type = 'manual'`. Useful for "I received +N" or
+     "I lost N" recorded with intent.
+  3. **Collect Payment RPC** — `collect_appointment_payment` decrements
      `inventory_items.stock` and inserts an `inventory_movements` row
      (`reason = 'sale'`, `ref_type = 'sales_order'`) for every sale line
      carrying `inventory_item_id`. This is the primary deduction path
@@ -558,6 +607,12 @@ become meaningful as those modules ship.
   purchase orders yet, so there's no non-manual way to *increase*
   stock. Once Phase 2 ships PO receiving, the form's stock field
   becomes read-only and every mutation flows through the ledger.
+
+  Void / cancellation reverses both paths — `void_sales_order` walks
+  every `sale` and `service_use` movement tied to the SO (or the
+  selected sale items, on partial void), inverts the delta back into
+  `inventory_items.stock`, and emits a matching `cancellation` /
+  `ref_type = 'cancellation'` row keyed to the cancellation note id.
 
 ### Stock ledger (`inventory_movements`, Phase 1)
 
@@ -579,14 +634,9 @@ create table inventory_movements (
   id          uuid primary key default gen_random_uuid(),
   item_id     uuid not null references inventory_items(id) on delete restrict,
   delta       numeric(12,3) not null,                  -- signed: - for sale, + for restock
-  reason      text not null check (reason in (
-                'sale',        -- from collect_appointment_payment RPC
-                'adjustment',  -- manual correction (future)
-                'initial',     -- seed / opening balance (future)
-                'restock'      -- PO receive (Phase 2)
-              )),
-  ref_type    text check (ref_type in ('sales_order', 'manual')),
-  ref_id      uuid,                                    -- sales_orders.id when reason='sale'
+  reason      text not null,                           -- vocabulary owned by app code
+  ref_type    text,                                    -- 'sales_order' | 'sale_item' | 'cancellation' | 'manual'
+  ref_id      uuid,
   notes       text,
   created_at  timestamptz not null default now(),
   created_by  uuid references employees(id) on delete set null
@@ -594,6 +644,16 @@ create table inventory_movements (
 create index on inventory_movements (item_id, created_at desc);
 create index on inventory_movements (ref_type, ref_id);
 ```
+
+`reason` and `ref_type` have **no CHECK constraint** (per project rule
+§8 — vocabulary lives in TS). Live values today:
+
+| reason | ref_type | Written by |
+|---|---|---|
+| `sale` | `sales_order` | `collect_appointment_payment` / `collect_walkin_sale` for product line items |
+| `service_use` | `sale_item` | same RPCs, for `service_inventory_items` consumed by a sold service |
+| `cancellation` | `cancellation` | `void_sales_order` (full or partial), inverts the original delta |
+| `adjustment` | `manual` | `updateInventoryItem` service when the form's `stock` changes |
 
 **Design notes:**
 - **`delta` is signed, not `in`/`out`.** Keeps the math trivial
@@ -633,6 +693,7 @@ create index on inventory_movements (ref_type, ref_id);
 | Related Module | Relationship | Details |
 |---|---|---|
 | Services | service ← consumable BOM | **Live (2026-04-17).** `service_inventory_items(service_id, inventory_item_id, default_quantity)` junction with `UNIQUE (service_id, inventory_item_id)`, CASCADE from services, RESTRICT from inventory_items. Edited via the Consumables & Medications section of `ServiceForm`. Read by `collect_appointment_payment` to deduct `default_quantity × line_qty` per service sale item, emitting `service_use` rows into `inventory_movements`. The former free-text `services.consumables` column was dropped in the same migration. |
+| Dashboard | low-stock reminder | **Live (2026-05-06).** `LowStockCard` reads `listLowStockItems(ctx)` — items with `stock_status` IN (`out`, `low`), excluding `CASH_WALLET`. Renders the first 6 with an Out/Low pill, with a link to inventory for the rest. |
 | Sales | item → sale_items | Phase 2: `sale_items.item_id` FK into `inventory_items` for product/medication line items. |
 | Appointments | item → appointment_line_items | Phase 2: same as sales. |
 | Outlets | item × outlet → stock | Phase 2: `inventory_stocks(item_id, outlet_id, qty)` junction. |
@@ -816,6 +877,36 @@ create index inventory_items_supplier_id_idx on public.inventory_items(supplier_
 -- applied to all five new tables
 ```
 
+**Companion doc:** [07.5-inventory-phase-2-plan.md](07.5-inventory-phase-2-plan.md)
+covers the next two follow-ups in detail (per-outlet stock split + a
+discount-cap enforcement pass on the sales RPCs).
+
+### Per-outlet split (shipped 2026-05-06)
+
+The four migrations applied (in order):
+
+1. `inventory_item_outlets_table` — junction table with PK
+   `(item_id, outlet_id)`, generated `stock_status`, RLS + temp dual
+   policies, backfill of one row per (item × active outlet within the
+   same brand) using the legacy global values.
+2. `inventory_movements_outlet_id` — adds `outlet_id` (nullable) on the
+   ledger, indexed, and backfills from `sales_orders` /
+   `sale_items` / `cancellations` / lowest-coded active outlet of the
+   item's brand for orphan rows.
+3. `inventory_item_outlets_auto_seed_triggers` — two `AFTER INSERT`
+   triggers: one on `inventory_items` seeds outlet rows for every
+   active outlet in the item's brand using the global template, and
+   one on `outlets` seeds rows for every existing item in the brand
+   (stock starts at 0, since no goods physically exist at a brand-new
+   outlet).
+4. `rpcs_use_per_outlet_stock` + `collect_walkin_sale_per_outlet_stock`
+   + `void_sales_order_per_outlet_stock` — drops the deprecated
+   no-incentives overloads, then rewrites every collect/void RPC to
+   read/write `inventory_item_outlets.stock` scoped by outlet and to
+   stamp `outlet_id` on every `inventory_movements` insert. Each stock
+   write checks `row_count = 0` and raises if the item isn't stocked
+   at the outlet (instead of silently no-oping).
+
 ### Phase 2 migration checklist (when we revisit)
 
 1. ~~New table `inventory_movements`~~ — **shipped in Phase 1** on
@@ -856,5 +947,7 @@ create index inventory_items_supplier_id_idx on public.inventory_items(supplier_
 - Add chooser dialog — [components/inventory/AddItemChooser.tsx](../../components/inventory/AddItemChooser.tsx)
 - Item form (kind-aware) — [components/inventory/ItemForm.tsx](../../components/inventory/ItemForm.tsx)
 - Stock Details dialog — [components/inventory/StockDetailsDialog.tsx](../../components/inventory/StockDetailsDialog.tsx)
+- Stock adjustment dialog — [components/inventory/StockAdjustmentDialog.tsx](../../components/inventory/StockAdjustmentDialog.tsx)
 - Inventory Options panel — [components/inventory/InventoryOptionsPanel.tsx](../../components/inventory/InventoryOptionsPanel.tsx)
 - UoM panel — [components/inventory/UomPanel.tsx](../../components/inventory/UomPanel.tsx)
+- Dashboard low-stock card — [components/dashboard/LowStockCard.tsx](../../components/dashboard/LowStockCard.tsx)

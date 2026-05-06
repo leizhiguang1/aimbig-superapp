@@ -100,7 +100,25 @@ function withOutlet(
 	return items.map((it) => ({ ...it, href: outletPath(outletCode, it.href) }));
 }
 
-export function AppSidebar({ outletCode }: { outletCode: string }) {
+function brandInitials(name: string, nickname: string | null | undefined) {
+	const source = (nickname ?? "").trim() || name.trim();
+	if (!source) return "BIG";
+	const words = source.split(/\s+/).filter(Boolean);
+	if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+	return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+export function AppSidebar({
+	outletCode,
+	brandName,
+	brandNickname,
+	brandLogoUrl,
+}: {
+	outletCode: string;
+	brandName: string;
+	brandNickname: string | null;
+	brandLogoUrl: string | null;
+}) {
 	const pathname = usePathname();
 	const [pendingHref, setPendingHref] = useState<string | null>(null);
 
@@ -126,11 +144,20 @@ export function AppSidebar({ outletCode }: { outletCode: string }) {
 			<SidebarHeader className="border-sidebar-border border-b">
 				<div className="flex min-h-12 items-center gap-2 py-2">
 					<SidebarTrigger className="hidden size-9 shrink-0 md:flex" />
-					<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-primary to-sky-500 font-bold text-primary-foreground text-xs shadow-sm group-data-[collapsible=icon]:hidden">
-						KD
-					</div>
+					{brandLogoUrl ? (
+						// biome-ignore lint/performance/noImgElement: tenant-uploaded logo, sized fixed; next/image adds little here
+						<img
+							src={brandLogoUrl}
+							alt={brandName}
+							className="size-8 shrink-0 rounded-lg object-cover shadow-sm group-data-[collapsible=icon]:hidden"
+						/>
+					) : (
+						<div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-primary to-sky-500 font-bold text-primary-foreground text-xs shadow-sm group-data-[collapsible=icon]:hidden">
+							{brandInitials(brandName, brandNickname)}
+						</div>
+					)}
 					<span className="truncate font-bold text-lg text-primary group-data-[collapsible=icon]:hidden">
-						BIG App
+						{brandName}
 					</span>
 				</div>
 			</SidebarHeader>

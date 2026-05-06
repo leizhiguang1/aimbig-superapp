@@ -35,6 +35,23 @@ const uuidNullable = z
 	.nullable()
 	.transform((v) => v ?? null);
 
+// Per-outlet pricing/stock row submitted alongside the item. The form
+// always sends one entry per active outlet under the brand. Stock starts
+// out matching the form's "default" template, but can diverge per outlet.
+export const inventoryItemOutletRowSchema = z.object({
+	outlet_id: z.string().uuid(),
+	cost_price: z.number().min(0, "Cost must be ≥ 0"),
+	selling_price: z.number().min(0, "Price must be ≥ 0"),
+	stock: z.number().min(0, "Stock must be ≥ 0"),
+	in_transit: z.number().min(0, "Must be ≥ 0"),
+	locked: z.number().min(0, "Must be ≥ 0"),
+	stock_alert_count: z.number().min(0, "Must be ≥ 0"),
+	minimum_stock_level: z.number().min(0, "Must be ≥ 0"),
+	location: trimmedNullable(120),
+	is_sellable: z.boolean(),
+});
+export type InventoryItemOutletRow = z.infer<typeof inventoryItemOutletRowSchema>;
+
 const sharedBase = z.object({
 	sku: z.string().trim().min(1, "SKU is required").max(40),
 	name: z.string().trim().min(1, "Name is required").max(200),
@@ -60,7 +77,10 @@ const sharedBase = z.object({
 	stock_alert_count: z.number().min(0, "Must be ≥ 0"),
 	discount_cap: z.number().min(0).max(100).nullable(),
 	location: trimmedNullable(120),
+	external_code: trimmedNullable(120),
+	image_path: trimmedNullable(400),
 	tax_ids: z.array(z.string().uuid()),
+	outlets: z.array(inventoryItemOutletRowSchema).default([]),
 });
 
 export const productCreateSchema = sharedBase.extend({
@@ -130,6 +150,55 @@ export type CategoryInput = z.infer<typeof categoryInputSchema>;
 
 export const PAYMENT_TERM_UNITS = ["days", "months"] as const;
 export type PaymentTermUnit = (typeof PAYMENT_TERM_UNITS)[number];
+
+// ---------- Stock adjustment ----------
+//
+// One dialog, signed delta. Reasons mirror the kumodent prototype's "Add new
+// batch" dropdown so staff training carries over, but we route them onto our
+// existing `inventory_movements.reason` vocabulary (restock vs adjustment).
+
+export const STOCK_ADJUSTMENT_REASONS = [
+	"new_stock_from_supplier",
+	"free_stock_in",
+	"found_stock",
+	"stock_adjustment",
+] as const;
+export type StockAdjustmentReason = (typeof STOCK_ADJUSTMENT_REASONS)[number];
+
+export const STOCK_ADJUSTMENT_REASON_LABELS: Record<
+	StockAdjustmentReason,
+	string
+> = {
+	new_stock_from_supplier: "New stock from supplier",
+	free_stock_in: "Free stock in",
+	found_stock: "Found stock",
+	stock_adjustment: "Stock adjustment",
+};
+
+// Maps the user-facing reason onto the movement-ledger reason.
+// Restock = goods physically arriving; adjustment = inventory recount fix.
+export const STOCK_ADJUSTMENT_LEDGER_REASON: Record<
+	StockAdjustmentReason,
+	"restock" | "adjustment"
+> = {
+	new_stock_from_supplier: "restock",
+	free_stock_in: "restock",
+	found_stock: "adjustment",
+	stock_adjustment: "adjustment",
+};
+
+export const stockAdjustmentInputSchema = z.object({
+	direction: z.enum(["in", "out"]),
+	quantity: z.number().gt(0, "Quantity must be > 0"),
+	reason: z.enum(STOCK_ADJUSTMENT_REASONS),
+	notes: z
+		.string()
+		.trim()
+		.max(400)
+		.optional()
+		.transform((v) => (v == null || v === "" ? null : v)),
+});
+export type StockAdjustmentInput = z.infer<typeof stockAdjustmentInputSchema>;
 
 export const supplierInputSchema = z.object({
 	// Supplier Details

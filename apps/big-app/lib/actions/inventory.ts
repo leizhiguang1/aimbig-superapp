@@ -7,6 +7,47 @@ import * as inventoryService from "@/lib/services/inventory";
 
 // ---------- Items ----------
 
+export type RecordStockMovementResult =
+	| { error: string }
+	| Awaited<ReturnType<typeof inventoryService.recordStockMovement>>;
+
+export async function recordStockMovementAction(
+	itemId: string,
+	outletId: string,
+	input: unknown,
+): Promise<RecordStockMovementResult> {
+	try {
+		const ctx = await getServerContext();
+		const item = await inventoryService.recordStockMovement(
+			ctx,
+			itemId,
+			outletId,
+			input,
+		);
+		revalidatePath("/o/[outlet]/inventory", "page");
+		revalidatePath("/o/[outlet]/dashboard", "page");
+		return item;
+	} catch (err) {
+		return toErr("[recordStockMovementAction]", err);
+	}
+}
+
+export type ItemMovementsActionResult =
+	| { error: string }
+	| Awaited<ReturnType<typeof inventoryService.listMovementsForItem>>;
+
+export async function listItemMovementsAction(
+	itemId: string,
+	outletId: string | null = null,
+): Promise<ItemMovementsActionResult> {
+	try {
+		const ctx = await getServerContext();
+		return await inventoryService.listMovementsForItem(ctx, itemId, outletId);
+	} catch (err) {
+		return toErr("[listItemMovementsAction]", err);
+	}
+}
+
 export type InventoryItemActionResult =
 	| { error: string }
 	| Awaited<ReturnType<typeof inventoryService.createInventoryItem>>;

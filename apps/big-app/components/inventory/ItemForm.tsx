@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { TaxesSelector } from "@/components/taxes/TaxesSelector";
 import { Button } from "@/components/ui/button";
+import { ImageUpload } from "@/components/ui/image-upload";
 import {
 	Dialog,
 	DialogContent,
@@ -26,10 +27,12 @@ import {
 import type {
 	InventoryBrand,
 	InventoryCategory,
+	InventoryItemOutlet,
 	InventoryItemWithRefs,
 	InventoryUom,
 	Supplier,
 } from "@/lib/services/inventory";
+import type { Outlet } from "@/lib/services/outlets";
 import type { Tax } from "@/lib/services/taxes";
 
 type FormState = {
@@ -54,6 +57,8 @@ type FormState = {
 	stock_alert_count: string;
 	discount_cap: string;
 	location: string;
+	external_code: string;
+	image_path: string | null;
 	is_controlled: boolean;
 	needs_replenish_reminder: boolean;
 	prescription_dosage: string;
@@ -64,6 +69,21 @@ type FormState = {
 	prescription_notes: string;
 	prescription_default_billing_qty: string;
 	tax_ids: string[];
+	outlet_rows: OutletRowState[];
+	apply_to_all: boolean;
+};
+
+type OutletRowState = {
+	outlet_id: string;
+	cost_price: string;
+	selling_price: string;
+	stock: string;
+	in_transit: string;
+	locked: string;
+	stock_alert_count: string;
+	minimum_stock_level: string;
+	location: string;
+	is_sellable: boolean;
 };
 
 const EMPTY: FormState = {
@@ -88,6 +108,8 @@ const EMPTY: FormState = {
 	stock_alert_count: "0",
 	discount_cap: "",
 	location: "",
+	external_code: "",
+	image_path: null,
 	is_controlled: false,
 	needs_replenish_reminder: false,
 	prescription_dosage: "1",
@@ -98,6 +120,8 @@ const EMPTY: FormState = {
 	prescription_notes: "",
 	prescription_default_billing_qty: "1",
 	tax_ids: [],
+	outlet_rows: [],
+	apply_to_all: true,
 };
 
 function fromItem(item: InventoryItemWithRefs): FormState {
@@ -124,6 +148,8 @@ function fromItem(item: InventoryItemWithRefs): FormState {
 		stock_alert_count: String(item.stock_alert_count),
 		discount_cap: item.discount_cap != null ? String(item.discount_cap) : "",
 		location: item.location ?? "",
+		external_code: item.external_code ?? "",
+		image_path: item.image_path ?? null,
 		is_controlled: item.is_controlled ?? false,
 		needs_replenish_reminder: item.needs_replenish_reminder ?? false,
 		prescription_dosage:
@@ -138,6 +164,38 @@ function fromItem(item: InventoryItemWithRefs): FormState {
 				? String(item.prescription_default_billing_qty)
 				: "1",
 		tax_ids: item.tax_ids ?? [],
+		outlet_rows: (item.outlets ?? []).map(outletRowFromDb),
+		apply_to_all: false,
+	};
+}
+
+function outletRowFromDb(o: InventoryItemOutlet): OutletRowState {
+	return {
+		outlet_id: o.outlet_id,
+		cost_price: String(o.cost_price),
+		selling_price: String(o.selling_price),
+		stock: String(o.stock),
+		in_transit: String(o.in_transit),
+		locked: String(o.locked),
+		stock_alert_count: String(o.stock_alert_count),
+		minimum_stock_level: String(o.minimum_stock_level),
+		location: o.location ?? "",
+		is_sellable: o.is_sellable,
+	};
+}
+
+function outletRowFromState(state: FormState, outletId: string): OutletRowState {
+	return {
+		outlet_id: outletId,
+		cost_price: state.cost_price,
+		selling_price: state.selling_price,
+		stock: state.stock,
+		in_transit: state.in_transit,
+		locked: state.locked,
+		stock_alert_count: state.stock_alert_count,
+		minimum_stock_level: "0",
+		location: state.location,
+		is_sellable: state.is_sellable,
 	};
 }
 
@@ -171,6 +229,7 @@ type Props = {
 	categories: InventoryCategory[];
 	suppliers: Supplier[];
 	taxes: Tax[];
+	outlets: Outlet[];
 	onClose: () => void;
 };
 
@@ -184,6 +243,7 @@ export function ItemFormDialog({
 	categories,
 	suppliers,
 	taxes,
+	outlets,
 	onClose,
 }: Props) {
 	const [state, setState] = useState<FormState>(EMPTY);
@@ -194,11 +254,30 @@ export function ItemFormDialog({
 	useEffect(() => {
 		if (open) {
 			const defaultTaxIds = taxes.filter((t) => t.is_active).map((t) => t.id);
-			setState(item ? fromItem(item) : { ...EMPTY, tax_ids: defaultTaxIds });
+			if (item) {
+				const seeded = fromItem(item);
+				// Make sure every active outlet has a row even if the item somehow
+				// missed one (defensive against trigger gaps).
+				const known = new Set(seeded.outlet_rows.map((r) => r.outlet_id));
+				for (const o of outlets) {
+					if (!known.has(o.id)) {
+						seeded.outlet_rows.push(outletRowFromState(seeded, o.id));
+					}
+				}
+				setState(seeded);
+			} else {
+				setState({
+					...EMPTY,
+					tax_ids: defaultTaxIds,
+					outlet_rows: outlets.map((o) =>
+						outletRowFromState({ ...EMPTY, tax_ids: defaultTaxIds }, o.id),
+					),
+				});
+			}
 			setServerError(null);
 			setFieldErrors({});
 		}
-	}, [open, item, taxes]);
+	}, [open, item, taxes, outlets]);
 
 	const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
 		setState((s) => ({ ...s, [key]: value }));
@@ -225,7 +304,24 @@ export function ItemFormDialog({
 			stock_alert_count: num(state.stock_alert_count),
 			discount_cap: nullableNum(state.discount_cap),
 			location: nullableStr(state.location),
+			external_code: nullableStr(state.external_code),
+			image_path: state.image_path,
 			tax_ids: state.tax_ids,
+			outlets: (state.apply_to_all
+				? state.outlet_rows.map((r) => outletRowFromState(state, r.outlet_id))
+				: state.outlet_rows
+			).map((r) => ({
+				outlet_id: r.outlet_id,
+				cost_price: num(r.cost_price),
+				selling_price: num(r.selling_price),
+				stock: num(r.stock),
+				in_transit: num(r.in_transit),
+				locked: num(r.locked),
+				stock_alert_count: num(r.stock_alert_count),
+				minimum_stock_level: num(r.minimum_stock_level),
+				location: nullableStr(r.location),
+				is_sellable: r.is_sellable,
+			})),
 		};
 
 		if (kind === "product") {
@@ -325,6 +421,22 @@ export function ItemFormDialog({
 				<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
 					<div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4">
 						<Section title="General">
+							<div className="flex flex-col items-center">
+								<ImageUpload
+									value={state.image_path}
+									onChange={(p) => set("image_path", p)}
+									entity="products"
+									entityId={item?.id ?? null}
+									shape="square"
+									sizeClass="size-24"
+									minimal
+								/>
+								{mode === "create" && (
+									<p className="mt-2 text-center text-muted-foreground text-xs">
+										Save first, then add a photo.
+									</p>
+								)}
+							</div>
 							<Two>
 								<Field label="Name" error={fieldErrors.name}>
 									<Input
@@ -363,6 +475,13 @@ export function ItemFormDialog({
 									/>
 								</Field>
 							</Two>
+							<Field label="External Code">
+								<Input
+									value={state.external_code}
+									onChange={(e) => set("external_code", e.target.value)}
+									placeholder="Optional — for accounting / integrations"
+								/>
+							</Field>
 							<div className="flex gap-6">
 								<Check
 									label="Sellable"
@@ -574,6 +693,166 @@ export function ItemFormDialog({
 								value={state.tax_ids}
 								onChange={(next) => set("tax_ids", next)}
 							/>
+						</Section>
+
+						<Section title="Outlets">
+							<div className="flex items-center gap-2">
+								<Check
+									label="Apply above prices, stocks to all outlets"
+									checked={state.apply_to_all}
+									onChange={(v) => set("apply_to_all", v)}
+								/>
+							</div>
+							<div className="overflow-x-auto rounded-md border">
+								<table className="w-full text-sm">
+									<thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
+										<tr>
+											<th className="px-3 py-2 text-left">Outlet</th>
+											<th className="px-3 py-2 text-right">Cost</th>
+											<th className="px-3 py-2 text-right">Selling</th>
+											<th className="px-3 py-2 text-right">
+												{mode === "create" ? "Initial Stock" : "On Hand"}
+											</th>
+											<th className="px-3 py-2 text-right">Alert</th>
+											<th className="px-3 py-2 text-right">Min Level</th>
+											<th className="px-3 py-2 text-left">Location</th>
+											<th className="px-3 py-2 text-center">Sellable</th>
+										</tr>
+									</thead>
+									<tbody>
+										{state.outlet_rows.map((row, idx) => {
+											const outlet = outlets.find((o) => o.id === row.outlet_id);
+											const disabled = state.apply_to_all;
+											const setRow = (patch: Partial<OutletRowState>) =>
+												setState((s) => ({
+													...s,
+													outlet_rows: s.outlet_rows.map((r, i) =>
+														i === idx ? { ...r, ...patch } : r,
+													),
+												}));
+											return (
+												<tr key={row.outlet_id} className="border-t">
+													<td className="px-3 py-2">
+														<div className="font-medium">
+															{outlet?.name ?? "—"}
+														</div>
+														<div className="text-muted-foreground text-xs">
+															({outlet?.code ?? ""})
+														</div>
+													</td>
+													<td className="px-3 py-2">
+														<Input
+															type="number"
+															min={0}
+															step="0.0001"
+															value={row.cost_price}
+															onChange={(e) =>
+																setRow({ cost_price: e.target.value })
+															}
+															disabled={disabled}
+															className="text-right"
+														/>
+													</td>
+													<td className="px-3 py-2">
+														<Input
+															type="number"
+															min={0}
+															step="0.01"
+															value={row.selling_price}
+															onChange={(e) =>
+																setRow({ selling_price: e.target.value })
+															}
+															disabled={disabled}
+															className="text-right"
+														/>
+													</td>
+													<td className="px-3 py-2">
+														<Input
+															type="number"
+															min={0}
+															step="0.01"
+															value={row.stock}
+															onChange={(e) =>
+																setRow({ stock: e.target.value })
+															}
+															disabled={disabled || mode === "edit"}
+															title={
+																mode === "edit"
+																	? "Use Stock Adjustment to change on-hand"
+																	: undefined
+															}
+															className="text-right"
+														/>
+													</td>
+													<td className="px-3 py-2">
+														<Input
+															type="number"
+															min={0}
+															step="0.01"
+															value={row.stock_alert_count}
+															onChange={(e) =>
+																setRow({ stock_alert_count: e.target.value })
+															}
+															disabled={disabled}
+															className="text-right"
+														/>
+													</td>
+													<td className="px-3 py-2">
+														<Input
+															type="number"
+															min={0}
+															step="0.01"
+															value={row.minimum_stock_level}
+															onChange={(e) =>
+																setRow({ minimum_stock_level: e.target.value })
+															}
+															disabled={disabled}
+															className="text-right"
+														/>
+													</td>
+													<td className="px-3 py-2">
+														<Input
+															type="text"
+															value={row.location}
+															onChange={(e) =>
+																setRow({ location: e.target.value })
+															}
+															disabled={disabled}
+															placeholder="—"
+														/>
+													</td>
+													<td className="px-3 py-2 text-center">
+														<input
+															type="checkbox"
+															checked={row.is_sellable}
+															onChange={(e) =>
+																setRow({ is_sellable: e.target.checked })
+															}
+															disabled={disabled}
+														/>
+													</td>
+												</tr>
+											);
+										})}
+										{state.outlet_rows.length === 0 && (
+											<tr>
+												<td
+													colSpan={8}
+													className="px-3 py-6 text-center text-muted-foreground text-xs"
+												>
+													No outlets configured for this brand.
+												</td>
+											</tr>
+										)}
+									</tbody>
+								</table>
+							</div>
+							{mode === "edit" && !state.apply_to_all && (
+								<p className="text-muted-foreground text-xs">
+									To change on-hand stock, use the “+ Adjust” button on Stock
+									Details — adjustments emit a movement row with a reason.
+								</p>
+							)}
 						</Section>
 
 						{kind === "medication" && (

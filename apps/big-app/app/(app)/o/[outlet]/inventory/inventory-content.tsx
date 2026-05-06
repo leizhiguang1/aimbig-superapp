@@ -8,18 +8,27 @@ import {
 	listSuppliers,
 	listUoms,
 } from "@/lib/services/inventory";
+import { listOutlets } from "@/lib/services/outlets";
 import { listTaxes } from "@/lib/services/taxes";
 
-export async function InventoryContent() {
+export async function InventoryContent({
+	params,
+}: {
+	params: Promise<{ outlet: string }>;
+}) {
+	const { outlet: outletCode } = await params;
 	const ctx = await getServerContext();
-	const [items, uoms, brands, categories, suppliers, taxes] = await Promise.all([
-		listInventoryItems(ctx),
-		listUoms(ctx),
-		listBrands(ctx),
-		listCategories(ctx),
-		listSuppliers(ctx),
-		listTaxes(ctx),
-	]);
+	const [outlets, uoms, brands, categories, suppliers, taxes] =
+		await Promise.all([
+			listOutlets(ctx),
+			listUoms(ctx),
+			listBrands(ctx),
+			listCategories(ctx),
+			listSuppliers(ctx),
+			listTaxes(ctx),
+		]);
+	const activeOutletId = outlets.find((o) => o.code === outletCode)?.id ?? null;
+	const items = await listInventoryItems(ctx, activeOutletId);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -33,6 +42,7 @@ export async function InventoryContent() {
 					categories={categories}
 					suppliers={suppliers}
 					taxes={taxes}
+					outlets={outlets}
 				/>
 			</div>
 			<ItemsTable
@@ -42,6 +52,8 @@ export async function InventoryContent() {
 				categories={categories}
 				suppliers={suppliers}
 				taxes={taxes}
+				outlets={outlets}
+				activeOutletId={activeOutletId}
 			/>
 		</div>
 	);

@@ -42,6 +42,19 @@ export async function updateOutletAction(
 	}
 }
 
+export async function setOutletTimezoneAction(
+	input: unknown,
+): Promise<OutletActionResult> {
+	try {
+		const ctx = await getServerContext();
+		const outlet = await outletsService.setOutletTimezone(ctx, input);
+		revalidatePath("/o/[outlet]/config/general", "page");
+		return outlet;
+	} catch (err) {
+		return toErr("[setOutletTimezoneAction]", err);
+	}
+}
+
 export async function deleteOutletAction(
 	id: string,
 ): Promise<{ error: string } | { ok: true }> {

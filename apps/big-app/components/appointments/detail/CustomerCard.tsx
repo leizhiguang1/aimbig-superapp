@@ -14,7 +14,6 @@ import {
 	Pencil,
 	Pill,
 	Printer,
-	Sparkles,
 	Star,
 	UserCog,
 	UserPlus,
@@ -25,6 +24,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { CustomerFormDialog } from "@/components/customers/CustomerForm";
+import { CustomerTagBadges } from "@/components/customers/CustomerTagBadges";
 import {
 	Tooltip,
 	TooltipContent,
@@ -180,10 +180,10 @@ export function CustomerCard({
 	const medicalAlert = customer?.medical_alert ?? null;
 	const drugAllergies = customer?.drug_allergies ?? null;
 	const smoker = customer?.smoker ?? null;
-	const customerTag = customer?.tag ?? null;
+	const customerTags = customer?.tags ?? [];
 	const isVip = customer?.is_vip ?? false;
 	const isStaff = customer?.is_staff ?? false;
-	const hasFlags = isVip || isStaff || Boolean(customerTag);
+	const hasFlags = isVip || isStaff || customerTags.length > 0;
 	const hasMedicalInfo =
 		medicalConditions.length > 0 ||
 		Boolean(medicalAlert) ||
@@ -393,13 +393,7 @@ export function CustomerCard({
 								className="bg-sky-100 text-sky-800"
 							/>
 						)}
-						{customerTag && (
-							<FlagBadge
-								icon={<Sparkles className="size-3" />}
-								label={customerTag}
-								className="bg-violet-100 text-violet-800"
-							/>
-						)}
+						<CustomerTagBadges tags={customerTags} withIcon />
 					</div>
 				)}
 
