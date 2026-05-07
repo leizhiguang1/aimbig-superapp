@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as inventoryService from "@/lib/services/inventory";
 
@@ -18,6 +19,7 @@ export async function recordStockMovementAction(
 ): Promise<RecordStockMovementResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.adjust_stock");
 		const item = await inventoryService.recordStockMovement(
 			ctx,
 			itemId,
@@ -57,6 +59,7 @@ export async function createInventoryItemAction(
 ): Promise<InventoryItemActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const item = await inventoryService.createInventoryItem(ctx, input);
 		revalidatePath("/o/[outlet]/inventory", "page");
 		return item;
@@ -72,6 +75,7 @@ export async function updateInventoryItemAction(
 ): Promise<InventoryItemActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const item = await inventoryService.updateInventoryItem(ctx, id, kind, input);
 		revalidatePath("/o/[outlet]/inventory", "page");
 		return item;
@@ -85,6 +89,7 @@ export async function deleteInventoryItemAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		await inventoryService.deleteInventoryItem(ctx, id);
 		revalidatePath("/o/[outlet]/inventory", "page");
 		return { ok: true };
@@ -102,6 +107,7 @@ export type UomActionResult =
 export async function createUomAction(input: unknown): Promise<UomActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.createUom(ctx, input);
 		revalidatePath("/o/[outlet]/inventory/uom", "page");
 		return row;
@@ -116,6 +122,7 @@ export async function updateUomAction(
 ): Promise<UomActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.updateUom(ctx, id, input);
 		revalidatePath("/o/[outlet]/inventory/uom", "page");
 		return row;
@@ -129,6 +136,7 @@ export async function deleteUomAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		await inventoryService.deleteUom(ctx, id);
 		revalidatePath("/o/[outlet]/inventory/uom", "page");
 		return { ok: true };
@@ -148,6 +156,7 @@ export async function createBrandAction(
 ): Promise<InventoryBrandActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.createBrand(ctx, input);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return row;
@@ -162,6 +171,7 @@ export async function updateBrandAction(
 ): Promise<InventoryBrandActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.updateBrand(ctx, id, input);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return row;
@@ -175,6 +185,7 @@ export async function deleteBrandAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		await inventoryService.deleteBrand(ctx, id);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return { ok: true };
@@ -194,6 +205,7 @@ export async function createCategoryAction(
 ): Promise<InventoryCategoryActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.createCategory(ctx, input);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return row;
@@ -208,6 +220,7 @@ export async function updateCategoryAction(
 ): Promise<InventoryCategoryActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.updateCategory(ctx, id, input);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return row;
@@ -221,6 +234,7 @@ export async function deleteCategoryAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		await inventoryService.deleteCategory(ctx, id);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return { ok: true };
@@ -240,6 +254,7 @@ export async function createSupplierAction(
 ): Promise<SupplierActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.createSupplier(ctx, input);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return row;
@@ -254,6 +269,7 @@ export async function updateSupplierAction(
 ): Promise<SupplierActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		const row = await inventoryService.updateSupplier(ctx, id, input);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return row;
@@ -267,6 +283,7 @@ export async function deleteSupplierAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "inventory.inventory_edit");
 		await inventoryService.deleteSupplier(ctx, id);
 		revalidatePath("/o/[outlet]/inventory/options", "page");
 		return { ok: true };

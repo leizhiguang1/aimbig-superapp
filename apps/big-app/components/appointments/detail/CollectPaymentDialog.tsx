@@ -99,6 +99,7 @@ type Props = {
 	billingSettings?: BillingSettings | null;
 	staffDiscountPercent: number;
 	walletBalance: number | null;
+	canBackdate?: boolean;
 	onSuccess?: (result: {
 		sales_order_id: string;
 		so_number: string;
@@ -127,6 +128,7 @@ export function CollectPaymentDialog({
 	billingSettings,
 	staffDiscountPercent,
 	walletBalance,
+	canBackdate = false,
 	onSuccess,
 	onError,
 }: Props) {
@@ -923,6 +925,7 @@ export function CollectPaymentDialog({
 							onBackdateChange={setBackdate}
 							backdateValue={backdateValue}
 							onBackdateValueChange={setBackdateValue}
+							canBackdate={canBackdate}
 							remarks={remarks}
 							onRemarksChange={setRemarks}
 						/>

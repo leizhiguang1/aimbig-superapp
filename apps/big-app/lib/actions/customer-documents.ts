@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import type { CustomerLetterInput } from "@/lib/schemas/customer-documents";
 import * as customerDocumentsService from "@/lib/services/customer-documents";
@@ -18,6 +19,7 @@ export async function requestCustomerDocumentUploadUrlAction(args: {
 	mime: string;
 }) {
 	const ctx = await getServerContext();
+	await requirePermission(ctx, "clinical.document_edit");
 	const path = buildCustomerDocumentPath({
 		customerId: args.customerId,
 		filename: args.filename,
@@ -36,6 +38,7 @@ export async function createCustomerDocumentAction(
 ): Promise<CustomerDocumentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.document_edit");
 		const doc = await customerDocumentsService.createCustomerDocument(ctx, input);
 		revalidatePath("/o/[outlet]/customers/[id]", "page");
 		if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -59,6 +62,7 @@ export async function deleteCustomerDocumentAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.document_delete");
 		const { storage_path } =
 			await customerDocumentsService.deleteCustomerDocument(ctx, id);
 		if (storage_path) {
@@ -84,6 +88,7 @@ export async function createCustomerLetterAction(
 ): Promise<CustomerLetterActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.medical_certificates");
 		const doc = await customerDocumentsService.createCustomerLetter(ctx, input);
 		revalidatePath("/o/[outlet]/customers/[id]", "page");
 		if (appointmentId) revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -100,6 +105,7 @@ export async function updateCustomerLetterAction(
 ): Promise<CustomerLetterActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.medical_certificates");
 		const doc = await customerDocumentsService.updateCustomerLetter(
 			ctx,
 			id,

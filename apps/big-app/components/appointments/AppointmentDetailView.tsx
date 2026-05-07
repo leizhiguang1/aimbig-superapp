@@ -86,6 +86,7 @@ type Props = {
 	staffDiscountPercent: number;
 	fullCustomer: CustomerWithRelations | null;
 	walletBalance: number | null;
+	canBackdate?: boolean;
 };
 
 export function AppointmentDetailView({
@@ -117,6 +118,7 @@ export function AppointmentDetailView({
 	staffDiscountPercent,
 	fullCustomer,
 	walletBalance,
+	canBackdate = false,
 }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [activeTab, setActiveTab] = useState<DetailTabKey>("overview");
@@ -233,6 +235,7 @@ export function AppointmentDetailView({
 					billingSettings={billingSettings}
 					staffDiscountPercent={staffDiscountPercent}
 					walletBalance={walletBalance}
+					canBackdate={canBackdate}
 					onEdit={() => setEditOpen(true)}
 					onToast={showToast}
 				/>

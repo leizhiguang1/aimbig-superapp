@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as service from "@/lib/services/employee-shifts";
 
@@ -14,6 +15,7 @@ export async function createShiftAction(
 ): Promise<ShiftActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "roster.roster_edit");
 		const shift = await service.createShift(ctx, input);
 		revalidatePath("/o/[outlet]/roster", "page");
 		return shift;
@@ -28,6 +30,7 @@ export async function updateShiftAction(
 ): Promise<ShiftActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "roster.roster_edit");
 		const shift = await service.updateShift(ctx, id, input);
 		revalidatePath("/o/[outlet]/roster", "page");
 		return shift;
@@ -41,6 +44,7 @@ export async function deleteShiftAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "roster.roster_edit");
 		await service.deleteShift(ctx, id);
 		revalidatePath("/o/[outlet]/roster", "page");
 		return { ok: true };

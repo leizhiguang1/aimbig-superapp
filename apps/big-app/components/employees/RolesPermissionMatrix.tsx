@@ -223,7 +223,7 @@ export function RolesPermissionMatrix({
 	return (
 		<>
 			{toolbar}
-			<div className="scrollbar-themed overflow-x-auto pb-2">
+			<div className="scrollbar-themed overflow-x-auto pb-3">
 				<div className="inline-block min-w-full overflow-hidden rounded-lg border align-top">
 				<table className="border-collapse text-sm">
 					<thead>

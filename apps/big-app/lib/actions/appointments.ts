@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as lineItemsService from "@/lib/services/appointment-line-items";
 import type {
@@ -19,6 +20,7 @@ export async function createAppointmentAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.createAppointment(ctx, input);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		return appointment;
@@ -33,6 +35,7 @@ export async function updateAppointmentAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.updateAppointment(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -48,6 +51,7 @@ export async function rescheduleAppointmentAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.rescheduleAppointment(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		return appointment;
@@ -62,6 +66,7 @@ export async function setAppointmentStatusAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.setAppointmentStatus(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -76,6 +81,7 @@ export async function markAppointmentCompletedAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.markAppointmentCompleted(ctx, id);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -90,6 +96,7 @@ export async function revertCompletedAppointmentAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.revert_appointment");
 		const appointment = await appointmentsService.revertCompletedAppointment(ctx, id);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -105,6 +112,7 @@ export async function setAppointmentTagsAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.setAppointmentTags(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -120,6 +128,7 @@ export async function collectAppointmentPaymentAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const appointment = await appointmentsService.setAppointmentPayment(ctx, id, {
 			payment_status: "paid",
 			paid_via: paidVia,
@@ -137,6 +146,7 @@ export async function undoAppointmentPaymentAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const appointment = await appointmentsService.setAppointmentPayment(ctx, id, {
 			payment_status: "unpaid",
 			paid_via: null,
@@ -155,6 +165,7 @@ export async function setAppointmentPaymentRemarkAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const appointment = await appointmentsService.setAppointmentPaymentRemark(ctx, id, {
 			payment_remark: remark,
 		});
@@ -171,6 +182,7 @@ export async function setAppointmentFollowUpAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.setAppointmentFollowUp(ctx, id, {
 			follow_up: followUp,
 		});
@@ -187,6 +199,7 @@ export async function cancelAppointmentAction(
 ): Promise<AppointmentActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const appointment = await appointmentsService.cancelAppointment(ctx, id, { reason });
 		revalidatePath("/o/[outlet]/appointments", "page");
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -208,6 +221,7 @@ export async function convertLeadToCustomerAction(
 ): Promise<ConvertLeadResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.lead_list_creation");
 		const result = await appointmentsService.convertLeadToCustomer(
 			ctx,
 			leadAppointmentId,
@@ -231,6 +245,7 @@ export async function saveFrontdeskMessageAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const { error } = await ctx.db
 			.from("appointments")
 			.update({ frontdesk_message: message })
@@ -258,6 +273,7 @@ export async function createLineItemAction(
 ): Promise<LineItemActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const entry = await lineItemsService.createLineItem(ctx, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return entry;
@@ -274,6 +290,7 @@ export async function createLineItemsBulkAction(
 ): Promise<LineItemsBulkActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const entries = await lineItemsService.createLineItemsBulk(ctx, inputs);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return entries;
@@ -289,6 +306,7 @@ export async function updateLineItemAction(
 ): Promise<LineItemActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const entry = await lineItemsService.updateLineItem(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return entry;
@@ -303,6 +321,7 @@ export async function deleteLineItemAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		await lineItemsService.deleteLineItem(ctx, id);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -317,6 +336,7 @@ export async function cancelBillingForAppointmentAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.revert_appointment");
 		await lineItemsService.cancelLineItemsForAppointment(ctx, targetAppointmentId);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -331,6 +351,7 @@ export async function revertBillingForAppointmentAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.revert_appointment");
 		await lineItemsService.revertLineItemsForAppointment(ctx, targetAppointmentId);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -345,6 +366,7 @@ export async function cancelBillingForCustomerAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.revert_appointment");
 		await lineItemsService.cancelLineItemsForAppointment(ctx, targetAppointmentId);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };
@@ -359,6 +381,7 @@ export async function revertBillingForCustomerAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.revert_appointment");
 		await lineItemsService.revertLineItemsForAppointment(ctx, targetAppointmentId);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };
@@ -384,6 +407,7 @@ export async function createLineItemIncentiveAction(
 ): Promise<LineItemIncentiveActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const row = await lineItemsService.createIncentive(ctx, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return row;
@@ -398,6 +422,7 @@ export async function deleteLineItemIncentiveAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		await lineItemsService.deleteIncentive(ctx, id);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -415,6 +440,7 @@ export async function saveAllocationsForAppointmentAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		for (const a of allocations) {
 			await lineItemsService.replaceIncentivesForLineItem(
 				ctx,

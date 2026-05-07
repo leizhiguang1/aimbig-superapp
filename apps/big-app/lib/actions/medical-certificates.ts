@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as mcService from "@/lib/services/medical-certificates";
 
@@ -14,6 +15,7 @@ export async function createMedicalCertificateAction(
 ): Promise<MedicalCertificateActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.medical_certificates");
 		const mc = await mcService.createMedicalCertificate(ctx, input);
 		if (mc.appointment_id) {
 			revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -31,6 +33,7 @@ export async function updateMedicalCertificateAction(
 ): Promise<MedicalCertificateActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.medical_certificates");
 		const mc = await mcService.updateMedicalCertificate(ctx, id, input);
 		if (mc.appointment_id) {
 			revalidatePath("/o/[outlet]/appointments/[ref]", "page");
@@ -47,6 +50,7 @@ export async function cancelMedicalCertificateAction(
 ): Promise<MedicalCertificateActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.medical_certificates");
 		const mc = await mcService.cancelMedicalCertificate(ctx, id);
 		if (mc.appointment_id) {
 			revalidatePath("/o/[outlet]/appointments/[ref]", "page");

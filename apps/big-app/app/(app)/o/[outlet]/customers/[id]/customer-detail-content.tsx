@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { AppointmentConfigProvider } from "@/components/brand-config/AppointmentConfigProvider";
 import { CustomerDetailView } from "@/components/customers/CustomerDetailView";
 import { Button } from "@/components/ui/button";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { NotFoundError } from "@/lib/errors";
 import { addDays, fmtDate } from "@/lib/roster/week";
@@ -46,6 +48,11 @@ export async function CustomerDetailContent({
 	outletCode: string;
 }) {
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "customers.view"))) notFound();
+	const [canSeeContact, canSeeCaseNotes] = await Promise.all([
+		hasPermission(ctx, "customers.customers_contact"),
+		hasPermission(ctx, "clinical.case_notes"),
+	]);
 
 	try {
 		const customer = await getCustomer(ctx, id);
@@ -140,6 +147,8 @@ export async function CustomerDetailContent({
 					formTemplates={formTemplates}
 					formResponses={formResponses}
 					manualTransactions={manualTransactions}
+					canSeeContact={canSeeContact}
+					canSeeCaseNotes={canSeeCaseNotes}
 				/>
 			</AppointmentConfigProvider>
 		);

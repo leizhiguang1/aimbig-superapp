@@ -125,6 +125,23 @@ How it actually works:
    (`subdomain ~ '^[a-z]…'`), and JSON shape. Those are invariants Zod
    can't fully express across rows.
 
+9. **Persisted UI prefs that change which view renders go in cookies, not
+   localStorage.** If a saved preference controls the SSR output (which
+   component renders, which scope/range is shown, which filter is applied
+   to the data), it must be readable on the server — that means a cookie.
+   localStorage is fine for prefs that only affect client-only details
+   (column order in a list, sidebar collapsed state) where the SSR HTML
+   is the same regardless. Why: the `useState(default) + useEffect(() =>
+   setX(readLocalStorage()))` pattern produces a visible flash where the
+   first paint is the default view (often empty for the user's data),
+   then it switches to the saved view after hydration. Users perceive
+   this as "data missing on refresh until I click a tab." The
+   appointments view-prefs (`lib/appointments/view-prefs.ts`) is the
+   reference pattern — mirror display/scope to a cookie on every save,
+   read it via `cookies()` in the RSC, pass as initial state to the
+   client component. The on-mount effect still reconciles to localStorage
+   so cross-tab updates and the migration window self-heal.
+
 - **Phase 1 (now):** Next.js 16 App Router (fullstack), TypeScript strict
 - **Phase 2+ (later):** Next.js 16 frontend + NestJS backend, pnpm workspace.
   Every Phase 1 file is written so the migration is mechanical — see below.

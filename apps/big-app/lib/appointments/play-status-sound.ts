@@ -8,7 +8,7 @@ const STATUS_SOUNDS: Record<NonNullable<StatusSound>, string> = {
 	billing:   "/sounds/billing.wav",
 	noshow:    "/sounds/noshow.wav",
 	cancelled: "/sounds/cancelled.wav",
-	completed: "/sounds/completed.wav",
+	completed: "/sounds/pending.wav",
 };
 
 // Preload all audio objects once so playback is instant (no fetch delay on trigger)

@@ -16,7 +16,6 @@ import type {
 	AppointmentTypeFilter,
 } from "@/lib/appointments/filters";
 import {
-	DEFAULT_VIEW_PREFS,
 	readViewPrefs,
 	type ViewPrefs,
 	writeViewPrefs,
@@ -60,6 +59,8 @@ type Props = {
 	allEmployees: EmployeeWithRelations[];
 	shifts: EmployeeShift[];
 	settings?: AppointmentViewSettings;
+	initialDisplay: DisplayStyle;
+	initialScope: TimeScope;
 };
 
 export function AppointmentsView({
@@ -78,23 +79,29 @@ export function AppointmentsView({
 	services,
 	allEmployees,
 	shifts,
+	initialDisplay,
+	initialScope,
 }: Props) {
-	const [display, setDisplay] = useState<DisplayStyle>(
-		DEFAULT_VIEW_PREFS.display,
-	);
-	const [scope, setScope] = useState<TimeScope>(DEFAULT_VIEW_PREFS.scope);
+	// display/scope come from the SSR-read cookie so the saved view renders
+	// on the first paint. columnOrder/visibleColumns aren't cookied (only
+	// matter in list view) and stay localStorage-only.
+	const [display, setDisplay] = useState<DisplayStyle>(initialDisplay);
+	const [scope, setScope] = useState<TimeScope>(initialScope);
 	const [columnOrder, setColumnOrder] =
 		useState<ColumnKey[]>(DEFAULT_COLUMN_ORDER);
 	const [visibleColumns, setVisibleColumns] =
 		useState<ColumnKey[]>(DEFAULT_VISIBLE);
 
-	// Hydrate from localStorage after mount to avoid SSR/CSR mismatch.
 	useEffect(() => {
 		const prefs = readViewPrefs();
-		setDisplay(prefs.display);
-		setScope(prefs.scope);
+		// Cookie may lag localStorage (e.g. on the first refresh after the
+		// cookie-backed release ships). Reconcile to localStorage and rewrite
+		// the cookie so subsequent SSR renders pick up the saved view directly.
+		setDisplay((cur) => (cur === prefs.display ? cur : prefs.display));
+		setScope((cur) => (cur === prefs.scope ? cur : prefs.scope));
 		setColumnOrder(prefs.columnOrder);
 		setVisibleColumns(prefs.visibleColumns);
+		writeViewPrefs(prefs);
 	}, []);
 
 	const persist = (patch: Partial<ViewPrefs>) => {

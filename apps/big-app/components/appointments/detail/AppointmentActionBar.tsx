@@ -61,6 +61,7 @@ type Props = {
 	billingSettings: BillingSettings;
 	staffDiscountPercent: number;
 	walletBalance: number | null;
+	canBackdate?: boolean;
 	onEdit: () => void;
 	onToast?: (
 		message: string,
@@ -133,6 +134,7 @@ export function AppointmentActionBar({
 	billingSettings,
 	staffDiscountPercent,
 	walletBalance,
+	canBackdate = false,
 	onEdit,
 	onToast,
 }: Props) {
@@ -402,6 +404,7 @@ export function AppointmentActionBar({
 				billingSettings={billingSettings}
 				staffDiscountPercent={staffDiscountPercent}
 				walletBalance={walletBalance}
+				canBackdate={canBackdate}
 				onSuccess={(r) =>
 					onToast?.(
 						`Payment collected · ${r.so_number} / ${r.invoice_no}`,

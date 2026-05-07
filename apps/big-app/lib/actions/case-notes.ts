@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as caseNotesService from "@/lib/services/case-notes";
 
@@ -15,6 +16,7 @@ export async function createCaseNoteAction(
 ): Promise<CaseNoteActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		const note = await caseNotesService.createCaseNote(ctx, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return note;
@@ -30,6 +32,7 @@ export async function updateCaseNoteAction(
 ): Promise<CaseNoteActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		const note = await caseNotesService.updateCaseNote(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return note;
@@ -44,6 +47,7 @@ export async function deleteCaseNoteAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.deleteCaseNote(ctx, id);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -60,6 +64,7 @@ export async function createCustomerCaseNoteAction(
 ): Promise<CaseNoteActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		const note = await caseNotesService.createCaseNote(ctx, input);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return note;
@@ -75,6 +80,7 @@ export async function updateCustomerCaseNoteAction(
 ): Promise<CaseNoteActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		const note = await caseNotesService.updateCaseNote(ctx, id, input);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return note;
@@ -89,6 +95,7 @@ export async function cancelCaseNoteAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.cancelCaseNote(ctx, id);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -103,6 +110,7 @@ export async function revertCaseNoteAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.revertCaseNote(ctx, id);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -118,6 +126,7 @@ export async function setCaseNotePinAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.setCaseNotePin(ctx, id, pinned);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -132,6 +141,7 @@ export async function deleteCustomerCaseNoteAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.deleteCaseNote(ctx, id);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };
@@ -146,6 +156,7 @@ export async function cancelCustomerCaseNoteAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.cancelCaseNote(ctx, id);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };
@@ -160,6 +171,7 @@ export async function revertCustomerCaseNoteAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.revertCaseNote(ctx, id);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };
@@ -175,6 +187,7 @@ export async function setCustomerCaseNotePinAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.case_notes_edit");
 		await caseNotesService.setCaseNotePin(ctx, id, pinned);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };

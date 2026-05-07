@@ -1,8 +1,10 @@
+import { notFound } from "next/navigation";
 import {
 	type InventoryItemChoice,
 	NewServiceButton,
 } from "@/components/services/ServiceForm";
 import { ServicesTable } from "@/components/services/ServicesTable";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { listInventoryItems } from "@/lib/services/inventory";
 import { listCategories, listServices } from "@/lib/services/services";
@@ -10,6 +12,7 @@ import { listTaxes } from "@/lib/services/taxes";
 
 export async function ServicesContent() {
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "services.services"))) notFound();
 	const [services, categories, taxes, inventory] = await Promise.all([
 		listServices(ctx),
 		listCategories(ctx),

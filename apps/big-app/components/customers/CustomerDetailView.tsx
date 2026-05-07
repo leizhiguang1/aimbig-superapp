@@ -123,6 +123,8 @@ type Props = {
 	formTemplates: FormTemplateWithSections[];
 	formResponses: FormResponse[];
 	manualTransactions: ManualTransactionWithRelations[];
+	canSeeContact?: boolean;
+	canSeeCaseNotes?: boolean;
 };
 
 type TabKey =
@@ -236,6 +238,8 @@ export function CustomerDetailView({
 	formTemplates,
 	formResponses,
 	manualTransactions,
+	canSeeContact = false,
+	canSeeCaseNotes = true,
 }: Props) {
 	const path = useOutletPath();
 	const [activeTab, setActiveTab] = useState<TabKey>("timeline");
@@ -343,7 +347,7 @@ export function CustomerDetailView({
 	return (
 		<div className="flex flex-col gap-3">
 			<SegmentedTabs
-				tabs={TABS}
+				tabs={canSeeCaseNotes ? TABS : TABS.filter((t) => t.key !== "casenotes")}
 				active={activeTab}
 				onChange={(key) => setActiveTab(key as TabKey)}
 				size="sm"
@@ -410,7 +414,7 @@ export function CustomerDetailView({
 										</span>
 									)}
 								</div>
-								{customer.phone && (
+								{canSeeContact && customer.phone && (
 									<span className="text-[11px] text-muted-foreground tabular-nums">
 										{customer.phone}
 									</span>
@@ -504,19 +508,19 @@ export function CustomerDetailView({
 										<span>AGED {age}</span>
 									</div>
 								)}
-								{customer.phone && (
+								{canSeeContact && customer.phone && (
 									<div className="flex items-center gap-1 text-[11px] text-emerald-600">
 										<Phone className="size-3 shrink-0" />
 										<span className="tabular-nums">{customer.phone}</span>
 									</div>
 								)}
-								{customer.phone2 && (
+								{canSeeContact && customer.phone2 && (
 									<div className="flex items-center gap-1 text-[11px] text-muted-foreground">
 										<Phone className="size-3 shrink-0" />
 										<span className="tabular-nums">{customer.phone2}</span>
 									</div>
 								)}
-								{customer.email && (
+								{canSeeContact && customer.email && (
 									<div className="flex items-center gap-1 text-[11px] text-muted-foreground">
 										<Mail className="size-3 shrink-0" />
 										<span className="truncate">{customer.email}</span>

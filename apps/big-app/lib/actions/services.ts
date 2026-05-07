@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as servicesService from "@/lib/services/services";
 
@@ -14,6 +15,7 @@ export async function createServiceAction(
 ): Promise<ServiceActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "services.services");
 		const service = await servicesService.createService(ctx, input);
 		revalidatePath("/o/[outlet]/services", "page");
 		return service;
@@ -28,6 +30,7 @@ export async function updateServiceAction(
 ): Promise<ServiceActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "services.services");
 		const service = await servicesService.updateService(ctx, id, input);
 		revalidatePath("/o/[outlet]/services", "page");
 		return service;
@@ -41,6 +44,7 @@ export async function deleteServiceAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "services.services");
 		await servicesService.deleteService(ctx, id);
 		revalidatePath("/o/[outlet]/services", "page");
 		return { ok: true };
@@ -58,6 +62,7 @@ export async function createCategoryAction(
 ): Promise<ServiceCategoryActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "services.services");
 		const category = await servicesService.createCategory(ctx, input);
 		revalidatePath("/o/[outlet]/services", "page");
 		return category;
@@ -72,6 +77,7 @@ export async function updateCategoryAction(
 ): Promise<ServiceCategoryActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "services.services");
 		const category = await servicesService.updateCategory(ctx, id, input);
 		revalidatePath("/o/[outlet]/services", "page");
 		return category;
@@ -85,6 +91,7 @@ export async function deleteCategoryAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "services.services");
 		await servicesService.deleteCategory(ctx, id);
 		revalidatePath("/o/[outlet]/services", "page");
 		return { ok: true };

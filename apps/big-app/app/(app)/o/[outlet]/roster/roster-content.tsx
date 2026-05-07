@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { RosterFilters } from "@/components/roster/RosterFilters";
 import { RosterGrid } from "@/components/roster/RosterGrid";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { addDays, fmtDate, getWeekStart, parseDate } from "@/lib/roster/week";
 import {
@@ -21,6 +22,7 @@ export async function RosterContent({
 		searchParams,
 	]);
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "roster.roster"))) notFound();
 	const outlets = await listOutlets(ctx);
 	const activeOutlets = outlets.filter((o) => o.is_active);
 

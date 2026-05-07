@@ -42,6 +42,7 @@ type Props = {
 	incentives: SaleItemIncentiveRow[];
 	outletName: string | null;
 	appointmentRef?: string | null;
+	canBackdate?: boolean;
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
@@ -159,6 +160,7 @@ export function PayOutstandingDialog({
 	incentives,
 	outletName,
 	appointmentRef,
+	canBackdate = false,
 	onSuccess,
 	onError,
 }: Props) {
@@ -525,17 +527,19 @@ export function PayOutstandingDialog({
 					{/* Right — payment form */}
 					<div className="flex w-full shrink-0 flex-col gap-4 border-t bg-white p-5 sm:w-[300px] sm:border-l sm:border-t-0">
 						{/* Backdate Invoice toggle */}
-						<div className="flex items-center justify-end gap-2 text-xs">
-							<span className="text-blue-600">Backdate Invoice?</span>
-							<Toggle
-								checked={backdate}
-								onCheckedChange={(v) => {
-									setBackdate(v);
-									setBackdateValue(v ? maxDate : "");
-								}}
-							/>
-						</div>
-						{backdate && (
+						{canBackdate ? (
+							<div className="flex items-center justify-end gap-2 text-xs">
+								<span className="text-blue-600">Backdate Invoice?</span>
+								<Toggle
+									checked={backdate}
+									onCheckedChange={(v) => {
+										setBackdate(v);
+										setBackdateValue(v ? maxDate : "");
+									}}
+								/>
+							</div>
+						) : null}
+						{canBackdate && backdate && (
 							<Input
 								type="date"
 								min={minDate}

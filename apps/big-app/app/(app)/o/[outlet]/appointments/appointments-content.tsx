@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import type { ResourceFilter } from "@/components/appointments/AppointmentsFilterBar";
 import { AppointmentsView } from "@/components/appointments/AppointmentsView";
@@ -8,6 +9,12 @@ import {
 	parseStatusParam,
 	parseTypeParam,
 } from "@/lib/appointments/filters";
+import {
+	DISPLAY_COOKIE,
+	resolveViewModeFromCookies,
+	SCOPE_COOKIE,
+} from "@/lib/appointments/view-prefs";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { addDays, fmtDate, getWeekStart, parseDate } from "@/lib/roster/week";
 import {
@@ -69,11 +76,17 @@ export async function AppointmentsContent({
 		pstatus?: string;
 	}>;
 }) {
-	const [{ outlet: outletCode }, params] = await Promise.all([
+	const [{ outlet: outletCode }, params, cookieStore] = await Promise.all([
 		paramsPromise,
 		searchParams,
+		cookies(),
 	]);
+	const initialView = resolveViewModeFromCookies(
+		cookieStore.get(DISPLAY_COOKIE)?.value,
+		cookieStore.get(SCOPE_COOKIE)?.value,
+	);
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "appointments.appointments"))) notFound();
 	const outlets = await listOutlets(ctx);
 	const activeOutlets = outlets.filter((o) => o.is_active);
 
@@ -185,6 +198,8 @@ export async function AppointmentsContent({
 				allEmployees={allEmployees.filter((e) => e.is_active)}
 				shifts={shifts}
 				settings={pilotSettings}
+				initialDisplay={initialView.display}
+				initialScope={initialView.scope}
 			/>
 		</AppointmentConfigProvider>
 	);

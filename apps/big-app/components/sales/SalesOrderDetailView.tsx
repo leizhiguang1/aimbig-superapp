@@ -50,6 +50,7 @@ type Props = {
 	customer: CustomerWithRelations | null;
 	brand: Brand | null;
 	autoPrint?: boolean;
+	canBackdate?: boolean;
 };
 
 function money(n: number) {
@@ -152,6 +153,7 @@ export function SalesOrderDetailView({
 	customer,
 	brand,
 	autoPrint,
+	canBackdate = false,
 }: Props) {
 	const path = useOutletPath();
 	const [voidOpen, setVoidOpen] = useState(false);
@@ -711,6 +713,7 @@ export function SalesOrderDetailView({
 				incentives={incentives}
 				outletName={outlet?.name ?? null}
 				appointmentRef={appointmentRef}
+				canBackdate={canBackdate}
 				onSuccess={(msg) => setFeedback({ type: "success", message: msg })}
 				onError={(msg) => setFeedback({ type: "error", message: msg })}
 			/>

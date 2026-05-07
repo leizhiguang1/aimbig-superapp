@@ -1,8 +1,13 @@
+import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { InventoryTabs } from "@/components/inventory/InventoryTabs";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getServerContext } from "@/lib/context/server";
 
-export default function InventoryLayout({ children }: { children: ReactNode }) {
+export default async function InventoryLayout({ children }: { children: ReactNode }) {
+	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "inventory.inventory"))) notFound();
 	return (
 		<div className="flex flex-col gap-6">
 			<div>

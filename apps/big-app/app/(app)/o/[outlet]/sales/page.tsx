@@ -1,7 +1,10 @@
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { SalesTabs } from "@/components/sales/SalesTabs";
 import { SALES_TABS, type SalesTabKey } from "@/components/sales/tabs";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getServerContext } from "@/lib/context/server";
 import { CancellationsContent } from "./cancellations-content";
 import { PaymentsContent } from "./payments-content";
 import { SalesOrdersContent } from "./sales-content";
@@ -21,6 +24,8 @@ type PageProps = {
 };
 
 export default async function SalesPage({ params, searchParams }: PageProps) {
+	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "sales.sales"))) notFound();
 	const { outlet: outletCode } = await params;
 	const { tab, o } = await searchParams;
 	const active: SalesTabKey =

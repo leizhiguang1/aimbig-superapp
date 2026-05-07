@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { SalesOrderDetailView } from "@/components/sales/SalesOrderDetailView";
 import { Button } from "@/components/ui/button";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { NotFoundError } from "@/lib/errors";
 import { getBrand } from "@/lib/services/brands";
@@ -26,6 +28,8 @@ export async function SalesOrderDetailContent({
 	autoPrint?: boolean;
 }) {
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "sales.sales"))) notFound();
+	const canBackdate = await hasPermission(ctx, "sales.backdate_transactions");
 
 	try {
 		const [
@@ -64,6 +68,7 @@ export async function SalesOrderDetailContent({
 				customer={customer}
 				brand={brand}
 				autoPrint={autoPrint}
+				canBackdate={canBackdate}
 			/>
 		);
 	} catch (err) {

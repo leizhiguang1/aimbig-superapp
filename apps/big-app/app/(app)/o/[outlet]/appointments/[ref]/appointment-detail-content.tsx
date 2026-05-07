@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { outletPath } from "@/lib/outlet-path";
 import { AppointmentDetailView } from "@/components/appointments/AppointmentDetailView";
 import { AppointmentConfigProvider } from "@/components/brand-config/AppointmentConfigProvider";
 import { Button } from "@/components/ui/button";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { NotFoundError } from "@/lib/errors";
 import { addDays, fmtDate } from "@/lib/roster/week";
@@ -65,6 +67,8 @@ export async function AppointmentDetailContent({
 	outletCode: string;
 }) {
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "appointments.appointments"))) notFound();
+	const canBackdate = await hasPermission(ctx, "sales.backdate_transactions");
 
 	let appointment: AppointmentWithRelations;
 	try {
@@ -222,6 +226,7 @@ export async function AppointmentDetailContent({
 				staffDiscountPercent={staffDiscountPercent}
 				fullCustomer={fullCustomer}
 				walletBalance={walletBalance}
+				canBackdate={canBackdate}
 			/>
 		</AppointmentConfigProvider>
 	);

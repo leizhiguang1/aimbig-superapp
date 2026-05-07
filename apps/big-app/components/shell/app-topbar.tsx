@@ -27,6 +27,7 @@ export function AppTopbar({
 	imageUrl,
 	hasPin,
 	canManualTransaction = false,
+	canCreateSale = false,
 }: {
 	outlets: OutletNavItem[];
 	activeOutletCode: string;
@@ -36,6 +37,7 @@ export function AppTopbar({
 	imageUrl: string | null;
 	hasPin: boolean;
 	canManualTransaction?: boolean;
+	canCreateSale?: boolean;
 }) {
 	const [newSaleOpen, setNewSaleOpen] = useState(false);
 	const [mtOpen, setMtOpen] = useState(false);
@@ -94,20 +96,22 @@ export function AppTopbar({
 							<TooltipContent>Manual Transaction</TooltipContent>
 						</Tooltip>
 					) : null}
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="secondary"
-								size="icon"
-								className="size-9 cursor-pointer shadow-sm"
-								aria-label="New Sale"
-								onClick={() => setNewSaleOpen(true)}
-							>
-								<ShoppingCart className="size-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>New Sale</TooltipContent>
-					</Tooltip>
+					{canCreateSale ? (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="secondary"
+									size="icon"
+									className="size-9 cursor-pointer shadow-sm"
+									aria-label="New Sale"
+									onClick={() => setNewSaleOpen(true)}
+								>
+									<ShoppingCart className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>New Sale</TooltipContent>
+						</Tooltip>
+					) : null}
 					<div className="mx-1 h-6 w-px bg-border" />
 					<UserMenu
 						email={email}

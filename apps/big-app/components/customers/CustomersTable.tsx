@@ -41,6 +41,8 @@ type Props = {
 	outlets: OutletWithRoomCount[];
 	employees: EmployeeWithRelations[];
 	defaultConsultantId: string | null;
+	canUpdate?: boolean;
+	canSeeContact?: boolean;
 };
 
 function computeAgeShort(dob: string | null): string | null {
@@ -70,13 +72,15 @@ export function CustomersTable({
 	outlets,
 	employees,
 	defaultConsultantId,
+	canUpdate = false,
+	canSeeContact = false,
 }: Props) {
 	const [editing, setEditing] = useState<CustomerWithRelations | null>(null);
 	const [deleting, setDeleting] = useState<CustomerWithRelations | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
 	const [pending, startTransition] = useTransition();
 
-	const columns: DataTableColumn<CustomerWithRelations>[] = [
+	const baseColumns: DataTableColumn<CustomerWithRelations>[] = [
 		{
 			key: "name",
 			header: "Name",
@@ -84,12 +88,18 @@ export function CustomersTable({
 			sortValue: (c) => `${c.first_name} ${c.last_name ?? ""}`,
 			cell: (c) => <NameCell customer={c} />,
 		},
-		{
-			key: "phone",
-			header: "Phone",
-			sortable: true,
-			cell: (c) => <span className="text-muted-foreground">{c.phone}</span>,
-		},
+		...(canSeeContact
+			? [
+					{
+						key: "phone",
+						header: "Phone",
+						sortable: true,
+						cell: (c: CustomerWithRelations) => (
+							<span className="text-muted-foreground">{c.phone}</span>
+						),
+					} satisfies DataTableColumn<CustomerWithRelations>,
+				]
+			: []),
 		{
 			key: "notifications",
 			header: (
@@ -160,63 +170,66 @@ export function CustomersTable({
 				</span>
 			),
 		},
-		{
-			key: "actions",
-			header: "Actions",
-			align: "right",
-			cell: (c) => (
-				<div className="inline-flex gap-1">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => setEditing(c)}
-								aria-label="Edit"
-								className="text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-							>
-								<Pencil />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Edit</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<span className="inline-flex">
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									disabled
-									aria-label="Print customer label (coming soon)"
-									className="text-sky-600 hover:bg-sky-50 hover:text-sky-700 disabled:text-sky-600/50"
-								>
-									<Printer />
-								</Button>
-							</span>
-						</TooltipTrigger>
-						<TooltipContent>Print Customer Label (coming soon)</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => {
-									setDeleteError(null);
-									setDeleting(c);
-								}}
-								aria-label="Delete"
-								className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-							>
-								<Trash2 />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Delete</TooltipContent>
-					</Tooltip>
-				</div>
-			),
-		},
 	];
+
+	const actionsColumn: DataTableColumn<CustomerWithRelations> = {
+		key: "actions",
+		header: "Actions",
+		align: "right",
+		cell: (c) => (
+			<div className="inline-flex gap-1">
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							onClick={() => setEditing(c)}
+							aria-label="Edit"
+							className="text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+						>
+							<Pencil />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Edit</TooltipContent>
+				</Tooltip>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<span className="inline-flex">
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								disabled
+								aria-label="Print customer label (coming soon)"
+								className="text-sky-600 hover:bg-sky-50 hover:text-sky-700 disabled:text-sky-600/50"
+							>
+								<Printer />
+							</Button>
+						</span>
+					</TooltipTrigger>
+					<TooltipContent>Print Customer Label (coming soon)</TooltipContent>
+				</Tooltip>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							onClick={() => {
+								setDeleteError(null);
+								setDeleting(c);
+							}}
+							aria-label="Delete"
+							className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+						>
+							<Trash2 />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Delete</TooltipContent>
+				</Tooltip>
+			</div>
+		),
+	};
+
+	const columns = canUpdate ? [...baseColumns, actionsColumn] : baseColumns;
 
 	return (
 		<>
@@ -224,15 +237,16 @@ export function CustomersTable({
 				data={customers}
 				columns={columns}
 				getRowKey={(c) => c.id}
-				searchKeys={[
-					"first_name",
-					"last_name",
-					"code",
-					"phone",
-					"id_number",
-					"email",
-				]}
-				searchPlaceholder="Search by name, phone, email, IC/passport…"
+				searchKeys={
+					canSeeContact
+						? ["first_name", "last_name", "code", "phone", "id_number", "email"]
+						: ["first_name", "last_name", "code", "id_number"]
+				}
+				searchPlaceholder={
+					canSeeContact
+						? "Search by name, phone, email, IC/passport…"
+						: "Search by name, code, IC/passport…"
+				}
 				emptyMessage="No customers yet. Click “New customer” to create one."
 				minWidth={1000}
 			/>

@@ -82,6 +82,7 @@ type LoadedData = {
 	taxes: Tax[];
 	paymentMethods: PaymentMethod[];
 	currentEmployeeId: string | null;
+	canBackdate: boolean;
 };
 
 type Props = {
@@ -835,6 +836,7 @@ function NewSaleBody({
 						onBackdateChange={setBackdate}
 						backdateValue={backdateValue}
 						onBackdateValueChange={setBackdateValue}
+						canBackdate={data.canBackdate}
 						remarks={remarks}
 						onRemarksChange={setRemarks}
 					/>

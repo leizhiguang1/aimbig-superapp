@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { hasPermission, requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { NotFoundError } from "@/lib/errors";
 import { listCustomers } from "@/lib/services/customers";
@@ -30,6 +31,7 @@ export async function collectAppointmentPaymentAction(
 ): Promise<CollectPaymentResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const result = await salesService.collectAppointmentPayment(
 			ctx,
 			appointmentId,
@@ -52,6 +54,7 @@ export async function collectWalkInSaleAction(
 ): Promise<CollectWalkInSaleResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const result = await salesService.collectWalkInSale(ctx, input);
 		revalidatePath("/o/[outlet]/sales", "page");
 		revalidatePath("/o/[outlet]/inventory", "page");
@@ -63,6 +66,7 @@ export async function collectWalkInSaleAction(
 
 export async function getNewSaleDataAction() {
 	const ctx = await getServerContext();
+	await requirePermission(ctx, "sales.create_sales");
 	const [
 		customers,
 		outlets,
@@ -71,6 +75,7 @@ export async function getNewSaleDataAction() {
 		products,
 		taxes,
 		paymentMethods,
+		canBackdate,
 	] = await Promise.all([
 		listCustomers(ctx),
 		listOutlets(ctx),
@@ -79,6 +84,7 @@ export async function getNewSaleDataAction() {
 		listSellableProducts(ctx),
 		listTaxes(ctx),
 		listActivePaymentMethods(ctx),
+		hasPermission(ctx, "sales.backdate_transactions"),
 	]);
 	return {
 		customers,
@@ -89,6 +95,7 @@ export async function getNewSaleDataAction() {
 		taxes,
 		paymentMethods,
 		currentEmployeeId: ctx.currentUser?.employeeId ?? null,
+		canBackdate,
 	};
 }
 
@@ -107,6 +114,7 @@ export async function getSalesOrderDetailAction(
 	id: string,
 ): Promise<SalesOrderDetailResult> {
 	const ctx = await getServerContext();
+	await requirePermission(ctx, "sales.sales");
 	try {
 		const [order, items, payments, incentives, employees] =
 			await Promise.all([
@@ -140,6 +148,7 @@ export async function voidSalesOrderAction(
 ): Promise<VoidSalesOrderResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const result = await salesService.voidSalesOrder(ctx, salesOrderId, input);
 		revalidatePath("/o/[outlet]/sales", "page");
 		revalidatePath(`/o/[outlet]/sales/${salesOrderId}`, "page");
@@ -166,6 +175,7 @@ export async function issueRefundAction(
 ): Promise<IssueRefundResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const result = await salesService.issueRefund(ctx, salesOrderId, input);
 		revalidatePath("/o/[outlet]/sales", "page");
 		revalidatePath(`/o/[outlet]/sales/${salesOrderId}`, "page");
@@ -199,6 +209,7 @@ export async function revertLastPaymentAction(
 ): Promise<RevertLastPaymentResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const result = await salesService.revertLastPayment(ctx, salesOrderId);
 		revalidateSalesOrder(salesOrderId, appointmentRef);
 		return {
@@ -227,6 +238,7 @@ export async function recordAdditionalPaymentAction(
 ): Promise<RecordAdditionalPaymentResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const result = await salesService.recordAdditionalPayment(
 			ctx,
 			salesOrderId,
@@ -252,6 +264,7 @@ export async function updatePaymentMethodAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		await salesService.updatePaymentMethod(ctx, paymentId, input);
 		revalidateSalesOrder(salesOrderId, appointmentRef);
 		return { ok: true };
@@ -267,6 +280,7 @@ export async function updatePaymentAllocationsAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		await salesService.updatePaymentAllocations(ctx, salesOrderId, input);
 		revalidateSalesOrder(salesOrderId, appointmentRef);
 		return { ok: true };
@@ -282,6 +296,7 @@ export async function replaceSaleItemIncentivesAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.sales_person_reallocation");
 		await salesService.replaceSaleItemIncentives(ctx, input);
 		revalidateSalesOrder(salesOrderId, appointmentRef);
 		return { ok: true };
@@ -301,6 +316,7 @@ export async function writeOffOutstandingAction(
 ): Promise<WriteOffResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		const result = await salesService.writeOffOutstanding(ctx, salesOrderId, input);
 		revalidateSalesOrder(salesOrderId, appointmentRef);
 		return {

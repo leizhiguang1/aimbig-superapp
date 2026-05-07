@@ -13,6 +13,13 @@ const SCOPE_KEY = "big.appointments.scope";
 const COLUMN_ORDER_KEY = "big.appointments.columnOrder";
 const VISIBLE_COLUMNS_KEY = "big.appointments.visibleColumns";
 
+// Cookie names mirror display/scope so the server can SSR the saved view —
+// without this the page renders the default day view, then flips to the saved
+// view after client hydration, which looked like "appointments missing on
+// refresh" because today is often empty.
+export const DISPLAY_COOKIE = DISPLAY_KEY;
+export const SCOPE_COOKIE = SCOPE_KEY;
+
 export type ViewPrefs = {
 	display: DisplayStyle;
 	scope: TimeScope;
@@ -27,12 +34,27 @@ export const DEFAULT_VIEW_PREFS: ViewPrefs = {
 	visibleColumns: DEFAULT_VISIBLE,
 };
 
-function isDisplay(v: string | null): v is DisplayStyle {
+export function isDisplay(v: string | null | undefined): v is DisplayStyle {
 	return v === "calendar" || v === "list" || v === "grid";
 }
 
-function isScope(v: string | null): v is TimeScope {
+export function isScope(v: string | null | undefined): v is TimeScope {
 	return v === "day" || v === "week" || v === "month";
+}
+
+// Resolve display+scope from raw cookie values (server-side). Falls back to
+// defaults and keeps display/scope mutually consistent.
+export function resolveViewModeFromCookies(
+	rawDisplay: string | undefined,
+	rawScope: string | undefined,
+): { display: DisplayStyle; scope: TimeScope } {
+	const display: DisplayStyle = isDisplay(rawDisplay)
+		? rawDisplay
+		: DEFAULT_VIEW_PREFS.display;
+	const allowed = VALID_SCOPES[display];
+	const scope: TimeScope =
+		isScope(rawScope) && allowed.includes(rawScope) ? rawScope : allowed[0];
+	return { display, scope };
 }
 
 function readJSON(key: string): unknown {
@@ -86,6 +108,10 @@ export function writeViewPrefs(prefs: ViewPrefs) {
 			VISIBLE_COLUMNS_KEY,
 			JSON.stringify(prefs.visibleColumns),
 		);
+		// Mirror display/scope to cookies so SSR can render the saved view.
+		const cookieAttrs = "path=/; max-age=31536000; samesite=lax";
+		document.cookie = `${DISPLAY_COOKIE}=${encodeURIComponent(prefs.display)}; ${cookieAttrs}`;
+		document.cookie = `${SCOPE_COOKIE}=${encodeURIComponent(prefs.scope)}; ${cookieAttrs}`;
 	} catch {
 		// ignore
 	}

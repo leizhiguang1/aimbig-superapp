@@ -24,6 +24,7 @@ type Props = {
 	onBackdateChange: (v: boolean) => void;
 	backdateValue: string;
 	onBackdateValueChange: (v: string) => void;
+	canBackdate?: boolean;
 
 	remarks: string;
 	onRemarksChange: (v: string) => void;
@@ -44,6 +45,7 @@ export function PaymentSection({
 	onBackdateChange,
 	backdateValue,
 	onBackdateValueChange,
+	canBackdate = false,
 	remarks,
 	onRemarksChange,
 }: Props) {
@@ -53,25 +55,27 @@ export function PaymentSection({
 				PAYMENT
 			</div>
 
-			<div className="mt-2 flex items-center justify-end gap-2 text-xs">
-				<span className="text-blue-600">Backdate Invoice?</span>
-				<Toggle
-					checked={backdate}
-					onCheckedChange={(v) => {
-						onBackdateChange(v);
-						if (v) {
-							const now = new Date();
-							const yyyy = now.getFullYear();
-							const mm = String(now.getMonth() + 1).padStart(2, "0");
-							const dd = String(now.getDate()).padStart(2, "0");
-							onBackdateValueChange(`${yyyy}-${mm}-${dd}`);
-						} else {
-							onBackdateValueChange("");
-						}
-					}}
-				/>
-			</div>
-			{backdate &&
+			{canBackdate ? (
+				<div className="mt-2 flex items-center justify-end gap-2 text-xs">
+					<span className="text-blue-600">Backdate Invoice?</span>
+					<Toggle
+						checked={backdate}
+						onCheckedChange={(v) => {
+							onBackdateChange(v);
+							if (v) {
+								const now = new Date();
+								const yyyy = now.getFullYear();
+								const mm = String(now.getMonth() + 1).padStart(2, "0");
+								const dd = String(now.getDate()).padStart(2, "0");
+								onBackdateValueChange(`${yyyy}-${mm}-${dd}`);
+							} else {
+								onBackdateValueChange("");
+							}
+						}}
+					/>
+				</div>
+			) : null}
+			{canBackdate && backdate &&
 				(() => {
 					const today = new Date();
 					const y = today.getFullYear();

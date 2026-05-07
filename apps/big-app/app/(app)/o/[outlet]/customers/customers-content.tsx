@@ -1,5 +1,7 @@
+import { notFound } from "next/navigation";
 import { NewCustomerButton } from "@/components/customers/CustomerForm";
 import { CustomersTable } from "@/components/customers/CustomersTable";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { listCustomers } from "@/lib/services/customers";
 import { listEmployees } from "@/lib/services/employees";
@@ -12,6 +14,10 @@ export async function CustomersContent({
 }) {
 	const { outlet: outletCode } = await params;
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "customers.customers"))) notFound();
+	const canCreate = await hasPermission(ctx, "customers.customers");
+	const canUpdate = await hasPermission(ctx, "customers.update");
+	const canSeeContact = await hasPermission(ctx, "customers.customers_contact");
 	const [customers, outlets, employees] = await Promise.all([
 		listCustomers(ctx),
 		listOutlets(ctx),
@@ -28,18 +34,22 @@ export async function CustomersContent({
 				<p className="text-muted-foreground text-sm">
 					{customers.length} customer{customers.length === 1 ? "" : "s"}
 				</p>
-				<NewCustomerButton
-					outlets={outlets}
-					employees={employees}
-					defaultConsultantId={defaultConsultantId}
-					defaultHomeOutletId={defaultHomeOutletId}
-				/>
+				{canCreate ? (
+					<NewCustomerButton
+						outlets={outlets}
+						employees={employees}
+						defaultConsultantId={defaultConsultantId}
+						defaultHomeOutletId={defaultHomeOutletId}
+					/>
+				) : null}
 			</div>
 			<CustomersTable
 				customers={customers}
 				outlets={outlets}
 				employees={employees}
 				defaultConsultantId={defaultConsultantId}
+				canUpdate={canUpdate}
+				canSeeContact={canSeeContact}
 			/>
 		</div>
 	);
