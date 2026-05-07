@@ -1,10 +1,13 @@
+import { notFound } from 'next/navigation'
 import { NewPositionButton } from '@/components/employees/PositionForm'
 import { PositionsTable } from '@/components/employees/PositionsTable'
+import { hasPermission } from '@/lib/auth/permissions'
 import { getServerContext } from '@/lib/context/server'
 import { listPositions } from '@/lib/services/positions'
 
 export async function PositionsContent() {
   const ctx = await getServerContext()
+  if (!(await hasPermission(ctx, 'staff.position'))) notFound()
   const positions = await listPositions(ctx)
 
   return (

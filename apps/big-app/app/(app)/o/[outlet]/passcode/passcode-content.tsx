@@ -1,11 +1,14 @@
+import { notFound } from "next/navigation";
 import { NewPasscodeButton } from "@/components/passcodes/PasscodeForm";
 import { PasscodesTable } from "@/components/passcodes/PasscodesTable";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { listOutlets } from "@/lib/services/outlets";
 import { listPasscodes } from "@/lib/services/passcodes";
 
 export async function PasscodeContent() {
 	const ctx = await getServerContext();
+	if (!(await hasPermission(ctx, "system.passcode"))) notFound();
 	const [passcodes, outlets] = await Promise.all([
 		listPasscodes(ctx),
 		listOutlets(ctx),

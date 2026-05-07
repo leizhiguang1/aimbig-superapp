@@ -26,6 +26,7 @@ export function AppTopbar({
 	role,
 	imageUrl,
 	hasPin,
+	canManualTransaction = false,
 }: {
 	outlets: OutletNavItem[];
 	activeOutletCode: string;
@@ -34,6 +35,7 @@ export function AppTopbar({
 	role: string | null;
 	imageUrl: string | null;
 	hasPin: boolean;
+	canManualTransaction?: boolean;
 }) {
 	const [newSaleOpen, setNewSaleOpen] = useState(false);
 	const [mtOpen, setMtOpen] = useState(false);
@@ -76,20 +78,22 @@ export function AppTopbar({
 						</TooltipTrigger>
 						<TooltipContent>Queue Display</TooltipContent>
 					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="secondary"
-								size="icon"
-								className="size-9 cursor-pointer shadow-sm"
-								aria-label="Manual Transaction"
-								onClick={() => setMtOpen(true)}
-							>
-								<Receipt className="size-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Manual Transaction</TooltipContent>
-					</Tooltip>
+					{canManualTransaction ? (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="secondary"
+									size="icon"
+									className="size-9 cursor-pointer shadow-sm"
+									aria-label="Manual Transaction"
+									onClick={() => setMtOpen(true)}
+								>
+									<Receipt className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Manual Transaction</TooltipContent>
+						</Tooltip>
+					) : null}
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button

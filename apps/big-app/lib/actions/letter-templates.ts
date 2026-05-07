@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as letterTemplatesService from "@/lib/services/letter-templates";
 
@@ -24,6 +25,7 @@ export async function createLetterTemplateAction(
 ): Promise<LetterTemplateActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const tpl = await letterTemplatesService.createLetterTemplate(ctx, input);
 		revalidatePath("/o/[outlet]/config/letter-templates", "page");
 		return tpl;
@@ -38,6 +40,7 @@ export async function updateLetterTemplateAction(
 ): Promise<LetterTemplateActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const tpl = await letterTemplatesService.updateLetterTemplate(ctx, id, input);
 		revalidatePath("/o/[outlet]/config/letter-templates", "page");
 		return tpl;
@@ -51,6 +54,7 @@ export async function deleteLetterTemplateAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await letterTemplatesService.deleteLetterTemplate(ctx, id);
 		revalidatePath("/o/[outlet]/config/letter-templates", "page");
 		return { ok: true };

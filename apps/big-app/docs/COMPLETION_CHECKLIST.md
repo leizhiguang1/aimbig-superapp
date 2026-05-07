@@ -64,6 +64,7 @@ governs every downstream read. Stabilize these first.
 - [ ] Defer to dedicated workflow modules (Phase 2): Purchase Orders, Stock Request, Transfer Orders, Returned Stock, Coverage Payor, Loyalty BP/Points
 
 ### B4. Employees — `docs/modules/08-employees.md`
+- [x] Admin password + PIN reset on employee row — **shipped 2026-05-06.** `KeyRound` row action opens `ResetCredentialsDialog` with three flows: set new password directly (`adminSetPasswordAction`), generate copy-paste recovery link (`resetPasswordAction`), set new 6-digit PIN (`adminSetPinAction`). Brand-scoped service helpers verify employee ownership before writing.
 - [ ] Employee PIN (login / clock-in auth)
 - [ ] Clock in / clock out
 - [ ] Commission rules (per-service, per-category, per-employee)

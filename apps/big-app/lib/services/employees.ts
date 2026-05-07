@@ -202,6 +202,61 @@ async function setEmployeePin(
 	if (error) throw new ValidationError(error.message);
 }
 
+/**
+ * Admin-initiated PIN reset. Verifies the employee belongs to this brand,
+ * then writes a new PIN via the SECURITY DEFINER RPC.
+ */
+export async function adminSetPin(
+	ctx: Context,
+	employeeId: string,
+	newPin: string,
+): Promise<void> {
+	const parsed = pinField.parse(newPin);
+	if (!parsed) throw new ValidationError("PIN must be exactly 6 digits");
+
+	const { data: emp, error } = await ctx.db
+		.from("employees")
+		.select("id")
+		.eq("id", employeeId)
+		.eq("brand_id", assertBrandId(ctx))
+		.single();
+	if (error || !emp)
+		throw new NotFoundError(`Employee ${employeeId} not found`);
+
+	await setEmployeePin(ctx, employeeId, parsed);
+}
+
+/**
+ * Admin-initiated password set. Writes the new password directly via the
+ * Supabase admin API. Use this for in-person resets; for share-a-link
+ * flows call `generatePasswordResetLink` instead.
+ */
+export async function adminSetPassword(
+	ctx: Context,
+	employeeId: string,
+	newPassword: string,
+): Promise<void> {
+	if (typeof newPassword !== "string" || newPassword.length < 8)
+		throw new ValidationError("Password must be at least 8 characters");
+
+	const { data: emp, error } = await ctx.db
+		.from("employees")
+		.select("auth_user_id")
+		.eq("id", employeeId)
+		.eq("brand_id", assertBrandId(ctx))
+		.single();
+	if (error || !emp)
+		throw new NotFoundError(`Employee ${employeeId} not found`);
+	if (!emp.auth_user_id)
+		throw new ValidationError("This employee does not have web login enabled");
+
+	const { error: authError } = await ctx.dbAdmin.auth.admin.updateUserById(
+		emp.auth_user_id,
+		{ password: newPassword },
+	);
+	if (authError) throw new ValidationError(authError.message);
+}
+
 export async function createEmployee(
 	ctx: Context,
 	input: unknown,

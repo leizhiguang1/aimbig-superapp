@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { listCustomers } from "@/lib/services/customers";
 import * as mtService from "@/lib/services/manual-transactions";
@@ -14,6 +15,7 @@ export async function listManualTransactionsAction(opts?: {
 	customerId?: string | null;
 }): Promise<ManualTransactionWithRelations[]> {
 	const ctx = await getServerContext();
+	await requirePermission(ctx, "system.manual_transaction");
 	return mtService.listManualTransactions(ctx, opts);
 }
 
@@ -21,11 +23,13 @@ export async function getManualTransactionAction(
 	id: string,
 ): Promise<ManualTransactionWithRelations> {
 	const ctx = await getServerContext();
+	await requirePermission(ctx, "system.manual_transaction");
 	return mtService.getManualTransaction(ctx, id);
 }
 
 export async function getNewManualTransactionDataAction() {
 	const ctx = await getServerContext();
+	await requirePermission(ctx, "system.manual_transaction");
 	const [customers, outlets, services] = await Promise.all([
 		listCustomers(ctx),
 		listOutlets(ctx),
@@ -43,6 +47,7 @@ export async function createManualTransactionAction(
 ): Promise<CreateManualTxResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.manual_transaction");
 		const result = await mtService.createManualTransaction(ctx, input);
 		revalidatePath("/o/[outlet]/sales", "page");
 		revalidatePath("/o/[outlet]/customers/[id]", "page");
@@ -58,6 +63,7 @@ export async function cancelManualTransactionAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.manual_transaction");
 		await mtService.cancelManualTransaction(ctx, id, input);
 		revalidatePath("/o/[outlet]/sales", "page");
 		revalidatePath("/o/[outlet]/customers/[id]", "page");

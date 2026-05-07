@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as taxesService from "@/lib/services/taxes";
 
@@ -20,6 +21,7 @@ export async function createTaxAction(
 ): Promise<TaxActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const tax = await taxesService.createTax(ctx, input);
 		revalidate();
 		return tax;
@@ -34,6 +36,7 @@ export async function updateTaxAction(
 ): Promise<TaxActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const tax = await taxesService.updateTax(ctx, id, input);
 		revalidate();
 		return tax;
@@ -47,6 +50,7 @@ export async function deleteTaxAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await taxesService.deleteTax(ctx, id);
 		revalidate();
 		return { ok: true };

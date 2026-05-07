@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { KeyRound, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,14 @@ import type { Position } from "@/lib/services/positions";
 import type { Role } from "@/lib/services/roles";
 import { mediaPublicUrl } from "@/lib/storage/urls";
 import { EmployeeFormDialog } from "./EmployeeForm";
+import { ResetCredentialsDialog } from "./ResetCredentialsDialog";
 
 type Props = {
 	employees: EmployeeWithRelations[];
 	roles: Role[];
 	positions: Position[];
 	outlets: OutletWithRoomCount[];
+	canManage?: boolean;
 };
 
 function FlagBadge({ on, label }: { on: boolean; label: string }) {
@@ -41,13 +43,20 @@ function FlagBadge({ on, label }: { on: boolean; label: string }) {
 	);
 }
 
-export function EmployeesTable({ employees, roles, positions, outlets }: Props) {
+export function EmployeesTable({
+	employees,
+	roles,
+	positions,
+	outlets,
+	canManage = false,
+}: Props) {
 	const [editing, setEditing] = useState<EmployeeWithRelations | null>(null);
 	const [deleting, setDeleting] = useState<EmployeeWithRelations | null>(null);
+	const [resetting, setResetting] = useState<EmployeeWithRelations | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
 	const [pending, startTransition] = useTransition();
 
-	const columns: DataTableColumn<EmployeeWithRelations>[] = [
+	const baseColumns: DataTableColumn<EmployeeWithRelations>[] = [
 		{
 			key: "name",
 			header: "Name",
@@ -166,45 +175,61 @@ export function EmployeesTable({ employees, roles, positions, outlets }: Props) 
 				</span>
 			),
 		},
-		{
-			key: "actions",
-			header: "Actions",
-			align: "right",
-			cell: (e) => (
-				<div className="inline-flex gap-1">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => setEditing(e)}
-								aria-label="Edit"
-							>
-								<Pencil />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Edit</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => {
-									setActionError(null);
-									setDeleting(e);
-								}}
-								aria-label="Delete"
-							>
-								<Trash2 />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Delete</TooltipContent>
-					</Tooltip>
-				</div>
-			),
-		},
 	];
+
+	const actionsColumn: DataTableColumn<EmployeeWithRelations> = {
+		key: "actions",
+		header: "Actions",
+		align: "right",
+		cell: (e) => (
+			<div className="inline-flex gap-1">
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							onClick={() => setEditing(e)}
+							aria-label="Edit"
+						>
+							<Pencil />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Edit</TooltipContent>
+				</Tooltip>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							onClick={() => setResetting(e)}
+							aria-label="Reset credentials"
+						>
+							<KeyRound />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Reset password / PIN</TooltipContent>
+				</Tooltip>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							onClick={() => {
+								setActionError(null);
+								setDeleting(e);
+							}}
+							aria-label="Delete"
+						>
+							<Trash2 />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Delete</TooltipContent>
+				</Tooltip>
+			</div>
+		),
+	};
+
+	const columns = canManage ? [...baseColumns, actionsColumn] : baseColumns;
 
 	return (
 		<>
@@ -225,6 +250,11 @@ export function EmployeesTable({ employees, roles, positions, outlets }: Props) 
 				positions={positions}
 				outlets={outlets}
 				onClose={() => setEditing(null)}
+			/>
+			<ResetCredentialsDialog
+				open={!!resetting}
+				employee={resetting}
+				onClose={() => setResetting(null)}
 			/>
 			<ConfirmDialog
 				open={!!deleting}

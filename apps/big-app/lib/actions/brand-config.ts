@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import {
 	type BrandConfigCategory,
 	isBrandConfigCategory,
@@ -30,6 +31,7 @@ export async function createBrandConfigItemAction(
 ): Promise<BrandConfigItemActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const row = await brandConfigService.createBrandConfigItem(ctx, input);
 		revalidate();
 		return row;
@@ -44,6 +46,7 @@ export async function updateBrandConfigItemAction(
 ): Promise<BrandConfigItemActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const row = await brandConfigService.updateBrandConfigItem(ctx, id, input);
 		revalidate();
 		return row;
@@ -57,6 +60,7 @@ export async function archiveBrandConfigItemAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await brandConfigService.archiveBrandConfigItem(ctx, id);
 		revalidate();
 		return { ok: true };
@@ -70,6 +74,7 @@ export async function deleteBrandConfigItemAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await brandConfigService.deleteBrandConfigItem(ctx, id);
 		revalidate();
 		return { ok: true };

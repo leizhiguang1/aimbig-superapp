@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as billingSettingsService from "@/lib/services/billing-settings";
 
@@ -14,6 +15,7 @@ export async function updateBillingSettingsAction(
 ): Promise<BillingSettingsActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const settings = await billingSettingsService.updateBillingSettings(
 			ctx,
 			input,

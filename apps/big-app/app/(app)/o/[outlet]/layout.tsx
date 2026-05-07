@@ -7,6 +7,10 @@ import { AppTopbar } from "@/components/shell/app-topbar";
 import { NavProgress } from "@/components/shell/nav-progress";
 import type { OutletNavItem } from "@/components/shell/outlet-selector";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+	checkPermission,
+	getCurrentUserPermissions,
+} from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { outletPath } from "@/lib/outlet-path";
 import { listCustomerTags } from "@/lib/services/brand-config";
@@ -52,6 +56,23 @@ export default async function OutletScopedLayout({
 		nick_name: o.nick_name,
 	}));
 
+	const perms = await getCurrentUserPermissions(ctx);
+	const hasAnyStaff =
+		checkPermission(perms, "staff.employees") ||
+		checkPermission(perms, "staff.employee_listing") ||
+		checkPermission(perms, "staff.roles") ||
+		checkPermission(perms, "staff.position") ||
+		checkPermission(perms, "staff.commissions");
+	const canManualTransaction = checkPermission(perms, "system.manual_transaction");
+	const hiddenNavKeys: Array<
+		"employees" | "passcode" | "reports" | "config" | "webstore"
+	> = [];
+	if (!hasAnyStaff) hiddenNavKeys.push("employees");
+	if (!checkPermission(perms, "system.passcode")) hiddenNavKeys.push("passcode");
+	if (!checkPermission(perms, "system.reports")) hiddenNavKeys.push("reports");
+	if (!checkPermission(perms, "system.config")) hiddenNavKeys.push("config");
+	if (!checkPermission(perms, "system.webstore")) hiddenNavKeys.push("webstore");
+
 	const { data: emp } = await ctx.dbAdmin
 		.from("employees")
 		.select(
@@ -78,6 +99,7 @@ export default async function OutletScopedLayout({
 					brandName={brand.name}
 					brandNickname={brand.nickname}
 					brandLogoUrl={mediaPublicUrl(brand.logo_url)}
+					hiddenNavKeys={hiddenNavKeys}
 				/>
 				<SidebarInset className="min-w-0">
 					<AppTopbar
@@ -88,6 +110,7 @@ export default async function OutletScopedLayout({
 						role={roleName}
 						imageUrl={mediaPublicUrl(imagePath)}
 						hasPin={hasPin}
+						canManualTransaction={canManualTransaction}
 					/>
 					<main className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:p-6">
 						{children}

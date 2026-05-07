@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownUp, Check, Pencil, Trash2, X } from "lucide-react";
-import { useOptimistic, useState, useTransition } from "react";
+import { type ReactNode, useOptimistic, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -117,7 +117,15 @@ type PendingToggle = {
 	nextValue: boolean;
 };
 
-export function RolesPermissionMatrix({ roles }: { roles: Role[] }) {
+export function RolesPermissionMatrix({
+	roles,
+	toolbarLeft,
+	toolbarRight,
+}: {
+	roles: Role[];
+	toolbarLeft?: ReactNode;
+	toolbarRight?: ReactNode;
+}) {
 	const [editing, setEditing] = useState<Role | null>(null);
 	const [deleting, setDeleting] = useState<Role | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
@@ -177,19 +185,12 @@ export function RolesPermissionMatrix({ roles }: { roles: Role[] }) {
 		setPendingToggle(null);
 	};
 
-	if (optimisticRoles.length === 0) {
-		return (
-			<div className="rounded-lg border p-8 text-center text-muted-foreground text-sm">
-				No roles yet. Click “New role” to create one.
-			</div>
-		);
-	}
-
 	const isVertical = headerOrientation === "vertical";
 
-	return (
-		<>
-			<div className="mb-2 flex items-center justify-end">
+	const toolbar = (
+		<div className="flex items-center justify-between gap-2">
+			<div className="flex items-center gap-3">{toolbarLeft}</div>
+			<div className="flex items-center gap-2">
 				<Button
 					type="button"
 					variant="outline"
@@ -203,8 +204,27 @@ export function RolesPermissionMatrix({ roles }: { roles: Role[] }) {
 					<ArrowDownUp />
 					{isVertical ? "Horizontal headers" : "Vertical headers"}
 				</Button>
+				{toolbarRight}
 			</div>
-			<div className="overflow-x-auto rounded-lg border">
+		</div>
+	);
+
+	if (optimisticRoles.length === 0) {
+		return (
+			<>
+				{toolbar}
+				<div className="rounded-lg border p-8 text-center text-muted-foreground text-sm">
+					No roles yet. Click “New role” to create one.
+				</div>
+			</>
+		);
+	}
+
+	return (
+		<>
+			{toolbar}
+			<div className="scrollbar-themed overflow-x-auto pb-2">
+				<div className="inline-block min-w-full overflow-hidden rounded-lg border align-top">
 				<table className="border-collapse text-sm">
 					<thead>
 						<tr>
@@ -356,6 +376,7 @@ export function RolesPermissionMatrix({ roles }: { roles: Role[] }) {
 						))}
 					</tbody>
 				</table>
+				</div>
 			</div>
 			{pending && (
 				<p className="mt-2 text-muted-foreground text-xs">Saving…</p>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as rolesService from "@/lib/services/roles";
 
@@ -14,6 +15,7 @@ export async function createRoleAction(
 ): Promise<RoleActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "staff.roles");
 		const role = await rolesService.createRole(ctx, input);
 		revalidatePath("/o/[outlet]/employees/roles", "page");
 		return role;
@@ -28,6 +30,7 @@ export async function updateRoleAction(
 ): Promise<RoleActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "staff.roles");
 		const role = await rolesService.updateRole(ctx, id, input);
 		revalidatePath("/o/[outlet]/employees/roles", "page");
 		return role;
@@ -41,6 +44,7 @@ export async function deleteRoleAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "staff.roles");
 		await rolesService.deleteRole(ctx, id);
 		revalidatePath("/o/[outlet]/employees/roles", "page");
 		return { ok: true };

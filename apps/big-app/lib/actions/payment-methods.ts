@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as paymentMethodsService from "@/lib/services/payment-methods";
 
@@ -19,6 +20,7 @@ export async function createPaymentMethodAction(
 ): Promise<PaymentMethodActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const method = await paymentMethodsService.createPaymentMethod(ctx, input);
 		revalidate();
 		return method;
@@ -33,6 +35,7 @@ export async function updatePaymentMethodAction(
 ): Promise<PaymentMethodActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const method = await paymentMethodsService.updatePaymentMethod(
 			ctx,
 			id,
@@ -50,6 +53,7 @@ export async function deletePaymentMethodAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await paymentMethodsService.deletePaymentMethod(ctx, id);
 		revalidate();
 		return { ok: true };

@@ -1,6 +1,11 @@
+import { notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { hasPermission } from '@/lib/auth/permissions'
+import { getServerContext } from '@/lib/context/server'
 
-export default function EmployeesCommissionPage() {
+export default async function EmployeesCommissionPage() {
+  const ctx = await getServerContext()
+  if (!(await hasPermission(ctx, 'staff.commissions'))) notFound()
   return (
     <Card>
       <CardHeader>

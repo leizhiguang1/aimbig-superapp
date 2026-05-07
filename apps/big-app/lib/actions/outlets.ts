@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as outletsService from "@/lib/services/outlets";
 
@@ -19,6 +20,7 @@ export async function createOutletAction(
 ): Promise<OutletActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const outlet = await outletsService.createOutlet(ctx, input);
 		revalidatePath("/o/[outlet]/config/outlets", "page");
 		return outlet;
@@ -33,6 +35,7 @@ export async function updateOutletAction(
 ): Promise<OutletActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const outlet = await outletsService.updateOutlet(ctx, id, input);
 		revalidatePath("/o/[outlet]/config/outlets", "page");
 		revalidatePath(`/o/[outlet]/config/outlets/${id}`, "page");
@@ -47,6 +50,7 @@ export async function setOutletTimezoneAction(
 ): Promise<OutletActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const outlet = await outletsService.setOutletTimezone(ctx, input);
 		revalidatePath("/o/[outlet]/config/general", "page");
 		return outlet;
@@ -60,6 +64,7 @@ export async function deleteOutletAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await outletsService.deleteOutlet(ctx, id);
 		revalidatePath("/o/[outlet]/config/outlets", "page");
 		return { ok: true };
@@ -78,6 +83,7 @@ export async function createRoomAction(
 ): Promise<RoomActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const room = await outletsService.createRoom(ctx, outletId, input);
 		revalidatePath("/o/[outlet]/config/outlets", "page");
 		revalidatePath(`/o/[outlet]/config/outlets/${outletId}`, "page");
@@ -94,6 +100,7 @@ export async function updateRoomAction(
 ): Promise<RoomActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const room = await outletsService.updateRoom(ctx, roomId, input);
 		revalidatePath(`/o/[outlet]/config/outlets/${outletId}`, "page");
 		return room;
@@ -108,6 +115,7 @@ export async function deleteRoomAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await outletsService.deleteRoom(ctx, roomId);
 		revalidatePath(`/o/[outlet]/config/outlets/${outletId}`, "page");
 		return { ok: true };

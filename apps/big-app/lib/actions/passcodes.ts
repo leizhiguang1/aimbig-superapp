@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as passcodesService from "@/lib/services/passcodes";
 
@@ -14,6 +15,7 @@ export async function createPasscodeAction(
 ): Promise<PasscodeActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.passcode");
 		const passcode = await passcodesService.createPasscode(ctx, input);
 		revalidatePath("/o/[outlet]/passcode", "page");
 		return passcode;
@@ -27,6 +29,7 @@ export async function deletePasscodeAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.passcode");
 		await passcodesService.deletePasscode(ctx, id);
 		revalidatePath("/o/[outlet]/passcode", "page");
 		return { ok: true };

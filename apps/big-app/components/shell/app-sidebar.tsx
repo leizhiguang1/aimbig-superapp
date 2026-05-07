@@ -42,20 +42,35 @@ import {
 } from "@/components/ui/sidebar";
 import { outletPath } from "@/lib/outlet-path";
 
-const baseNavItems: SidebarNavItemData[] = [
-	{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-	{ label: "Appointments", href: "/appointments", icon: Calendar },
-	{ label: "Customers", href: "/customers", icon: Users },
-	{ label: "Sales", href: "/sales", icon: ShoppingCart },
-	{ label: "Roster", href: "/roster", icon: CalendarDays },
-	{ label: "Services", href: "/services", icon: Stethoscope },
-	{ label: "Inventory", href: "/inventory", icon: Archive },
-	{ label: "Employees", href: "/employees", icon: UserCog },
-	{ label: "Voucher", href: "/voucher", icon: Ticket },
-	{ label: "Passcode", href: "/passcode", icon: KeyRound },
-	{ label: "Reports", href: "/reports", icon: BarChart2 },
-	{ label: "Webstore", href: "/webstore", icon: Store },
-	{ label: "Config", href: "/config", icon: Settings },
+type NavKey =
+	| "dashboard"
+	| "appointments"
+	| "customers"
+	| "sales"
+	| "roster"
+	| "services"
+	| "inventory"
+	| "employees"
+	| "voucher"
+	| "passcode"
+	| "reports"
+	| "webstore"
+	| "config";
+
+const baseNavItems: ReadonlyArray<SidebarNavItemData & { key: NavKey }> = [
+	{ key: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+	{ key: "appointments", label: "Appointments", href: "/appointments", icon: Calendar },
+	{ key: "customers", label: "Customers", href: "/customers", icon: Users },
+	{ key: "sales", label: "Sales", href: "/sales", icon: ShoppingCart },
+	{ key: "roster", label: "Roster", href: "/roster", icon: CalendarDays },
+	{ key: "services", label: "Services", href: "/services", icon: Stethoscope },
+	{ key: "inventory", label: "Inventory", href: "/inventory", icon: Archive },
+	{ key: "employees", label: "Employees", href: "/employees", icon: UserCog },
+	{ key: "voucher", label: "Voucher", href: "/voucher", icon: Ticket },
+	{ key: "passcode", label: "Passcode", href: "/passcode", icon: KeyRound },
+	{ key: "reports", label: "Reports", href: "/reports", icon: BarChart2 },
+	{ key: "webstore", label: "Webstore", href: "/webstore", icon: Store },
+	{ key: "config", label: "Config", href: "/config", icon: Settings },
 ];
 
 const baseWhatsappNavItems: SidebarNavItemData[] = [
@@ -113,11 +128,13 @@ export function AppSidebar({
 	brandName,
 	brandNickname,
 	brandLogoUrl,
+	hiddenNavKeys,
 }: {
 	outletCode: string;
 	brandName: string;
 	brandNickname: string | null;
 	brandLogoUrl: string | null;
+	hiddenNavKeys?: NavKey[];
 }) {
 	const pathname = usePathname();
 	const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -130,10 +147,13 @@ export function AppSidebar({
 		setPendingHref(href);
 	}, []);
 
-	const navItems = useMemo(
-		() => withOutlet(baseNavItems, outletCode),
-		[outletCode],
-	);
+	const navItems = useMemo(() => {
+		const hidden = new Set(hiddenNavKeys ?? []);
+		return withOutlet(
+			baseNavItems.filter((it) => !hidden.has(it.key)),
+			outletCode,
+		);
+	}, [outletCode, hiddenNavKeys]);
 	const whatsappNavItems = useMemo(
 		() => withOutlet(baseWhatsappNavItems, outletCode),
 		[outletCode],
