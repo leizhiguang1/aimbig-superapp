@@ -87,6 +87,9 @@ type Props = {
 	fullCustomer: CustomerWithRelations | null;
 	walletBalance: number | null;
 	canBackdate?: boolean;
+	canSeeCaseNotes?: boolean;
+	canCaseBilling?: boolean;
+	canRevert?: boolean;
 };
 
 export function AppointmentDetailView({
@@ -119,6 +122,9 @@ export function AppointmentDetailView({
 	fullCustomer,
 	walletBalance,
 	canBackdate = false,
+	canSeeCaseNotes = true,
+	canCaseBilling = true,
+	canRevert = false,
 }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [activeTab, setActiveTab] = useState<DetailTabKey>("overview");
@@ -236,6 +242,7 @@ export function AppointmentDetailView({
 					staffDiscountPercent={staffDiscountPercent}
 					walletBalance={walletBalance}
 					canBackdate={canBackdate}
+					canRevert={canRevert}
 					onEdit={() => setEditOpen(true)}
 					onToast={showToast}
 				/>
@@ -273,7 +280,12 @@ export function AppointmentDetailView({
 						)}
 					</div>
 
-					<DetailTabs activeTab={activeTab} onChange={goToTab} />
+					<DetailTabs
+					activeTab={activeTab}
+					onChange={goToTab}
+					canSeeCaseNotes={canSeeCaseNotes}
+					canCaseBilling={canCaseBilling}
+				/>
 
 					{visitedTabs.has("overview") && (
 						<TabPanel hidden={activeTab !== "overview"}>
@@ -313,7 +325,7 @@ export function AppointmentDetailView({
 						</TabPanel>
 					)}
 
-					{visitedTabs.has("billing") && (
+					{canCaseBilling && visitedTabs.has("billing") && (
 						<TabPanel hidden={activeTab !== "billing"}>
 							<BillingTab
 								appointmentId={appointment.id}

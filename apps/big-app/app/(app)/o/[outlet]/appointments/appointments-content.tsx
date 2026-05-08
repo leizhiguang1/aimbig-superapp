@@ -87,6 +87,16 @@ export async function AppointmentsContent({
 	);
 	const ctx = await getServerContext();
 	if (!(await hasPermission(ctx, "appointments.appointments"))) notFound();
+	const [canViewAllAppointments, canApptCustomerAll] = await Promise.all([
+		hasPermission(ctx, "appointments.view_all_appointments"),
+		hasPermission(ctx, "appointments.customer_transparency"),
+	]);
+	const employeeIdFilter = canViewAllAppointments
+		? null
+		: (ctx.currentUser?.employeeId ?? null);
+	const apptCustomerFilter = canApptCustomerAll
+		? null
+		: (ctx.currentUser?.employeeId ?? null);
 	const outlets = await listOutlets(ctx);
 	const activeOutlets = outlets.filter((o) => o.is_active);
 
@@ -134,8 +144,9 @@ export async function AppointmentsContent({
 			outletId,
 			from: localDateIso(range.from),
 			to: localDateIso(range.to),
+			employeeIdFilter,
 		}),
-		listCustomers(ctx),
+		listCustomers(ctx, { consultantIdFilter: apptCustomerFilter }),
 		listBookableEmployeesForOutlet(ctx, outletId),
 		listRooms(ctx, outletId),
 		listServices(ctx),

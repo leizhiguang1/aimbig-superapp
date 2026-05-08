@@ -57,6 +57,7 @@ export type SalesOrderWithRelations = SalesOrder & {
 		is_vip: boolean | null;
 		is_staff: boolean | null;
 		tags: string[] | null;
+		consultant_id: string | null;
 	} | null;
 	consultant: {
 		id: string;
@@ -75,7 +76,7 @@ export type SalesOrderWithRelations = SalesOrder & {
 };
 
 const SALES_ORDER_SELECT =
-	"*, customer:customers!sales_orders_customer_id_fkey(id, code, first_name, last_name, profile_image_path, phone, id_number, is_vip, is_staff, tags), consultant:employees!sales_orders_consultant_id_fkey(id, first_name, last_name, profile_image_path), outlet:outlets!sales_orders_outlet_id_fkey(id, code, name), created_by_employee:employees!sales_orders_created_by_fkey(id, first_name, last_name, profile_image_path), appointment:appointments!sales_orders_appointment_id_fkey(id, booking_ref)";
+	"*, customer:customers!sales_orders_customer_id_fkey(id, code, first_name, last_name, profile_image_path, phone, id_number, is_vip, is_staff, tags, consultant_id), consultant:employees!sales_orders_consultant_id_fkey(id, first_name, last_name, profile_image_path), outlet:outlets!sales_orders_outlet_id_fkey(id, code, name), created_by_employee:employees!sales_orders_created_by_fkey(id, first_name, last_name, profile_image_path), appointment:appointments!sales_orders_appointment_id_fkey(id, booking_ref)";
 
 export async function listSalesOrders(
 	ctx: Context,
@@ -83,6 +84,7 @@ export async function listSalesOrders(
 		outletId?: string | null;
 		customerId?: string | null;
 		limit?: number;
+		customerConsultantIdFilter?: string | null;
 	} = {},
 ): Promise<SalesOrderWithRelations[]> {
 	const brandId = assertBrandId(ctx);
@@ -98,7 +100,18 @@ export async function listSalesOrders(
 	if (opts.customerId) query = query.eq("customer_id", opts.customerId);
 	const { data, error } = await query;
 	if (error) throw new ValidationError(error.message);
-	return (data ?? []) as unknown as SalesOrderWithRelations[];
+	const rows = (data ?? []) as unknown as SalesOrderWithRelations[];
+	// "Sales for customers tied to me" — filter in-memory. The query is
+	// already capped at 200 rows so the cost is negligible. Walk-in sales
+	// (no customer) are excluded since by definition they aren't "tied"
+	// to anyone.
+	if (opts.customerConsultantIdFilter) {
+		const me = opts.customerConsultantIdFilter;
+		return rows.filter(
+			(r) => r.customer != null && r.customer.consultant_id === me,
+		);
+	}
+	return rows;
 }
 
 export type CollectPaymentResult = {

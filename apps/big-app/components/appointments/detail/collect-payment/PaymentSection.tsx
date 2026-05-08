@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { Input } from "@/components/ui/input";
 import { RawNumericInput } from "@/components/ui/numeric-input";
 import type { PaymentMethod } from "@/lib/services/payment-methods";
@@ -24,7 +25,7 @@ type Props = {
 	onBackdateChange: (v: boolean) => void;
 	backdateValue: string;
 	onBackdateValueChange: (v: string) => void;
-	canBackdate?: boolean;
+	canBackdate?: boolean | null;
 
 	remarks: string;
 	onRemarksChange: (v: string) => void;
@@ -45,17 +46,19 @@ export function PaymentSection({
 	onBackdateChange,
 	backdateValue,
 	onBackdateValueChange,
-	canBackdate = false,
+	canBackdate,
 	remarks,
 	onRemarksChange,
 }: Props) {
+	const fallbackBackdate = usePermission("sales.backdate_transactions");
+	const allowBackdate = canBackdate ?? fallbackBackdate;
 	return (
 		<>
 			<div className="mt-5 text-sm font-semibold tracking-wide text-blue-600">
 				PAYMENT
 			</div>
 
-			{canBackdate ? (
+			{allowBackdate ? (
 				<div className="mt-2 flex items-center justify-end gap-2 text-xs">
 					<span className="text-blue-600">Backdate Invoice?</span>
 					<Toggle
@@ -75,7 +78,7 @@ export function PaymentSection({
 					/>
 				</div>
 			) : null}
-			{canBackdate && backdate &&
+			{allowBackdate && backdate &&
 				(() => {
 					const today = new Date();
 					const y = today.getFullYear();

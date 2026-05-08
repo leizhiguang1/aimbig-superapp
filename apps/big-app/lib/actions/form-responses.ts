@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import {
 	createFormResponse,
@@ -17,6 +18,7 @@ export async function createFormResponseAction(
 ): Promise<FormResponseActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.document_edit");
 		const result = await createFormResponse(ctx, input);
 		revalidatePath("/", "layout");
 		return result;
@@ -30,6 +32,7 @@ export async function deleteFormResponseAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "clinical.document_delete");
 		await deleteFormResponse(ctx, id);
 		revalidatePath("/", "layout");
 		return { ok: true };

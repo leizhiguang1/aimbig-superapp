@@ -8,6 +8,7 @@ import {
 	AppointmentToastStack,
 	type Toast,
 } from "@/components/appointments/AppointmentToastStack";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { AddMcDialog } from "@/components/medical-certificates/AddMcDialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -97,6 +98,7 @@ export function CustomerMedicalCertificatesTab({
 	issuingEmployeeId,
 	medicalCertificates,
 }: Props) {
+	const canManageMc = usePermission("clinical.medical_certificates");
 	const router = useRouter();
 	const path = useOutletPath();
 	const [pending, startTransition] = useTransition();
@@ -283,71 +285,77 @@ export function CustomerMedicalCertificatesTab({
 				);
 			},
 		},
-		{
-			key: "actions_right",
-			header: "",
-			align: "right",
-			headerClassName: "w-24",
-			className: "w-24",
-			cell: (mc) => {
-				const isCancelled = !!mc.cancelled_at;
-				return (
-					<div className="flex items-center justify-end gap-1">
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<button
-									type="button"
-									aria-label="Edit certificate"
-									onClick={() => setEditing(mc)}
-									disabled={isCancelled}
-									className="inline-flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-background"
-								>
-									<Pencil className="size-3.5" />
-								</button>
-							</TooltipTrigger>
-							<TooltipContent>
-								{isCancelled ? "Cancelled — cannot edit" : "Edit"}
-							</TooltipContent>
-						</Tooltip>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<button
-									type="button"
-									aria-label="Cancel certificate"
-									onClick={() => setCancelTarget(mc)}
-									disabled={isCancelled}
-									className="inline-flex size-7 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-rose-50"
-								>
-									<Ban className="size-3.5" />
-								</button>
-							</TooltipTrigger>
-							<TooltipContent>
-								{isCancelled ? "Already cancelled" : "Cancel"}
-							</TooltipContent>
-						</Tooltip>
-					</div>
-				);
-			},
-		},
+		...(canManageMc
+			? [
+					{
+						key: "actions_right",
+						header: "",
+						align: "right" as const,
+						headerClassName: "w-24",
+						className: "w-24",
+						cell: (mc: MedicalCertificateWithRefs) => {
+							const isCancelled = !!mc.cancelled_at;
+							return (
+								<div className="flex items-center justify-end gap-1">
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<button
+												type="button"
+												aria-label="Edit certificate"
+												onClick={() => setEditing(mc)}
+												disabled={isCancelled}
+												className="inline-flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-background"
+											>
+												<Pencil className="size-3.5" />
+											</button>
+										</TooltipTrigger>
+										<TooltipContent>
+											{isCancelled ? "Cancelled — cannot edit" : "Edit"}
+										</TooltipContent>
+									</Tooltip>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<button
+												type="button"
+												aria-label="Cancel certificate"
+												onClick={() => setCancelTarget(mc)}
+												disabled={isCancelled}
+												className="inline-flex size-7 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-rose-50"
+											>
+												<Ban className="size-3.5" />
+											</button>
+										</TooltipTrigger>
+										<TooltipContent>
+											{isCancelled ? "Already cancelled" : "Cancel"}
+										</TooltipContent>
+									</Tooltip>
+								</div>
+							);
+						},
+					} satisfies DataTableColumn<MedicalCertificateWithRefs>,
+				]
+			: []),
 	];
 
 	return (
 		<div className="flex flex-col gap-3">
-			<div className="flex items-center justify-between gap-3">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<button
-							type="button"
-							aria-label="New medical certificate"
-							onClick={() => setAddOpen(true)}
-							className="flex size-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600"
-						>
-							<Plus className="size-5" />
-						</button>
-					</TooltipTrigger>
-					<TooltipContent>New medical certificate</TooltipContent>
-				</Tooltip>
-			</div>
+			{canManageMc ? (
+				<div className="flex items-center justify-between gap-3">
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								type="button"
+								aria-label="New medical certificate"
+								onClick={() => setAddOpen(true)}
+								className="flex size-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600"
+							>
+								<Plus className="size-5" />
+							</button>
+						</TooltipTrigger>
+						<TooltipContent>New medical certificate</TooltipContent>
+					</Tooltip>
+				</div>
+			) : null}
 
 			<DataTable<MedicalCertificateWithRefs>
 				data={medicalCertificates}

@@ -1,4 +1,5 @@
 import { Mail, MapPin, Phone } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Brand } from "@/lib/services/brands";
 import type { CustomerWithRelations } from "@/lib/services/customers";
 import type { Outlet } from "@/lib/services/outlets";
@@ -129,54 +130,81 @@ export function PrintableInvoice({
 	const taxNumber =
 		(showTaxNumber ? outlet?.tax_number : null) ?? brand?.tax_id ?? null;
 
+	const paymentTypeSummary =
+		payments.length === 0
+			? "—"
+			: payments.length === 1
+				? formatMethodLabel(payments[0])
+				: payments
+						.map((p) => `${formatMethodLabel(p)} (${money(p.amount)})`)
+						.join(", ");
+
 	return (
-		<div className="invoice-sheet mx-auto max-w-[820px] bg-white p-8 text-[11px] text-zinc-900 print:p-0 print:text-[10px]">
+		<div className="invoice-sheet mx-auto flex w-[210mm] min-h-[297mm] flex-col bg-white p-[16mm] text-[12px] text-zinc-900 shadow-sm print:p-0 print:text-[11px] print:shadow-none">
 			<div className="flex items-end gap-3">
 				<div className="h-[18px] flex-1 border-zinc-500 border-b" aria-hidden />
-				<div className="font-semibold text-[18px] leading-none tracking-wide">
+				<div className="font-semibold text-[20px] leading-none tracking-wide">
 					INVOICE
 				</div>
 			</div>
 
-			<header className="flex items-start gap-6 border-zinc-400 border-b py-4">
+			<header className="flex items-start gap-8 border-zinc-400 border-b py-7">
 				<HeaderLogo src={logoSrc} alt={outlet?.name ?? brand?.name ?? "Logo"} />
-				<div className="flex flex-1 flex-col gap-2">
-					<div className="grid grid-cols-2 gap-x-8 gap-y-1">
-						<HeaderField label="Customer Name" value={customerName} />
-						<HeaderField label="Invoice #" value={headerInvoiceNo} />
-						<HeaderField
-							label="Identification #"
-							value={customer?.id_number ?? "—"}
-						/>
-						<HeaderField label="Sales Order #" value={order.so_number} />
-						<HeaderField label="Membership #" value={customer?.code ?? "—"} />
-						<HeaderField label="Date" value={formatDate(order.sold_at)} />
-						<HeaderField label="Phone #" value={customer?.phone ?? "—"} />
-						<HeaderField label="Served By" value={servedBy} />
-					</div>
-					<HeaderField
-						label="Customer Address"
-						value={customerAddressLine(customer) || "—"}
-						labelWidth="146px"
-						multiline
-					/>
+				<div className="grid flex-1 grid-cols-[125px_10px_minmax(0,1fr)_2.5rem_115px_10px_minmax(0,1fr)] items-baseline gap-x-2 gap-y-3">
+					<InfoLabel>Customer Name</InfoLabel>
+					<Colon />
+					<InfoValue>{customerName}</InfoValue>
+					<span aria-hidden />
+					<InfoLabel>Invoice #</InfoLabel>
+					<Colon />
+					<InfoValue>{headerInvoiceNo}</InfoValue>
+
+					<InfoLabel>Identification #</InfoLabel>
+					<Colon />
+					<InfoValue>{customer?.id_number ?? "—"}</InfoValue>
+					<span aria-hidden />
+					<InfoLabel>Sales Order #</InfoLabel>
+					<Colon />
+					<InfoValue>{order.so_number}</InfoValue>
+
+					<InfoLabel>Membership #</InfoLabel>
+					<Colon />
+					<InfoValue>{customer?.code ?? "—"}</InfoValue>
+					<span aria-hidden />
+					<InfoLabel>Date</InfoLabel>
+					<Colon />
+					<InfoValue>{formatDate(order.sold_at)}</InfoValue>
+
+					<InfoLabel>Phone #</InfoLabel>
+					<Colon />
+					<InfoValue>{customer?.phone ?? "—"}</InfoValue>
+					<span aria-hidden />
+					<InfoLabel>Served By</InfoLabel>
+					<Colon />
+					<InfoValue>{servedBy}</InfoValue>
+
+					<InfoLabel>Customer Address</InfoLabel>
+					<Colon />
+					<InfoValue className="col-span-5 whitespace-pre-wrap">
+						{customerAddressLine(customer) || "—"}
+					</InfoValue>
 				</div>
 			</header>
 
-			<section className="mt-2">
-				<table className="w-full border-collapse text-[11px]">
+			<section className="mt-6">
+				<table className="w-full border-collapse">
 					<thead>
 						<tr className="border-zinc-300 border-y bg-zinc-50 text-left">
-							<th className="py-2 pl-2 font-semibold">Description</th>
-							<th className="w-[110px] py-2 font-semibold">Item Code</th>
-							<th className="w-[60px] py-2 text-center font-semibold">Qty</th>
-							<th className="w-[110px] py-2 text-right font-semibold">
+							<th className="py-3 pl-2 font-semibold">Description</th>
+							<th className="w-[100px] py-3 font-semibold">Item Code</th>
+							<th className="w-[55px] py-3 text-center font-semibold">Qty</th>
+							<th className="w-[105px] py-3 text-right font-semibold">
 								U/Price (MYR)
 							</th>
-							<th className="w-[110px] py-2 text-right font-semibold">
+							<th className="w-[110px] py-3 text-right font-semibold">
 								Discount (MYR)
 							</th>
-							<th className="w-[120px] py-2 pr-2 text-right font-semibold">
+							<th className="w-[115px] py-3 pr-2 text-right font-semibold">
 								Amount (MYR)
 							</th>
 						</tr>
@@ -197,19 +225,19 @@ export function PrintableInvoice({
 									key={item.id}
 									className="border-zinc-200 border-b align-top"
 								>
-									<td className="py-1.5 pl-2">
+									<td className="py-3 pl-2">
 										<div>{item.item_name}</div>
 										{isFoc && <div className="text-zinc-700">FOC</div>}
 									</td>
-									<td className="py-1.5">{item.sku ?? "—"}</td>
-									<td className="py-1.5 text-center tabular-nums">{qty}</td>
-									<td className="py-1.5 text-right tabular-nums">
+									<td className="py-3">{item.sku ?? "—"}</td>
+									<td className="py-3 text-center tabular-nums">{qty}</td>
+									<td className="py-3 text-right tabular-nums">
 										{money(unitPrice)}
 									</td>
-									<td className="py-1.5 text-right tabular-nums">
+									<td className="py-3 text-right tabular-nums">
 										{money(itemDiscount)}
 									</td>
-									<td className="py-1.5 pr-2 text-right tabular-nums">
+									<td className="py-3 pr-2 text-right tabular-nums">
 										<div>{money(lineAmount)}</div>
 										<div className="text-[10px] text-zinc-500">
 											(LOCAL) ({taxRate}%): {money(taxLineAmount)}
@@ -222,23 +250,23 @@ export function PrintableInvoice({
 							<tr>
 								<td
 									colSpan={6}
-									className="py-6 text-center text-zinc-500 italic"
+									className="py-8 text-center text-zinc-500 italic"
 								>
 									No line items
 								</td>
 							</tr>
 						)}
 						<tr className="border-zinc-300 border-t-2">
-							<td colSpan={3} className="py-2 pl-2 font-semibold">
+							<td colSpan={3} className="py-3 pl-2 font-semibold">
 								Sub Total (MYR)
 							</td>
-							<td className="py-2 text-right font-semibold tabular-nums">
+							<td className="py-3 text-right font-semibold tabular-nums">
 								{money(subtotal)}
 							</td>
-							<td className="py-2 text-right font-semibold tabular-nums">
+							<td className="py-3 text-right font-semibold tabular-nums">
 								{money(discount)}
 							</td>
-							<td className="py-2 pr-2 text-right font-semibold tabular-nums">
+							<td className="py-3 pr-2 text-right font-semibold tabular-nums">
 								{money(total)}
 							</td>
 						</tr>
@@ -246,68 +274,63 @@ export function PrintableInvoice({
 				</table>
 			</section>
 
-			<section className="mt-4 flex items-center justify-between border-zinc-300 border-y py-2">
+			<section className="mt-8 flex items-center justify-between border-zinc-300 border-y py-3">
 				<span className="font-semibold">Gross Total (MYR)</span>
 				<span className="font-semibold tabular-nums">{money(total)}</span>
 			</section>
 
-			<section className="mt-4">
+			<section className="mt-8">
 				<div className="font-semibold underline">Payment Details</div>
-				<div className="mt-1 flex items-center justify-between">
+				<div className="mt-3 flex items-baseline justify-between">
 					<span>Tendered Amount (MYR)</span>
 					<span className="tabular-nums">{money(tendered)}</span>
 				</div>
-				<div className="mt-2 flex items-center justify-between border-zinc-300 border-b font-semibold">
-					<span className="underline">Payment Type</span>
-					<span className="underline">Amount(MYR)</span>
+				<div className="mt-2 flex items-baseline justify-between gap-6">
+					<span>Payment Type</span>
+					<span className="text-right">{paymentTypeSummary}</span>
 				</div>
-				{payments.length === 0 ? (
-					<div className="py-2 text-zinc-500 italic">
-						No payments collected.
-					</div>
-				) : (
-					payments.map((p) => {
-						const methodLabel = formatMethodLabel(p);
-						const trace = p.trace_no?.trim();
-						const approval = p.approval_code?.trim();
-						const reference = p.reference_no?.trim();
-						return (
-							<div key={p.id} className="border-zinc-200 border-b py-1.5">
-								<div className="flex items-center justify-between">
-									<span>{methodLabel}</span>
-									<span className="tabular-nums">{money(p.amount)}</span>
+				{payments.some(
+					(p) => p.trace_no?.trim() || p.approval_code?.trim() || p.reference_no?.trim(),
+				) && (
+					<div className="mt-2 space-y-0.5 text-[10px] text-zinc-500">
+						{payments.map((p) => {
+							const trace = p.trace_no?.trim();
+							const approval = p.approval_code?.trim();
+							const reference = p.reference_no?.trim();
+							if (!(trace || approval || reference)) return null;
+							return (
+								<div key={p.id} className="flex flex-wrap gap-x-4">
+									{payments.length > 1 && (
+										<span>{formatMethodLabel(p)}:</span>
+									)}
+									{trace && <span>Trace No: {trace}</span>}
+									{approval && <span>Approval Code: {approval}</span>}
+									{reference && <span>Ref: {reference}</span>}
 								</div>
-								{(trace || approval || reference) && (
-									<div className="mt-0.5 flex gap-4 text-[10px] text-zinc-500">
-										{trace && <span>Trace No: {trace}</span>}
-										{approval && <span>Approval Code: {approval}</span>}
-										{reference && <span>Ref: {reference}</span>}
-									</div>
-								)}
-							</div>
-						);
-					})
+							);
+						})}
+					</div>
 				)}
 			</section>
 
-			<section className="mt-4">
+			<section className="mt-8">
 				<div className="font-semibold underline">Payment Summary</div>
-				<div className="mt-1 flex items-center justify-between">
+				<div className="mt-3 flex items-baseline justify-between">
 					<span>Total Paid to date (MYR)</span>
 					<span className="tabular-nums">{money(amountPaid)}</span>
 				</div>
-				<div className="flex items-center justify-between">
+				<div className="mt-2 flex items-baseline justify-between">
 					<span>Outstanding (MYR)</span>
 					<span className="tabular-nums">{money(outstanding)}</span>
 				</div>
 			</section>
 
-			<section className="mt-4">
-				<div className="font-semibold underline">Terms & Conditions</div>
-				<div className="mt-1">Goods sold are not refundable.</div>
+			<section className="mt-8">
+				<div className="font-semibold underline">Terms &amp; Conditions</div>
+				<div className="mt-3">Goods sold are not refundable.</div>
 			</section>
 
-			<footer className="mt-12 border-zinc-400 border-t pt-3">
+			<footer className="mt-auto border-zinc-400 border-t pt-4">
 				<div className="grid grid-cols-[16px_1fr] items-start gap-x-3 gap-y-2 text-[10px]">
 					<MapPin className="mt-0.5 size-3.5 text-zinc-500" aria-hidden />
 					<div>
@@ -341,13 +364,14 @@ export function PrintableInvoice({
 
 			<style>{`
 				@media print {
-					@page { size: A4; margin: 12mm; }
+					@page { size: A4; margin: 14mm; }
 					html, body { background: white !important; }
 					body * { visibility: hidden !important; }
 					.invoice-sheet, .invoice-sheet * { visibility: visible !important; }
 					.invoice-sheet {
-						position: absolute; top: 0; left: 0; width: 100%;
-						box-shadow: none !important; margin: 0 !important; max-width: none !important; padding: 0 !important;
+						position: absolute; top: 0; left: 0;
+						width: 100% !important; min-height: 0 !important;
+						box-shadow: none !important; margin: 0 !important; padding: 0 !important;
 					}
 				}
 			`}</style>
@@ -355,27 +379,26 @@ export function PrintableInvoice({
 	);
 }
 
-function HeaderField({
-	label,
-	value,
-	labelWidth = "120px",
-	multiline,
-}: {
-	label: string;
-	value: string;
-	labelWidth?: string;
-	multiline?: boolean;
-}) {
+function InfoLabel({ children }: { children: ReactNode }) {
+	return <span className="font-semibold">{children}</span>;
+}
+
+function Colon() {
 	return (
-		<div
-			className="grid items-baseline gap-x-2"
-			style={{ gridTemplateColumns: `${labelWidth} 8px 1fr` }}
-		>
-			<span className="font-semibold">{label}</span>
-			<span className="text-zinc-700">:</span>
-			<span className={multiline ? "whitespace-pre-wrap" : ""}>{value}</span>
-		</div>
+		<span className="text-zinc-500" aria-hidden>
+			:
+		</span>
 	);
+}
+
+function InfoValue({
+	children,
+	className,
+}: {
+	children: ReactNode;
+	className?: string;
+}) {
+	return <span className={className}>{children}</span>;
 }
 
 function HeaderLogo({ src, alt }: { src: string | null; alt: string }) {

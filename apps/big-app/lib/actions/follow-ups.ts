@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import * as followUpsService from "@/lib/services/follow-ups";
 
@@ -15,6 +16,7 @@ export async function createFollowUpAction(
 ): Promise<FollowUpActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const followUp = await followUpsService.createFollowUp(ctx, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return followUp;
@@ -30,6 +32,7 @@ export async function updateFollowUpAction(
 ): Promise<FollowUpActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const followUp = await followUpsService.updateFollowUp(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return followUp;
@@ -45,6 +48,7 @@ export async function setFollowUpReminderDoneAction(
 ): Promise<FollowUpActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const followUp = await followUpsService.setFollowUpReminderDone(ctx, id, {
 			reminder_done: reminderDone,
 		});
@@ -62,6 +66,7 @@ export async function setFollowUpPinAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		await followUpsService.setFollowUpPin(ctx, id, pinned);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -76,6 +81,7 @@ export async function deleteFollowUpAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		await followUpsService.deleteFollowUp(ctx, id);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };
@@ -92,6 +98,7 @@ export async function createCustomerFollowUpAction(
 ): Promise<FollowUpActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const followUp = await followUpsService.createFollowUp(ctx, input);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return followUp;
@@ -107,6 +114,7 @@ export async function updateCustomerFollowUpAction(
 ): Promise<FollowUpActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const followUp = await followUpsService.updateFollowUp(ctx, id, input);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return followUp;
@@ -122,6 +130,7 @@ export async function setCustomerFollowUpReminderDoneAction(
 ): Promise<FollowUpActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const followUp = await followUpsService.setFollowUpReminderDone(ctx, id, {
 			reminder_done: reminderDone,
 		});
@@ -139,6 +148,7 @@ export async function setCustomerFollowUpPinAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		await followUpsService.setFollowUpPin(ctx, id, pinned);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };
@@ -153,6 +163,7 @@ export async function deleteCustomerFollowUpAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		await followUpsService.deleteFollowUp(ctx, id);
 		revalidatePath(`/o/[outlet]/customers/${customerId}`, "page");
 		return { ok: true };
@@ -167,6 +178,7 @@ export async function setDashboardFollowUpReminderDoneAction(
 ): Promise<FollowUpActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "appointments.appointments");
 		const followUp = await followUpsService.setFollowUpReminderDone(ctx, id, {
 			reminder_done: reminderDone,
 		});

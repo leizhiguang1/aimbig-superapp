@@ -2,6 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CreateButton } from "@/components/ui/create-button";
@@ -103,6 +104,7 @@ function BrandsPanel({
 	brands: InventoryBrand[];
 	counts: Record<string, number>;
 }) {
+	const canEdit = usePermission("inventory.inventory_edit");
 	const [editing, setEditing] = useState<InventoryBrand | "new" | null>(null);
 	const [deleting, setDeleting] = useState<InventoryBrand | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -111,7 +113,7 @@ function BrandsPanel({
 	return (
 		<PanelCard
 			title="Brands"
-			onAdd={() => setEditing("new")}
+			onAdd={canEdit ? () => setEditing("new") : null}
 			emptyMessage="No brands yet."
 			rows={brands}
 		>
@@ -120,11 +122,15 @@ function BrandsPanel({
 					key={b.id}
 					left={b.name}
 					right={`${counts[b.id] ?? 0} items`}
-					onEdit={() => setEditing(b)}
-					onDelete={() => {
-						setDeleteError(null);
-						setDeleting(b);
-					}}
+					onEdit={canEdit ? () => setEditing(b) : null}
+					onDelete={
+						canEdit
+							? () => {
+									setDeleteError(null);
+									setDeleting(b);
+								}
+							: null
+					}
 				/>
 			))}
 			{editing && (
@@ -185,6 +191,7 @@ function CategoriesPanel({
 	categories: InventoryCategory[];
 	counts: Record<string, number>;
 }) {
+	const canEdit = usePermission("inventory.inventory_edit");
 	const [editing, setEditing] = useState<InventoryCategory | "new" | null>(
 		null,
 	);
@@ -195,7 +202,7 @@ function CategoriesPanel({
 	return (
 		<PanelCard
 			title="Categories"
-			onAdd={() => setEditing("new")}
+			onAdd={canEdit ? () => setEditing("new") : null}
 			emptyMessage="No categories yet."
 			rows={categories}
 		>
@@ -205,11 +212,15 @@ function CategoriesPanel({
 					left={c.name}
 					right={`${counts[c.id] ?? 0} items`}
 					sub={c.external_code ?? undefined}
-					onEdit={() => setEditing(c)}
-					onDelete={() => {
-						setDeleteError(null);
-						setDeleting(c);
-					}}
+					onEdit={canEdit ? () => setEditing(c) : null}
+					onDelete={
+						canEdit
+							? () => {
+									setDeleteError(null);
+									setDeleting(c);
+								}
+							: null
+					}
 				/>
 			))}
 			{editing && (
@@ -276,6 +287,7 @@ function SuppliersPanel({
 	suppliers: Supplier[];
 	counts: Record<string, number>;
 }) {
+	const canEdit = usePermission("inventory.inventory_edit");
 	const [editing, setEditing] = useState<Supplier | "new" | null>(null);
 	const [deleting, setDeleting] = useState<Supplier | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -362,53 +374,59 @@ function SuppliersPanel({
 			header: "BARCODE",
 			cell: () => dash,
 		},
-		{
-			key: "actions",
-			header: "",
-			align: "right",
-			cell: (s) => (
-				<div className="flex justify-end gap-1">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => setEditing(s)}
-								aria-label="Edit"
-							>
-								<Pencil />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Edit</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => {
-									setDeleteError(null);
-									setDeleting(s);
-								}}
-								aria-label="Delete"
-							>
-								<Trash2 />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Delete</TooltipContent>
-					</Tooltip>
-				</div>
-			),
-		},
+		...(canEdit
+			? [
+					{
+						key: "actions",
+						header: "",
+						align: "right" as const,
+						cell: (s: Supplier) => (
+							<div className="flex justify-end gap-1">
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											onClick={() => setEditing(s)}
+											aria-label="Edit"
+										>
+											<Pencil />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>Edit</TooltipContent>
+								</Tooltip>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											onClick={() => {
+												setDeleteError(null);
+												setDeleting(s);
+											}}
+											aria-label="Delete"
+										>
+											<Trash2 />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>Delete</TooltipContent>
+								</Tooltip>
+							</div>
+						),
+					} satisfies DataTableColumn<Supplier>,
+				]
+			: []),
 	];
 
 	return (
 		<div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
 			<div className="flex items-center justify-between">
 				<h2 className="font-semibold text-sm">Suppliers</h2>
-				<CreateButton size="sm" onClick={() => setEditing("new")}>
-					Add
-				</CreateButton>
+				{canEdit ? (
+					<CreateButton size="sm" onClick={() => setEditing("new")}>
+						Add
+					</CreateButton>
+				) : null}
 			</div>
 			<DataTable
 				data={suppliers}
@@ -478,7 +496,7 @@ function PanelCard({
 	className,
 }: {
 	title: string;
-	onAdd: () => void;
+	onAdd: (() => void) | null;
 	emptyMessage: string;
 	rows: unknown[];
 	children: React.ReactNode;
@@ -490,9 +508,11 @@ function PanelCard({
 		>
 			<div className="flex items-center justify-between">
 				<h2 className="font-semibold text-sm">{title}</h2>
-				<CreateButton size="sm" onClick={onAdd}>
-					Add
-				</CreateButton>
+				{onAdd ? (
+					<CreateButton size="sm" onClick={onAdd}>
+						Add
+					</CreateButton>
+				) : null}
 			</div>
 			{rows.length === 0 ? (
 				<p className="py-6 text-center text-muted-foreground text-sm">
@@ -515,8 +535,8 @@ function Row({
 	left: string;
 	right: string;
 	sub?: string;
-	onEdit: () => void;
-	onDelete: () => void;
+	onEdit: (() => void) | null;
+	onDelete: (() => void) | null;
 }) {
 	return (
 		<li className="flex items-center justify-between gap-3 py-2">
@@ -527,34 +547,40 @@ function Row({
 				)}
 			</div>
 			<div className="text-muted-foreground text-xs">{right}</div>
-			<div className="flex gap-1">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							onClick={onEdit}
-							aria-label="Edit"
-						>
-							<Pencil />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Edit</TooltipContent>
-				</Tooltip>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							onClick={onDelete}
-							aria-label="Delete"
-						>
-							<Trash2 />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Delete</TooltipContent>
-				</Tooltip>
-			</div>
+			{(onEdit || onDelete) && (
+				<div className="flex gap-1">
+					{onEdit && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									onClick={onEdit}
+									aria-label="Edit"
+								>
+									<Pencil />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Edit</TooltipContent>
+						</Tooltip>
+					)}
+					{onDelete && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									onClick={onDelete}
+									aria-label="Delete"
+								>
+									<Trash2 />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Delete</TooltipContent>
+						</Tooltip>
+					)}
+				</div>
+			)}
 		</li>
 	);
 }

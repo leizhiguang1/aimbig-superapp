@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { CustomerFormDialog } from "@/components/customers/CustomerForm";
 import { CustomerTagBadges } from "@/components/customers/CustomerTagBadges";
 import {
@@ -146,6 +147,7 @@ export function CustomerCard({
 	collapsed = false,
 }: Props) {
 	const path = useOutletPath();
+	const canConvertLead = usePermission("appointments.lead_list_creation");
 	const [convertOpen, setConvertOpen] = useState(false);
 	const [editOpen, setEditOpen] = useState(false);
 	const isBlock = appointment.is_time_block;
@@ -470,7 +472,7 @@ export function CustomerCard({
 						<ActionIcon label="Page customer" disabled>
 							<Bell className="size-4" />
 						</ActionIcon>
-					) : (
+					) : canConvertLead ? (
 						<button
 							type="button"
 							onClick={() => setConvertOpen(true)}
@@ -479,7 +481,7 @@ export function CustomerCard({
 							<UserPlus className="size-3.5" />
 							Register to Customer
 						</button>
-					)}
+					) : null}
 				</div>
 
 				{isLead && convertOpen && (

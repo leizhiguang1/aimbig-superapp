@@ -125,6 +125,7 @@ type Props = {
 	manualTransactions: ManualTransactionWithRelations[];
 	canSeeContact?: boolean;
 	canSeeCaseNotes?: boolean;
+	canSeeManualTransactions?: boolean;
 };
 
 type TabKey =
@@ -240,6 +241,7 @@ export function CustomerDetailView({
 	manualTransactions,
 	canSeeContact = false,
 	canSeeCaseNotes = true,
+	canSeeManualTransactions = true,
 }: Props) {
 	const path = useOutletPath();
 	const [activeTab, setActiveTab] = useState<TabKey>("timeline");
@@ -330,6 +332,19 @@ export function CustomerDetailView({
 		};
 	}, [timeline]);
 
+	const leadAttendedBy = useMemo(() => {
+		// `lead_attended_by_id` is filled only on the appointment created during
+		// the walk-in lead flow — it is NOT the appointment's doctor/employee
+		// and NOT derived from anywhere else. We just read the value stored at
+		// lead creation; if nothing was stored (older customers, customers not
+		// created from a lead), we render "—" and leave it at that.
+		for (let i = timeline.length - 1; i >= 0; i--) {
+			const a = timeline[i];
+			if (a.lead_attended_by) return a.lead_attended_by;
+		}
+		return null;
+	}, [timeline]);
+
 	const groupedTimeline = useMemo(() => {
 		const groups: {
 			key: string;
@@ -347,7 +362,12 @@ export function CustomerDetailView({
 	return (
 		<div className="flex flex-col gap-3">
 			<SegmentedTabs
-				tabs={canSeeCaseNotes ? TABS : TABS.filter((t) => t.key !== "casenotes")}
+				tabs={TABS.filter((t) => {
+					if (t.key === "casenotes" && !canSeeCaseNotes) return false;
+					if (t.key === "manual-transactions" && !canSeeManualTransactions)
+						return false;
+					return true;
+				})}
 				active={activeTab}
 				onChange={(key) => setActiveTab(key as TabKey)}
 				size="sm"
@@ -590,8 +610,16 @@ export function CustomerDetailView({
 								<span className="text-[10px] text-muted-foreground uppercase">
 									Lead Attended By
 								</span>
-								<span className="font-medium text-xs text-muted-foreground/70">
-									—
+								<span
+									className={
+										leadAttendedBy
+											? "font-medium text-xs"
+											: "font-medium text-xs text-muted-foreground/70"
+									}
+								>
+									{leadAttendedBy
+										? `${leadAttendedBy.first_name} ${leadAttendedBy.last_name}`.toUpperCase()
+										: "—"}
 								</span>
 							</div>
 							<div className="flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground">

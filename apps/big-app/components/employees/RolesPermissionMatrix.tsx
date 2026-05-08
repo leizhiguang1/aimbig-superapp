@@ -86,16 +86,23 @@ type FlatFlag = {
 	sectionKey: PermissionSectionKey;
 	flagKey: string;
 	label: string;
+	description: string;
+	deferred: boolean;
 	style: SectionStyle;
 };
 
 const FLAT_FLAGS: FlatFlag[] = PERMISSION_SECTIONS.flatMap((section) =>
-	section.flags.map((flag) => ({
-		sectionKey: section.key,
-		flagKey: flag.key,
-		label: flag.label,
-		style: SECTION_STYLES[section.key],
-	})),
+	section.flags.map((flag) => {
+		const f = flag as { key: string; label: string; description: string; deferred?: boolean };
+		return {
+			sectionKey: section.key,
+			flagKey: f.key,
+			label: f.label,
+			description: f.description,
+			deferred: f.deferred ?? false,
+			style: SECTION_STYLES[section.key],
+		};
+	}),
 );
 
 function isFlagOn(
@@ -266,23 +273,54 @@ export function RolesPermissionMatrix({
 											isVertical ? "h-40" : "h-12"
 										}`}
 									>
-										{isVertical ? (
-											<div className="mx-auto flex h-40 w-8 items-end justify-center pb-2">
-												<span
-													className="whitespace-nowrap"
-													style={{
-														writingMode: "vertical-rl",
-														transform: "rotate(180deg)",
-													}}
-												>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												{isVertical ? (
+													<div className="mx-auto flex h-40 w-8 cursor-help items-end justify-center pb-2">
+														<span
+															className={`whitespace-nowrap underline decoration-current/40 decoration-dotted underline-offset-2 ${
+																f.deferred ? "italic opacity-60" : ""
+															}`}
+															style={{
+																writingMode: "vertical-rl",
+																transform: "rotate(180deg)",
+															}}
+														>
+															{f.label}
+															{f.deferred ? " *" : ""}
+														</span>
+													</div>
+												) : (
+													<div className="mx-auto flex h-12 min-w-[120px] cursor-help items-center justify-center px-2 text-center leading-tight">
+														<span
+															className={`underline decoration-current/40 decoration-dotted underline-offset-2 ${
+																f.deferred ? "italic opacity-60" : ""
+															}`}
+														>
+															{f.label}
+															{f.deferred ? " *" : ""}
+														</span>
+													</div>
+												)}
+											</TooltipTrigger>
+											<TooltipContent
+												side="top"
+												align="center"
+												className="max-w-xs text-pretty leading-snug"
+											>
+												<div className="font-medium">
 													{f.label}
-												</span>
-											</div>
-										) : (
-											<div className="mx-auto flex h-12 min-w-[120px] items-center justify-center px-2 text-center leading-tight">
-												{f.label}
-											</div>
-										)}
+													{f.deferred ? (
+														<span className="ml-1.5 rounded bg-amber-200/90 px-1 py-0.5 font-semibold text-[9px] text-amber-900 uppercase tracking-wide">
+															Coming soon
+														</span>
+													) : null}
+												</div>
+												<div className="mt-0.5 text-[11px] opacity-90">
+													{f.description}
+												</div>
+											</TooltipContent>
+										</Tooltip>
 									</th>
 								);
 							})}

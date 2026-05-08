@@ -2,6 +2,7 @@
 
 import { Coffee, Moon, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ type DialogState = {
 };
 
 export function RosterGrid({ outletId, weekStart, employees, shifts }: Props) {
+	const canEdit = usePermission("roster.roster_edit");
 	const [dialog, setDialog] = useState<DialogState | null>(null);
 
 	const weekDays = useMemo(
@@ -129,12 +131,15 @@ export function RosterGrid({ outletId, weekStart, employees, shifts }: Props) {
 										>
 											<ShiftCell
 												shift={shift}
-												onClick={() =>
-													setDialog({
-														employee: emp,
-														shiftDate: dateStr,
-														shift,
-													})
+												onClick={
+													canEdit
+														? () =>
+																setDialog({
+																	employee: emp,
+																	shiftDate: dateStr,
+																	shift,
+																})
+														: null
 												}
 											/>
 										</td>
@@ -165,9 +170,17 @@ function ShiftCell({
 	onClick,
 }: {
 	shift: EmployeeShift | null;
-	onClick: () => void;
+	onClick: (() => void) | null;
 }) {
+	const readOnly = onClick === null;
 	if (!shift) {
+		if (readOnly) {
+			return (
+				<div className="flex h-9 w-full items-center justify-center text-muted-foreground/60 text-xs">
+					—
+				</div>
+			);
+		}
 		return (
 			<button
 				type="button"
@@ -180,32 +193,43 @@ function ShiftCell({
 		);
 	}
 	const breakCount = Array.isArray(shift.breaks) ? shift.breaks.length : 0;
+	const summary = (
+		<>
+			<span className="truncate">
+				{fmtTime(shift.start_time)}–{fmtTime(shift.end_time)}
+			</span>
+			{shift.is_overnight && (
+				<Moon
+					className="size-3 shrink-0 text-sky-700 dark:text-sky-300"
+					aria-label="Overnight"
+				/>
+			)}
+			{breakCount > 0 && (
+				<span
+					className="flex shrink-0 items-center gap-0.5 text-[10px] text-sky-700 dark:text-sky-300"
+					title={`${breakCount} break${breakCount === 1 ? "" : "s"}`}
+				>
+					<Coffee className="size-3" />
+					{breakCount}
+				</span>
+			)}
+		</>
+	);
 	return (
 		<div className="flex h-9 items-center gap-1 rounded-md bg-sky-100 px-1.5 text-sky-900 dark:bg-sky-950/60 dark:text-sky-100">
-			<button
-				type="button"
-				onClick={onClick}
-				className="flex min-w-0 flex-1 items-center gap-1 text-left font-semibold text-[11px] tabular-nums"
-			>
-				<span className="truncate">
-					{fmtTime(shift.start_time)}–{fmtTime(shift.end_time)}
-				</span>
-				{shift.is_overnight && (
-					<Moon
-						className="size-3 shrink-0 text-sky-700 dark:text-sky-300"
-						aria-label="Overnight"
-					/>
-				)}
-				{breakCount > 0 && (
-					<span
-						className="flex shrink-0 items-center gap-0.5 text-[10px] text-sky-700 dark:text-sky-300"
-						title={`${breakCount} break${breakCount === 1 ? "" : "s"}`}
-					>
-						<Coffee className="size-3" />
-						{breakCount}
-					</span>
-				)}
-			</button>
+			{readOnly ? (
+				<div className="flex min-w-0 flex-1 items-center gap-1 font-semibold text-[11px] tabular-nums">
+					{summary}
+				</div>
+			) : (
+				<button
+					type="button"
+					onClick={onClick}
+					className="flex min-w-0 flex-1 items-center gap-1 text-left font-semibold text-[11px] tabular-nums"
+				>
+					{summary}
+				</button>
+			)}
 			<Button
 				type="button"
 				size="sm"

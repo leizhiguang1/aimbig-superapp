@@ -98,6 +98,8 @@ type Props = {
 	taxes: Tax[];
 	outlets: Outlet[];
 	activeOutletId: string | null;
+	canSeeCost?: boolean;
+	canEdit?: boolean;
 };
 
 export function ItemsTable({
@@ -109,6 +111,8 @@ export function ItemsTable({
 	taxes,
 	outlets,
 	activeOutletId,
+	canSeeCost = true,
+	canEdit = false,
 }: Props) {
 	const [editing, setEditing] = useState<InventoryItemWithRefs | null>(null);
 	const [stockDetails, setStockDetails] =
@@ -373,44 +377,48 @@ export function ItemsTable({
 				);
 			},
 		},
-		{
-			key: "actions",
-			header: "",
-			align: "right",
-			cell: (i) => (
-				<div className="inline-flex gap-1">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => setEditing(i)}
-								aria-label="Edit"
-							>
-								<Pencil />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Edit</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => {
-									setDeleteError(null);
-									setDeleting(i);
-								}}
-								aria-label="Delete"
-							>
-								<Trash2 />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Delete</TooltipContent>
-					</Tooltip>
-				</div>
-			),
-		},
+		...(canEdit
+			? [
+					{
+						key: "actions",
+						header: "",
+						align: "right" as const,
+						cell: (i: InventoryItemWithRefs) => (
+							<div className="inline-flex gap-1">
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											onClick={() => setEditing(i)}
+											aria-label="Edit"
+										>
+											<Pencil />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>Edit</TooltipContent>
+								</Tooltip>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											onClick={() => {
+												setDeleteError(null);
+												setDeleting(i);
+											}}
+											aria-label="Delete"
+										>
+											<Trash2 />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>Delete</TooltipContent>
+								</Tooltip>
+							</div>
+						),
+					} satisfies DataTableColumn<InventoryItemWithRefs>,
+				]
+			: []),
 	];
 
 	const toolbar = (
@@ -469,6 +477,7 @@ export function ItemsTable({
 					suppliers={suppliers}
 					taxes={taxes}
 					outlets={outlets}
+					canSeeCost={canSeeCost}
 					onClose={() => setEditing(null)}
 				/>
 			)}

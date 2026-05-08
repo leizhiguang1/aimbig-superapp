@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { PermissionsProvider } from "@/components/auth/PermissionsProvider";
 import { CustomerTagsProvider } from "@/components/brand-config/CustomerTagsProvider";
 import { AppointmentNotificationsProvider } from "@/components/notifications/AppointmentNotificationsProvider";
 import { AppSidebar } from "@/components/shell/app-sidebar";
@@ -57,20 +58,26 @@ export default async function OutletScopedLayout({
 	}));
 
 	const perms = await getCurrentUserPermissions(ctx);
+	// Only flags that own a page belong here. `staff.employees` is a WRITE
+	// flag (manage existing employees) — it doesn't grant page access on its
+	// own. Without `staff.employee_listing`, having `staff.employees` alone
+	// is a config error and shouldn't surface a nav item.
 	const hasAnyStaff =
-		checkPermission(perms, "staff.employees") ||
 		checkPermission(perms, "staff.employee_listing") ||
 		checkPermission(perms, "staff.roles") ||
 		checkPermission(perms, "staff.position") ||
 		checkPermission(perms, "staff.commissions");
 	const canManualTransaction = checkPermission(perms, "system.manual_transaction");
 	const canCreateSale = checkPermission(perms, "sales.create_sales");
-	const hasAnyCustomers =
-		checkPermission(perms, "customers.customers") ||
-		checkPermission(perms, "customers.view");
-	const hasAnySales =
-		checkPermission(perms, "sales.sales") ||
-		checkPermission(perms, "sales.create_sales");
+	// `customers.customers` is the master "browse the listing" flag. Don't
+	// show the sidebar nav for someone with only `customers.view` — that
+	// flag is for opening individual customer URLs (from appointments etc.),
+	// not for the list page which 404s without the master flag.
+	const hasCustomersList = checkPermission(perms, "customers.customers");
+	// Same shape as customers: `sales.sales` is the master "browse list" flag.
+	// `sales.create_sales` only enables the topbar New Sale button; without
+	// `sales.sales`, the /sales page itself 404s.
+	const hasSalesList = checkPermission(perms, "sales.sales");
 	const hiddenNavKeys: Array<
 		| "employees"
 		| "passcode"
@@ -89,10 +96,10 @@ export default async function OutletScopedLayout({
 	if (!checkPermission(perms, "system.reports")) hiddenNavKeys.push("reports");
 	if (!checkPermission(perms, "system.config")) hiddenNavKeys.push("config");
 	if (!checkPermission(perms, "system.webstore")) hiddenNavKeys.push("webstore");
-	if (!hasAnyCustomers) hiddenNavKeys.push("customers");
+	if (!hasCustomersList) hiddenNavKeys.push("customers");
 	if (!checkPermission(perms, "appointments.appointments"))
 		hiddenNavKeys.push("appointments");
-	if (!hasAnySales) hiddenNavKeys.push("sales");
+	if (!hasSalesList) hiddenNavKeys.push("sales");
 	if (!checkPermission(perms, "inventory.inventory")) hiddenNavKeys.push("inventory");
 	if (!checkPermission(perms, "services.services")) hiddenNavKeys.push("services");
 	if (!checkPermission(perms, "roster.roster")) hiddenNavKeys.push("roster");
@@ -115,6 +122,7 @@ export default async function OutletScopedLayout({
 
 	return (
 		<AppointmentNotificationsProvider outletId={current.id}>
+			<PermissionsProvider permissions={perms}>
 			<CustomerTagsProvider tags={customerTags}>
 			<NavProgress />
 			<SidebarProvider className="h-svh">
@@ -143,6 +151,7 @@ export default async function OutletScopedLayout({
 				</SidebarInset>
 			</SidebarProvider>
 			</CustomerTagsProvider>
+			</PermissionsProvider>
 		</AppointmentNotificationsProvider>
 	);
 }

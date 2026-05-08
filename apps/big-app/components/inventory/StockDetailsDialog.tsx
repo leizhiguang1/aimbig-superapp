@@ -3,6 +3,7 @@
 import { Package, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -200,6 +201,7 @@ export function StockDetailsDialog({
 	const [loading, setLoading] = useState(false);
 	const [loadError, setLoadError] = useState<string | null>(null);
 	const [adjusting, setAdjusting] = useState(false);
+	const canAdjustStock = usePermission("inventory.adjust_stock");
 
 	useEffect(() => {
 		if (open) setOutletId(activeOutletId ?? outlets[0]?.id ?? "");
@@ -311,20 +313,22 @@ export function StockDetailsDialog({
 							<section className="rounded-lg border bg-background p-4 shadow-sm">
 								<div className="mb-3 flex items-center justify-between">
 									<h3 className="font-semibold text-sm">Stock Details</h3>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<Button
-												variant="default"
-												size="icon-sm"
-												className="rounded-full bg-emerald-500 hover:bg-emerald-600"
-												onClick={() => setAdjusting(true)}
-												aria-label="Adjust stock"
-											>
-												<Plus className="size-4" />
-											</Button>
-										</TooltipTrigger>
-										<TooltipContent>Add or remove stock</TooltipContent>
-									</Tooltip>
+									{canAdjustStock ? (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<Button
+													variant="default"
+													size="icon-sm"
+													className="rounded-full bg-emerald-500 hover:bg-emerald-600"
+													onClick={() => setAdjusting(true)}
+													aria-label="Adjust stock"
+												>
+													<Plus className="size-4" />
+												</Button>
+											</TooltipTrigger>
+											<TooltipContent>Add or remove stock</TooltipContent>
+										</Tooltip>
+									) : null}
 								</div>
 								{loadError && (
 									<div className="mb-3 rounded-md bg-rose-50 px-3 py-2 text-rose-700 text-xs ring-1 ring-rose-200">

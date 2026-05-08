@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { CustomerIdentityCard } from "@/components/customers/CustomerIdentityCard";
 import { ChangePaymentMethodDialog } from "@/components/sales/ChangePaymentMethodDialog";
 import { ReallocatePaymentsEditor } from "@/components/sales/ReallocatePaymentsEditor";
@@ -155,6 +156,10 @@ export function SalesOrderDetailView({
 	autoPrint,
 	canBackdate = false,
 }: Props) {
+	const canCreateSales = usePermission("sales.create_sales");
+	const canReallocateIncentives = usePermission(
+		"sales.sales_person_reallocation",
+	);
 	const path = useOutletPath();
 	const [voidOpen, setVoidOpen] = useState(false);
 	const [recordPayOpen, setRecordPayOpen] = useState(false);
@@ -280,7 +285,7 @@ export function SalesOrderDetailView({
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
-					{canRecordPayment && (
+					{canCreateSales && canRecordPayment && (
 						<Button
 							size="sm"
 							className="bg-green-600 text-white hover:bg-green-700"
@@ -290,7 +295,7 @@ export function SalesOrderDetailView({
 							Record payment
 						</Button>
 					)}
-					{canRecordPayment && (
+					{canCreateSales && canRecordPayment && (
 						<Button
 							variant="outline"
 							size="sm"
@@ -300,7 +305,7 @@ export function SalesOrderDetailView({
 							Write off
 						</Button>
 					)}
-					{canReallocate && !reallocMode && (
+					{canCreateSales && canReallocate && !reallocMode && (
 						<Button
 							variant="outline"
 							size="sm"
@@ -310,7 +315,7 @@ export function SalesOrderDetailView({
 							Reallocate payments
 						</Button>
 					)}
-					{isCancellable && (
+					{canCreateSales && isCancellable && (
 						<Button
 							variant="outline"
 							size="sm"
@@ -450,10 +455,14 @@ export function SalesOrderDetailView({
 											<div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
 												<button
 													type="button"
-													onClick={() => !isCancelled && setAllocItem(item)}
-													disabled={isCancelled}
+													onClick={() =>
+														!isCancelled &&
+														canReallocateIncentives &&
+														setAllocItem(item)
+													}
+													disabled={isCancelled || !canReallocateIncentives}
 													className={
-														isCancelled
+														isCancelled || !canReallocateIncentives
 															? "inline-flex cursor-default items-center gap-1 text-muted-foreground"
 															: "inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-blue-700 hover:bg-blue-100"
 													}
@@ -600,7 +609,7 @@ export function SalesOrderDetailView({
 											<Badge variant="outline" className="text-xs">
 												{paymentMethodName(p)}
 											</Badge>
-											{!isCancelled && !isWallet && !isWriteOff && (
+											{canCreateSales && !isCancelled && !isWallet && !isWriteOff && (
 												<button
 													type="button"
 													onClick={() => setChangeMethodPayment(p)}
@@ -611,7 +620,7 @@ export function SalesOrderDetailView({
 													Change
 												</button>
 											)}
-											{isLast && !isCancelled && !isWallet && !isWriteOff && (
+											{canCreateSales && isLast && !isCancelled && !isWallet && !isWriteOff && (
 												<button
 													type="button"
 													onClick={() => setRevertPayment(p)}

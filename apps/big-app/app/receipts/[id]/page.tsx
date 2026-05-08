@@ -34,7 +34,7 @@ export default async function ReceiptPrintPage({
 				<PrintButton />
 			</div>
 
-			<div className="mx-auto my-8 max-w-[700px] px-4 print:my-0 print:max-w-none print:px-0">
+			<div className="mx-auto my-8 w-fit px-4 print:my-0 print:px-0">
 				<Suspense fallback={<ReceiptSkeleton />}>
 					<ReceiptContent id={id} autoPrint={shouldAutoPrint} />
 				</Suspense>

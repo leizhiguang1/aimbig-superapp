@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState, useTransition } from "react";
 import type { Toast } from "@/components/appointments/AppointmentToastStack";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	Tooltip,
@@ -884,6 +885,7 @@ function BillingRow({
 	onRevert: () => void;
 	onJump?: () => void;
 }) {
+	const canRevert = usePermission("appointments.revert_appointment");
 	const paymentStatusClass =
 		PAYMENT_STATUS_STYLES[item.paymentStatus] ?? "bg-slate-400 text-white";
 	const payMode = paymentModeLabel(item.paidVia);
@@ -959,23 +961,25 @@ function BillingRow({
 							<ExternalLink className="size-[11px]" />
 						</IconBtn>
 					)}
-					{cancelled ? (
-						<IconBtn
-							label="Restore billing"
-							onClick={onRevert}
-							className="bg-blue-500 text-white hover:bg-blue-600"
-						>
-							<RotateCcw className="size-[11px]" />
-						</IconBtn>
-					) : (
-						<IconBtn
-							label="Cancel billing"
-							onClick={onCancel}
-							className="bg-rose-500 text-white hover:bg-rose-600"
-						>
-							<XCircle className="size-[11px]" />
-						</IconBtn>
-					)}
+					{canRevert ? (
+						cancelled ? (
+							<IconBtn
+								label="Restore billing"
+								onClick={onRevert}
+								className="bg-blue-500 text-white hover:bg-blue-600"
+							>
+								<RotateCcw className="size-[11px]" />
+							</IconBtn>
+						) : (
+							<IconBtn
+								label="Cancel billing"
+								onClick={onCancel}
+								className="bg-rose-500 text-white hover:bg-rose-600"
+							>
+								<XCircle className="size-[11px]" />
+							</IconBtn>
+						)
+					) : null}
 				</div>
 			</div>
 
@@ -1165,6 +1169,7 @@ function NoteRow({
 	onRevert: () => void;
 	onJump?: () => void;
 }) {
+	const canEditNotes = usePermission("clinical.case_notes_edit");
 	const content = item.note.content ?? "";
 	const pinned = item.isPinned;
 	const cancelled = item.isCancelled;
@@ -1207,30 +1212,34 @@ function NoteRow({
 				</div>
 				<div className="flex items-center gap-1">
 					{cancelled ? (
-						<IconBtn
-							label="Restore note"
-							onClick={onRevert}
-							className="bg-blue-500 text-white hover:bg-blue-600"
-						>
-							<RotateCcw className="size-[11px]" />
-						</IconBtn>
+						canEditNotes ? (
+							<IconBtn
+								label="Restore note"
+								onClick={onRevert}
+								className="bg-blue-500 text-white hover:bg-blue-600"
+							>
+								<RotateCcw className="size-[11px]" />
+							</IconBtn>
+						) : null
 					) : (
 						<>
-							<IconBtn
-								label={pinned ? "Unpin" : "Pin to top"}
-								onClick={onTogglePin}
-								className={
-									pinned
-										? "bg-amber-500 text-white hover:bg-amber-600"
-										: "border border-amber-300 bg-amber-50 text-amber-600 hover:bg-amber-100"
-								}
-							>
-								{pinned ? (
-									<PinOff className="size-[11px]" />
-								) : (
-									<Pin className="size-[11px]" />
-								)}
-							</IconBtn>
+							{canEditNotes ? (
+								<IconBtn
+									label={pinned ? "Unpin" : "Pin to top"}
+									onClick={onTogglePin}
+									className={
+										pinned
+											? "bg-amber-500 text-white hover:bg-amber-600"
+											: "border border-amber-300 bg-amber-50 text-amber-600 hover:bg-amber-100"
+									}
+								>
+									{pinned ? (
+										<PinOff className="size-[11px]" />
+									) : (
+										<Pin className="size-[11px]" />
+									)}
+								</IconBtn>
+							) : null}
 							{onJump && (
 								<IconBtn
 									label="Go to appointment"
@@ -1240,7 +1249,7 @@ function NoteRow({
 									<ExternalLink className="size-[11px]" />
 								</IconBtn>
 							)}
-							{onEdit && (
+							{canEditNotes && onEdit && (
 								<IconBtn
 									label="Edit"
 									onClick={onEdit}
@@ -1249,13 +1258,15 @@ function NoteRow({
 									<Pencil className="size-[11px]" />
 								</IconBtn>
 							)}
-							<IconBtn
-								label="Cancel note"
-								onClick={onCancel}
-								className="bg-rose-500 text-white hover:bg-rose-600"
-							>
-								<XCircle className="size-[11px]" />
-							</IconBtn>
+							{canEditNotes ? (
+								<IconBtn
+									label="Cancel note"
+									onClick={onCancel}
+									className="bg-rose-500 text-white hover:bg-rose-600"
+								>
+									<XCircle className="size-[11px]" />
+								</IconBtn>
+							) : null}
 						</>
 					)}
 				</div>

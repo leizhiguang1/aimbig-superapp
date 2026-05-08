@@ -68,7 +68,24 @@ export async function AppointmentDetailContent({
 }) {
 	const ctx = await getServerContext();
 	if (!(await hasPermission(ctx, "appointments.appointments"))) notFound();
-	const canBackdate = await hasPermission(ctx, "sales.backdate_transactions");
+	const [
+		canBackdate,
+		canSeeCaseNotes,
+		canCaseBilling,
+		canRevert,
+		canViewAll,
+		canApptCustomerAll,
+	] = await Promise.all([
+		hasPermission(ctx, "sales.backdate_transactions"),
+		hasPermission(ctx, "clinical.case_notes"),
+		hasPermission(ctx, "clinical.case_notes_billing"),
+		hasPermission(ctx, "appointments.revert_appointment"),
+		hasPermission(ctx, "appointments.view_all_appointments"),
+		hasPermission(ctx, "appointments.customer_transparency"),
+	]);
+	const apptCustomerFilter = canApptCustomerAll
+		? null
+		: (ctx.currentUser?.employeeId ?? null);
 
 	let appointment: AppointmentWithRelations;
 	try {
@@ -79,6 +96,12 @@ export async function AppointmentDetailContent({
 		}
 		throw err;
 	}
+	if (
+		!canViewAll &&
+		appointment.employee_id !== ctx.currentUser?.employeeId
+	) {
+		return <NotFoundPanel outletCode={outletCode} />;
+	}
 	const id = appointment.id;
 
 	const customerHistoryPromise: Promise<CustomerAppointmentSummary[]> =
@@ -87,7 +110,7 @@ export async function AppointmentDetailContent({
 			: Promise.resolve([]);
 
 	const caseNotesPromise: Promise<CaseNoteWithContext[]> =
-		appointment.customer_id
+		canSeeCaseNotes && appointment.customer_id
 			? listCaseNotesWithContext(ctx, appointment.customer_id)
 			: Promise.resolve([]);
 
@@ -159,7 +182,7 @@ export async function AppointmentDetailContent({
 		followUpsPromise,
 		customerDocumentsPromise,
 		customerLineItemsPromise,
-		listCustomers(ctx),
+		listCustomers(ctx, { consultantIdFilter: apptCustomerFilter }),
 		listBookableEmployeesForOutlet(ctx, appointment.outlet_id),
 		listRooms(ctx, appointment.outlet_id),
 		listServices(ctx),
@@ -227,6 +250,9 @@ export async function AppointmentDetailContent({
 				fullCustomer={fullCustomer}
 				walletBalance={walletBalance}
 				canBackdate={canBackdate}
+				canSeeCaseNotes={canSeeCaseNotes}
+				canCaseBilling={canCaseBilling}
+				canRevert={canRevert}
 			/>
 		</AppointmentConfigProvider>
 	);

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import { getBrand } from "@/lib/services/brands";
 import * as receiptsService from "@/lib/services/receipts";
@@ -30,6 +31,7 @@ export async function saveReceiptAction(
 ): Promise<SaveReceiptResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "sales.create_sales");
 		await receiptsService.saveReceiptEdit(ctx, receiptId, input);
 		const [receipt, edits, brand] = await Promise.all([
 			receiptsService.getReceiptById(ctx, receiptId),

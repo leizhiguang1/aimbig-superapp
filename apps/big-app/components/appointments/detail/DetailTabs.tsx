@@ -26,15 +26,27 @@ const TABS: { key: DetailTabKey; label: string }[] = [
 type Props = {
 	activeTab: DetailTabKey;
 	onChange: (key: DetailTabKey) => void;
+	canSeeCaseNotes?: boolean;
+	canCaseBilling?: boolean;
 };
 
-export function DetailTabs({ activeTab, onChange }: Props) {
+export function DetailTabs({
+	activeTab,
+	onChange,
+	canSeeCaseNotes = true,
+	canCaseBilling = true,
+}: Props) {
+	const tabs = TABS.filter((t) => {
+		if (t.key === "casenotes" && !canSeeCaseNotes) return false;
+		if (t.key === "billing" && !canCaseBilling) return false;
+		return true;
+	});
 	return (
 		<SegmentedTabs
 			aria-label="Appointment detail sections"
 			active={activeTab}
 			onChange={(key) => onChange(key as DetailTabKey)}
-			tabs={TABS}
+			tabs={tabs}
 			size="sm"
 		/>
 	);

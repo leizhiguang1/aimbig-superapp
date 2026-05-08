@@ -4,6 +4,7 @@ import { Phone, StickyNote, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppointmentHoverCard } from "@/components/appointments/AppointmentHoverCard";
 import { useAppointmentTag } from "@/components/brand-config/AppointmentConfigProvider";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import {
 	Tooltip,
 	TooltipContent,
@@ -154,7 +155,10 @@ export function AppointmentCard({
 	const employeeName = a.employee
 		? `${a.employee.first_name} ${a.employee.last_name}`
 		: null;
-	const phone = a.customer?.phone ?? a.lead_phone ?? null;
+	const canSeeContact = usePermission("appointments.customer_contact_email");
+	const phone = canSeeContact
+		? (a.customer?.phone ?? a.lead_phone ?? null)
+		: null;
 
 	return (
 		<>

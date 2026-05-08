@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { Toast } from "@/components/appointments/AppointmentToastStack";
 import { CaseNoteRow } from "@/components/case-notes/CaseNoteRow";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { AddMcDialog } from "@/components/medical-certificates/AddMcDialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -70,6 +71,8 @@ export function CaseNotesTab({
 	const [cancelId, setCancelId] = useState<string | null>(null);
 	const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 	const [mcDialogOpen, setMcDialogOpen] = useState(false);
+	const canIssueMc = usePermission("clinical.medical_certificates");
+	const canEditNotes = usePermission("clinical.case_notes_edit");
 	const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
 	const [pending, startTransition] = useTransition();
 	const [localNotes, setLocalNotes] =
@@ -299,50 +302,53 @@ export function CaseNotesTab({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div
-				className={cn(
-					"rounded-md border bg-card p-4",
-					editingFromHistoryId && "border-amber-300 bg-amber-50/30",
-				)}
-			>
-				<div className="flex items-center justify-between">
-					<div className="text-muted-foreground text-xs uppercase tracking-wide">
-						{editingFromHistoryId ? "Editing note" : "New case note"}
+			{canEditNotes ? (
+				<div
+					className={cn(
+						"rounded-md border bg-card p-4",
+						editingFromHistoryId && "border-amber-300 bg-amber-50/30",
+					)}
+				>
+					<div className="flex items-center justify-between">
+						<div className="text-muted-foreground text-xs uppercase tracking-wide">
+							{editingFromHistoryId ? "Editing note" : "New case note"}
+						</div>
+						<CaseNoteToolbar
+							onAddMc={() => setMcDialogOpen(true)}
+							mcCount={medicalCertificates.length}
+							canIssueMc={canIssueMc}
+						/>
 					</div>
-					<CaseNoteToolbar
-						onAddMc={() => setMcDialogOpen(true)}
-						mcCount={medicalCertificates.length}
+					<textarea
+						value={draft}
+						onChange={(e) => setDraft(e.target.value)}
+						rows={6}
+						placeholder="Chief complaint, findings, procedure details, medication…"
+						className="mt-3 w-full resize-y rounded-md border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
 					/>
-				</div>
-				<textarea
-					value={draft}
-					onChange={(e) => setDraft(e.target.value)}
-					rows={6}
-					placeholder="Chief complaint, findings, procedure details, medication…"
-					className="mt-3 w-full resize-y rounded-md border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-				/>
-				<div className="mt-3 flex items-center justify-end gap-2">
-					{editingFromHistoryId && (
+					<div className="mt-3 flex items-center justify-end gap-2">
+						{editingFromHistoryId && (
+							<Button
+								type="button"
+								size="sm"
+								variant="ghost"
+								onClick={clearDraft}
+							>
+								Cancel
+							</Button>
+						)}
 						<Button
 							type="button"
 							size="sm"
-							variant="ghost"
-							onClick={clearDraft}
+							onClick={handleSave}
+							disabled={!draft.trim()}
 						>
-							Cancel
+							<Save className="size-3.5" />
+							{editingFromHistoryId ? "Update note" : "Save note"}
 						</Button>
-					)}
-					<Button
-						type="button"
-						size="sm"
-						onClick={handleSave}
-						disabled={!draft.trim()}
-					>
-						<Save className="size-3.5" />
-						{editingFromHistoryId ? "Update note" : "Save note"}
-					</Button>
+					</div>
 				</div>
-			</div>
+			) : null}
 
 			{medicalCertificates.length > 0 && (
 				<MedicalCertificateStrip items={medicalCertificates} />
@@ -452,9 +458,11 @@ export function CaseNotesTab({
 function CaseNoteToolbar({
 	onAddMc,
 	mcCount,
+	canIssueMc,
 }: {
 	onAddMc: () => void;
 	mcCount: number;
+	canIssueMc: boolean;
 }) {
 	return (
 		<div className="flex items-center gap-1">
@@ -473,16 +481,18 @@ function CaseNoteToolbar({
 				label="Prescription"
 				description="Write, save, and print a prescription slip for this visit."
 			/>
-			<ToolbarButton
-				icon={FileBadge}
-				label={
-					mcCount > 0
-						? `Add medical certificate (${mcCount} issued for this visit)`
-						: "Add medical certificate"
-				}
-				onClick={onAddMc}
-				badge={mcCount}
-			/>
+			{canIssueMc ? (
+				<ToolbarButton
+					icon={FileBadge}
+					label={
+						mcCount > 0
+							? `Add medical certificate (${mcCount} issued for this visit)`
+							: "Add medical certificate"
+					}
+					onClick={onAddMc}
+					badge={mcCount}
+				/>
+			) : null}
 			<StubButton
 				icon={BookMarked}
 				label="ICD-10 lookup"

@@ -188,7 +188,7 @@ export function PaymentsTable({
 									onClick={(e) => {
 										e.stopPropagation();
 										window.open(
-											`/invoices/${soId}?autoPrint=1&variant=receipt`,
+											`/invoices/${p.id}?autoPrint=1&variant=receipt`,
 											"_blank",
 											"noopener",
 										);

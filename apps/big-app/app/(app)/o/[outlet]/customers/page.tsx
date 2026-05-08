@@ -8,8 +8,8 @@ export default function CustomersPage({
 	params: Promise<{ outlet: string }>;
 }) {
 	return (
-		<div className="flex flex-col gap-4">
-			<h2 className="font-semibold text-lg">Customers</h2>
+		<div className="flex min-h-0 flex-1 flex-col gap-4">
+			<h2 className="shrink-0 font-semibold text-lg">Customers</h2>
 			<Suspense
 				fallback={<TableSkeleton columns={7} rows={8} showHeader={false} />}
 			>

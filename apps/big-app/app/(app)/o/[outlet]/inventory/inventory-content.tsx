@@ -1,5 +1,6 @@
 import { AddItemButton } from "@/components/inventory/AddItemChooser";
 import { ItemsTable } from "@/components/inventory/ItemsTable";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import {
 	listBrands,
@@ -18,7 +19,7 @@ export async function InventoryContent({
 }) {
 	const { outlet: outletCode } = await params;
 	const ctx = await getServerContext();
-	const [outlets, uoms, brands, categories, suppliers, taxes] =
+	const [outlets, uoms, brands, categories, suppliers, taxes, canSeeCost, canEdit] =
 		await Promise.all([
 			listOutlets(ctx),
 			listUoms(ctx),
@@ -26,24 +27,29 @@ export async function InventoryContent({
 			listCategories(ctx),
 			listSuppliers(ctx),
 			listTaxes(ctx),
+			hasPermission(ctx, "inventory.inventory_cost"),
+			hasPermission(ctx, "inventory.inventory_edit"),
 		]);
 	const activeOutletId = outlets.find((o) => o.code === outletCode)?.id ?? null;
 	const items = await listInventoryItems(ctx, activeOutletId);
 
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between">
+		<div className="flex min-h-0 flex-1 flex-col gap-4">
+			<div className="flex shrink-0 items-center justify-between">
 				<p className="text-muted-foreground text-sm">
 					{items.length} item{items.length === 1 ? "" : "s"}
 				</p>
-				<AddItemButton
-					uoms={uoms}
-					brands={brands}
-					categories={categories}
-					suppliers={suppliers}
-					taxes={taxes}
-					outlets={outlets}
-				/>
+				{canEdit ? (
+					<AddItemButton
+						uoms={uoms}
+						brands={brands}
+						categories={categories}
+						suppliers={suppliers}
+						taxes={taxes}
+						outlets={outlets}
+						canSeeCost={canSeeCost}
+					/>
+				) : null}
 			</div>
 			<ItemsTable
 				items={items}
@@ -54,6 +60,8 @@ export async function InventoryContent({
 				taxes={taxes}
 				outlets={outlets}
 				activeOutletId={activeOutletId}
+				canSeeCost={canSeeCost}
+				canEdit={canEdit}
 			/>
 		</div>
 	);

@@ -15,11 +15,18 @@ export async function CustomersContent({
 	const { outlet: outletCode } = await params;
 	const ctx = await getServerContext();
 	if (!(await hasPermission(ctx, "customers.customers"))) notFound();
-	const canCreate = await hasPermission(ctx, "customers.customers");
-	const canUpdate = await hasPermission(ctx, "customers.update");
-	const canSeeContact = await hasPermission(ctx, "customers.customers_contact");
+	const [canCreate, canUpdate, canSeeContact, canCustomerAll] =
+		await Promise.all([
+			hasPermission(ctx, "customers.customers"),
+			hasPermission(ctx, "customers.update"),
+			hasPermission(ctx, "customers.customers_contact"),
+			hasPermission(ctx, "customers.customer_transparency"),
+		]);
+	const consultantFilter = canCustomerAll
+		? null
+		: (ctx.currentUser?.employeeId ?? null);
 	const [customers, outlets, employees] = await Promise.all([
-		listCustomers(ctx),
+		listCustomers(ctx, { consultantIdFilter: consultantFilter }),
 		listOutlets(ctx),
 		listEmployees(ctx),
 	]);
@@ -29,8 +36,8 @@ export async function CustomersContent({
 		outlets.find((o) => o.code === outletCode)?.id ?? null;
 
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between">
+		<div className="flex min-h-0 flex-1 flex-col gap-4">
+			<div className="flex shrink-0 items-center justify-between">
 				<p className="text-muted-foreground text-sm">
 					{customers.length} customer{customers.length === 1 ? "" : "s"}
 				</p>

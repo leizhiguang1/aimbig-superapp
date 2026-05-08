@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, CalendarDays, Lock, Trash2, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { useAppointmentTagList } from "@/components/brand-config/AppointmentConfigProvider";
 import { CustomerFormDialog } from "@/components/customers/CustomerForm";
 import { Button } from "@/components/ui/button";
@@ -386,11 +387,15 @@ export function AppointmentDialog({
 		!!appointment.lead_name &&
 		isLead;
 
+	const hasLeadCreatePermission = usePermission(
+		"appointments.lead_list_creation",
+	);
 	const canConvertLead =
 		!!appointment &&
 		!appointment.customer_id &&
 		!appointment.is_time_block &&
-		!!appointment.lead_name;
+		!!appointment.lead_name &&
+		hasLeadCreatePermission;
 
 	const headerLabel = appointment
 		? appointment.is_time_block

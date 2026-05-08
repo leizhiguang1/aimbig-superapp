@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
-import { requirePermission } from "@/lib/auth/permissions";
+import { hasPermission, requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
+import { UnauthorizedError } from "@/lib/errors";
 import * as lineItemsService from "@/lib/services/appointment-line-items";
 import type {
 	AppointmentLineItem,
@@ -11,6 +12,7 @@ import type {
 } from "@/lib/services/appointment-line-items";
 import type { Appointment } from "@/lib/services/appointments";
 import * as appointmentsService from "@/lib/services/appointments";
+import { getCustomer } from "@/lib/services/customers";
 import type { Tables } from "@/lib/supabase/types";
 
 export type AppointmentActionResult = { error: string } | Appointment;
@@ -21,6 +23,24 @@ export async function createAppointmentAction(
 	try {
 		const ctx = await getServerContext();
 		await requirePermission(ctx, "appointments.appointments");
+		const customerId =
+			input && typeof input === "object" && "customer_id" in input
+				? (input as { customer_id?: string | null }).customer_id ?? null
+				: null;
+		if (customerId) {
+			const canAll = await hasPermission(
+				ctx,
+				"appointments.customer_transparency",
+			);
+			if (!canAll) {
+				const customer = await getCustomer(ctx, customerId);
+				if (customer.consultant_id !== ctx.currentUser?.employeeId) {
+					throw new UnauthorizedError(
+						"You can only book appointments for customers tied to you.",
+					);
+				}
+			}
+		}
 		const appointment = await appointmentsService.createAppointment(ctx, input);
 		revalidatePath("/o/[outlet]/appointments", "page");
 		return appointment;
@@ -273,7 +293,7 @@ export async function createLineItemAction(
 ): Promise<LineItemActionResult> {
 	try {
 		const ctx = await getServerContext();
-		await requirePermission(ctx, "appointments.appointments");
+		await requirePermission(ctx, "clinical.case_notes_billing");
 		const entry = await lineItemsService.createLineItem(ctx, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return entry;
@@ -290,7 +310,7 @@ export async function createLineItemsBulkAction(
 ): Promise<LineItemsBulkActionResult> {
 	try {
 		const ctx = await getServerContext();
-		await requirePermission(ctx, "appointments.appointments");
+		await requirePermission(ctx, "clinical.case_notes_billing");
 		const entries = await lineItemsService.createLineItemsBulk(ctx, inputs);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return entries;
@@ -306,7 +326,7 @@ export async function updateLineItemAction(
 ): Promise<LineItemActionResult> {
 	try {
 		const ctx = await getServerContext();
-		await requirePermission(ctx, "appointments.appointments");
+		await requirePermission(ctx, "clinical.case_notes_billing");
 		const entry = await lineItemsService.updateLineItem(ctx, id, input);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return entry;
@@ -321,7 +341,7 @@ export async function deleteLineItemAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
-		await requirePermission(ctx, "appointments.appointments");
+		await requirePermission(ctx, "clinical.case_notes_billing");
 		await lineItemsService.deleteLineItem(ctx, id);
 		revalidatePath("/o/[outlet]/appointments/[ref]", "page");
 		return { ok: true };

@@ -230,6 +230,7 @@ type Props = {
 	suppliers: Supplier[];
 	taxes: Tax[];
 	outlets: Outlet[];
+	canSeeCost?: boolean;
 	onClose: () => void;
 };
 
@@ -244,6 +245,7 @@ export function ItemFormDialog({
 	suppliers,
 	taxes,
 	outlets,
+	canSeeCost = true,
 	onClose,
 }: Props) {
 	const [state, setState] = useState<FormState>(EMPTY);
@@ -603,15 +605,17 @@ export function ItemFormDialog({
 
 						<Section title="Pricing & Stock">
 							<Two>
-								<Field label="Cost Price" error={fieldErrors.cost_price}>
-									<Input
-										type="number"
-										min={0}
-										step="0.0001"
-										value={state.cost_price}
-										onChange={(e) => set("cost_price", e.target.value)}
-									/>
-								</Field>
+								{canSeeCost ? (
+									<Field label="Cost Price" error={fieldErrors.cost_price}>
+										<Input
+											type="number"
+											min={0}
+											step="0.0001"
+											value={state.cost_price}
+											onChange={(e) => set("cost_price", e.target.value)}
+										/>
+									</Field>
+								) : null}
 								<Field
 									label="Selling Price (MYR)"
 									error={fieldErrors.selling_price}
@@ -708,7 +712,9 @@ export function ItemFormDialog({
 									<thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
 										<tr>
 											<th className="px-3 py-2 text-left">Outlet</th>
-											<th className="px-3 py-2 text-right">Cost</th>
+											{canSeeCost ? (
+												<th className="px-3 py-2 text-right">Cost</th>
+											) : null}
 											<th className="px-3 py-2 text-right">Selling</th>
 											<th className="px-3 py-2 text-right">
 												{mode === "create" ? "Initial Stock" : "On Hand"}
@@ -740,19 +746,21 @@ export function ItemFormDialog({
 															({outlet?.code ?? ""})
 														</div>
 													</td>
-													<td className="px-3 py-2">
-														<Input
-															type="number"
-															min={0}
-															step="0.0001"
-															value={row.cost_price}
-															onChange={(e) =>
-																setRow({ cost_price: e.target.value })
-															}
-															disabled={disabled}
-															className="text-right"
-														/>
-													</td>
+													{canSeeCost ? (
+														<td className="px-3 py-2">
+															<Input
+																type="number"
+																min={0}
+																step="0.0001"
+																value={row.cost_price}
+																onChange={(e) =>
+																	setRow({ cost_price: e.target.value })
+																}
+																disabled={disabled}
+																className="text-right"
+															/>
+														</td>
+													) : null}
 													<td className="px-3 py-2">
 														<Input
 															type="number"

@@ -126,16 +126,25 @@ function normalize(input: unknown) {
 
 export async function listAppointmentsForRange(
 	ctx: Context,
-	args: { outletId: string; from: string; to: string },
+	args: {
+		outletId: string;
+		from: string;
+		to: string;
+		employeeIdFilter?: string | null;
+	},
 ): Promise<AppointmentWithRelations[]> {
 	await assertOutletInBrand(ctx, args.outletId);
-	const { data, error } = await ctx.db
+	let q = ctx.db
 		.from("appointments")
 		.select(SELECT_WITH_RELATIONS)
 		.eq("outlet_id", args.outletId)
 		.gte("start_at", args.from)
 		.lt("start_at", args.to)
 		.order("start_at", { ascending: true });
+	if (args.employeeIdFilter) {
+		q = q.eq("employee_id", args.employeeIdFilter);
+	}
+	const { data, error } = await q;
 	if (error) throw new ValidationError(error.message);
 	return (data ?? []) as unknown as AppointmentWithRelations[];
 }
@@ -489,6 +498,11 @@ export type CustomerTimelineAppointment = Appointment & {
 		first_name: string;
 		last_name: string;
 	} | null;
+	lead_attended_by: {
+		id: string;
+		first_name: string;
+		last_name: string;
+	} | null;
 };
 
 export async function listCustomerTimeline(
@@ -499,7 +513,7 @@ export async function listCustomerTimeline(
 	const { data, error } = await ctx.db
 		.from("appointments")
 		.select(
-			"*, outlet:outlets!appointments_outlet_id_fkey(id, name, code), room:rooms!appointments_room_id_fkey(id, name), employee:employees!appointments_employee_id_fkey(id, first_name, last_name), cancelled_by_employee:employees!appointments_cancelled_by_fkey(id, first_name, last_name)",
+			"*, outlet:outlets!appointments_outlet_id_fkey(id, name, code), room:rooms!appointments_room_id_fkey(id, name), employee:employees!appointments_employee_id_fkey(id, first_name, last_name), cancelled_by_employee:employees!appointments_cancelled_by_fkey(id, first_name, last_name), lead_attended_by:employees!appointments_lead_attended_by_id_fkey(id, first_name, last_name)",
 		)
 		.eq("customer_id", customerId)
 		.order("start_at", { ascending: false });

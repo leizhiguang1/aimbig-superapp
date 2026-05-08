@@ -15,6 +15,7 @@ import { useState, useTransition } from "react";
 import { AppointmentDialog } from "@/components/appointments/AppointmentDialog";
 import { CancelAppointmentDialog } from "@/components/appointments/CancelAppointmentDialog";
 import { CollectPaymentDialog } from "@/components/appointments/detail/CollectPaymentDialog";
+import { PinEntryDialog } from "@/components/pin/PinEntryDialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -62,6 +63,7 @@ type Props = {
 	staffDiscountPercent: number;
 	walletBalance: number | null;
 	canBackdate?: boolean;
+	canRevert?: boolean;
 	onEdit: () => void;
 	onToast?: (
 		message: string,
@@ -135,6 +137,7 @@ export function AppointmentActionBar({
 	staffDiscountPercent,
 	walletBalance,
 	canBackdate = false,
+	canRevert = false,
 	onEdit,
 	onToast,
 }: Props) {
@@ -143,9 +146,18 @@ export function AppointmentActionBar({
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [collectOpen, setCollectOpen] = useState(false);
 	const [revertOpen, setRevertOpen] = useState(false);
+	const [revertPinOpen, setRevertPinOpen] = useState(false);
 	const [cancelOpen, setCancelOpen] = useState(false);
 	const [newApptOpen, setNewApptOpen] = useState(false);
 	const [isPending, startTransition] = useTransition();
+
+	const pinEmployees = allEmployees
+		.filter((e) => e.is_active !== false)
+		.map((e) => ({
+			id: e.id,
+			first_name: e.first_name ?? "",
+			last_name: e.last_name ?? "",
+		}));
 
 	const isCompleted = appointment.status === "completed";
 	const path = pickCompletionPath(appointment, lineItems);
@@ -170,6 +182,10 @@ export function AppointmentActionBar({
 
 	const handleRevertConfirm = () => {
 		setRevertOpen(false);
+		setRevertPinOpen(true);
+	};
+
+	const handleRevertPinSuccess = () => {
 		startTransition(async () => {
 			try {
 				await revertCompletedAppointmentAction(appointment.id);
@@ -205,22 +221,24 @@ export function AppointmentActionBar({
 							</TooltipContent>
 						</Tooltip>
 
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									type="button"
-									variant="outline"
-									size="icon-sm"
-									className={colorClass.slate}
-									onClick={() => setRevertOpen(true)}
-									disabled={isPending}
-									aria-label="Revert to pending"
-								>
-									{isPending ? <Loader2 className="animate-spin" /> : <Undo2 />}
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent side="bottom">Revert to pending</TooltipContent>
-						</Tooltip>
+						{canRevert ? (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										type="button"
+										variant="outline"
+										size="icon-sm"
+										className={colorClass.slate}
+										onClick={() => setRevertOpen(true)}
+										disabled={isPending}
+										aria-label="Revert to pending"
+									>
+										{isPending ? <Loader2 className="animate-spin" /> : <Undo2 />}
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent side="bottom">Revert to pending</TooltipContent>
+							</Tooltip>
+						) : null}
 					</>
 				) : (
 					<>
@@ -369,6 +387,14 @@ export function AppointmentActionBar({
 				cancelLabel="Cancel"
 				variant="default"
 				onConfirm={handleRevertConfirm}
+			/>
+
+			<PinEntryDialog
+				open={revertPinOpen}
+				onOpenChange={setRevertPinOpen}
+				employees={pinEmployees}
+				onSuccess={handleRevertPinSuccess}
+				title="Authorize revert with your PIN"
 			/>
 
 			<CancelAppointmentDialog

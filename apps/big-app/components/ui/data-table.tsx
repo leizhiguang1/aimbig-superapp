@@ -88,7 +88,7 @@ export function DataTable<T>({
 	pagination = true,
 	defaultPageSize = 25,
 	pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
-	fillHeight = false,
+	fillHeight = true,
 }: Props<T>) {
 	const [query, setQuery] = useState("");
 	const [sort, setSort] = useState<SortState>(null);
@@ -272,9 +272,7 @@ export function DataTable<T>({
 				<div
 					className={cn(
 						"flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2 text-sm shadow-sm",
-						fillHeight
-							? "shrink-0"
-							: "sticky bottom-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75",
+						fillHeight && "shrink-0",
 					)}
 				>
 					<div className="text-muted-foreground">

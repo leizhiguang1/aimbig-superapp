@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
+import { requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
 import {
 	createFormTemplate,
@@ -19,6 +20,7 @@ export async function createFormTemplateAction(
 ): Promise<FormTemplateActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const result = await createFormTemplate(ctx, input);
 		revalidatePath("/config/e-documents");
 		return result;
@@ -33,6 +35,7 @@ export async function updateFormTemplateAction(
 ): Promise<FormTemplateActionResult> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		const result = await updateFormTemplate(ctx, id, input);
 		revalidatePath("/config/e-documents");
 		return result;
@@ -46,6 +49,7 @@ export async function deleteFormTemplateAction(
 ): Promise<{ error: string } | { ok: true }> {
 	try {
 		const ctx = await getServerContext();
+		await requirePermission(ctx, "system.config");
 		await deleteFormTemplate(ctx, id);
 		revalidatePath("/config/e-documents");
 		return { ok: true };

@@ -10,7 +10,10 @@ import { addDays, fmtDate } from "@/lib/roster/week";
 import { listLineItemsForCustomer } from "@/lib/services/appointment-line-items";
 import { listCustomerTimeline } from "@/lib/services/appointments";
 import { listAppointmentTags } from "@/lib/services/brand-config";
-import { listCaseNotesWithContext } from "@/lib/services/case-notes";
+import {
+	type CaseNoteWithContext,
+	listCaseNotesWithContext,
+} from "@/lib/services/case-notes";
 import { listCustomerDocuments } from "@/lib/services/customer-documents";
 import { listLetterTemplates } from "@/lib/services/letter-templates";
 import { listFormTemplates } from "@/lib/services/form-templates";
@@ -49,13 +52,26 @@ export async function CustomerDetailContent({
 }) {
 	const ctx = await getServerContext();
 	if (!(await hasPermission(ctx, "customers.view"))) notFound();
-	const [canSeeContact, canSeeCaseNotes] = await Promise.all([
+	const [
+		canSeeContact,
+		canSeeCaseNotes,
+		canSeeManualTransactions,
+		canCustomerAll,
+	] = await Promise.all([
 		hasPermission(ctx, "customers.customers_contact"),
 		hasPermission(ctx, "clinical.case_notes"),
+		hasPermission(ctx, "system.manual_transaction"),
+		hasPermission(ctx, "customers.customer_transparency"),
 	]);
 
 	try {
 		const customer = await getCustomer(ctx, id);
+		if (
+			!canCustomerAll &&
+			customer.consultant_id !== ctx.currentUser?.employeeId
+		) {
+			return <NotFoundPanel outletCode={outletCode} />;
+		}
 		const homeOutletId = customer.home_outlet_id;
 		const today = new Date();
 		const fromStr = fmtDate(addDays(today, -1));
@@ -87,7 +103,9 @@ export async function CustomerDetailContent({
 		] = await Promise.all([
 			listCustomerTimeline(ctx, id),
 			listLineItemsForCustomer(ctx, id),
-			listCaseNotesWithContext(ctx, id),
+			canSeeCaseNotes
+				? listCaseNotesWithContext(ctx, id)
+				: Promise.resolve([] as CaseNoteWithContext[]),
 			listSalesOrders(ctx, { customerId: id }),
 			listCancellations(ctx, { customerId: id }),
 			listPayments(ctx, { customerId: id }),
@@ -111,7 +129,9 @@ export async function CustomerDetailContent({
 			listLetterTemplates(ctx, { activeOnly: true }),
 			listFormTemplates(ctx, { activeOnly: true }),
 			listFormResponsesForCustomer(ctx, id),
-			listManualTransactions(ctx, { customerId: id }),
+			canSeeManualTransactions
+				? listManualTransactions(ctx, { customerId: id })
+				: Promise.resolve([] as Awaited<ReturnType<typeof listManualTransactions>>),
 		]);
 		const defaultConsultantId = ctx.currentUser?.employeeId ?? null;
 		const activeOutlets = outlets.filter((o) => o.is_active);
@@ -149,6 +169,7 @@ export async function CustomerDetailContent({
 					manualTransactions={manualTransactions}
 					canSeeContact={canSeeContact}
 					canSeeCaseNotes={canSeeCaseNotes}
+					canSeeManualTransactions={canSeeManualTransactions}
 				/>
 			</AppointmentConfigProvider>
 		);

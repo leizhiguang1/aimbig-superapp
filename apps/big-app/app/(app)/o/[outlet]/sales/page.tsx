@@ -32,9 +32,11 @@ export default async function SalesPage({ params, searchParams }: PageProps) {
 		tab && VALID_TABS.has(tab as SalesTabKey) ? (tab as SalesTabKey) : "sales";
 
 	return (
-		<div className="flex flex-col gap-4">
-			<h2 className="font-semibold text-lg">Sales</h2>
-			<SalesTabs active={active} />
+		<div className="flex min-h-0 flex-1 flex-col gap-4">
+			<h2 className="shrink-0 font-semibold text-lg">Sales</h2>
+			<div className="shrink-0">
+				<SalesTabs active={active} />
+			</div>
 
 			{active === "summary" && (
 				<Suspense fallback={<SummarySkeleton />}>

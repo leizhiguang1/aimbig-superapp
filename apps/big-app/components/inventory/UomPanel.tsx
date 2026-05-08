@@ -2,6 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CreateButton } from "@/components/ui/create-button";
@@ -49,6 +50,7 @@ export function UomPanel({ uoms, items }: Props) {
 // ---------- UoM List ----------
 
 function UomList({ uoms }: { uoms: InventoryUom[] }) {
+	const canEdit = usePermission("inventory.inventory_edit");
 	const [editing, setEditing] = useState<InventoryUom | "new" | null>(null);
 	const [deleting, setDeleting] = useState<InventoryUom | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -58,9 +60,11 @@ function UomList({ uoms }: { uoms: InventoryUom[] }) {
 		<div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
 			<div className="flex items-center justify-between">
 				<h2 className="font-semibold text-sm">UoM List</h2>
-				<CreateButton size="sm" onClick={() => setEditing("new")}>
-					Add
-				</CreateButton>
+				{canEdit ? (
+					<CreateButton size="sm" onClick={() => setEditing("new")}>
+						Add
+					</CreateButton>
+				) : null}
 			</div>
 			{uoms.length === 0 ? (
 				<p className="py-6 text-center text-muted-foreground text-sm">
@@ -81,39 +85,41 @@ function UomList({ uoms }: { uoms: InventoryUom[] }) {
 									</div>
 								)}
 							</div>
-							<div className="flex gap-1">
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<Button
-											variant="ghost"
-											size="icon-sm"
-											onClick={() => setEditing(u)}
-											aria-label="Edit"
-										>
-											<Pencil />
-										</Button>
-									</TooltipTrigger>
-									<TooltipContent>Edit</TooltipContent>
-								</Tooltip>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<Button
-											variant="ghost"
-											size="icon-sm"
-											onClick={() => {
-												setDeleteError(null);
-												setDeleting(u);
-											}}
-											aria-label="Delete"
-										>
-											<Trash2 />
-										</Button>
-									</TooltipTrigger>
-									<TooltipContent>Delete</TooltipContent>
-								</Tooltip>
-							</div>
-						</li>
-					))}
+							{canEdit && (
+								<div className="flex gap-1">
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												onClick={() => setEditing(u)}
+												aria-label="Edit"
+											>
+												<Pencil />
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent>Edit</TooltipContent>
+									</Tooltip>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												onClick={() => {
+													setDeleteError(null);
+													setDeleting(u);
+												}}
+												aria-label="Delete"
+											>
+												<Trash2 />
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent>Delete</TooltipContent>
+									</Tooltip>
+									</div>
+								)}
+							</li>
+						))}
 				</ul>
 			)}
 			{editing && (

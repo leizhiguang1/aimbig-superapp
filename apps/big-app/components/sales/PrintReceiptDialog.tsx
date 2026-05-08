@@ -180,7 +180,7 @@ export function PrintReceiptDialog({ open, paymentId, onOpenChange }: Props) {
 	return (
 		<Dialog open={open} onOpenChange={handleClose}>
 			<DialogContent
-				className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
+				className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-[1180px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1180px]"
 				preventOutsideClose
 			>
 				<DialogHeader className="border-b">
@@ -217,7 +217,7 @@ export function PrintReceiptDialog({ open, paymentId, onOpenChange }: Props) {
 						)}
 
 						<div className="grid grid-cols-1 gap-4 px-6 pb-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-							<div className="rounded border bg-zinc-50/50 p-2">
+							<div className="overflow-x-auto rounded border bg-zinc-50/50 p-2">
 								<PrintableReceipt
 									receipt={data.receipt}
 									brand={data.brand}

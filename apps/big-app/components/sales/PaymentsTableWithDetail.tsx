@@ -88,13 +88,9 @@ export function PaymentsTableWithDetail({ payments, outlets }: Props) {
 	const clearSelection = () => setSelectedIds(new Set());
 
 	const printSelected = () => {
-		const soIds = Array.from(selectedIds)
-			.map((pid) => payments.find((p) => p.id === pid)?.sales_order?.id)
-			.filter((id): id is string => Boolean(id));
-		const unique = Array.from(new Set(soIds));
-		for (const id of unique) {
+		for (const pid of selectedIds) {
 			window.open(
-				`/invoices/${id}?autoPrint=1&variant=receipt`,
+				`/invoices/${pid}?autoPrint=1&variant=receipt`,
 				"_blank",
 				"noopener",
 			);
@@ -104,7 +100,7 @@ export function PaymentsTableWithDetail({ payments, outlets }: Props) {
 
 	return (
 		<>
-			<div className="flex flex-wrap items-center gap-2">
+			<div className="flex shrink-0 flex-wrap items-center gap-2">
 				<Select value={year} onValueChange={setYear}>
 					<SelectTrigger className="h-9 w-[120px]">
 						<SelectValue />

@@ -7,6 +7,7 @@ import {
 	PaymentMethodFields,
 } from "@/components/appointments/detail/collect-payment/PaymentMethodFields";
 import { Toggle } from "@/components/appointments/detail/collect-payment/ui-primitives";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import {
 	Dialog,
 	DialogContent,
@@ -42,7 +43,7 @@ type Props = {
 	incentives: SaleItemIncentiveRow[];
 	outletName: string | null;
 	appointmentRef?: string | null;
-	canBackdate?: boolean;
+	canBackdate?: boolean | null;
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
@@ -160,10 +161,12 @@ export function PayOutstandingDialog({
 	incentives,
 	outletName,
 	appointmentRef,
-	canBackdate = false,
+	canBackdate,
 	onSuccess,
 	onError,
 }: Props) {
+	const fallbackBackdate = usePermission("sales.backdate_transactions");
+	const allowBackdate = canBackdate ?? fallbackBackdate;
 	const allMethods = usePaymentMethods();
 
 	const [entry, setEntry] = useState<PayEntry>(() =>
@@ -527,7 +530,7 @@ export function PayOutstandingDialog({
 					{/* Right — payment form */}
 					<div className="flex w-full shrink-0 flex-col gap-4 border-t bg-white p-5 sm:w-[300px] sm:border-l sm:border-t-0">
 						{/* Backdate Invoice toggle */}
-						{canBackdate ? (
+						{allowBackdate ? (
 							<div className="flex items-center justify-end gap-2 text-xs">
 								<span className="text-blue-600">Backdate Invoice?</span>
 								<Toggle
@@ -539,7 +542,7 @@ export function PayOutstandingDialog({
 								/>
 							</div>
 						) : null}
-						{canBackdate && backdate && (
+						{allowBackdate && backdate && (
 							<Input
 								type="date"
 								min={minDate}

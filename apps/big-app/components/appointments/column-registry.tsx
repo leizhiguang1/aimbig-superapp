@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { useAppointmentTag } from "@/components/brand-config/AppointmentConfigProvider";
 import type { ColumnKey } from "@/lib/appointments/columns";
 import {
@@ -45,6 +46,30 @@ function ms(iso: string | null | undefined): number | null {
 }
 
 const Empty = () => <span className="text-muted-foreground">—</span>;
+
+function PhoneCell({ a }: { a: AppointmentWithRelations }) {
+	const canSeeContact = usePermission("appointments.customer_contact_email");
+	if (!canSeeContact) return <Empty />;
+	const phone = a.customer?.phone ?? a.lead_phone ?? null;
+	const phone2 = a.customer?.phone2 ?? null;
+	if (!phone && !phone2) return <Empty />;
+	return (
+		<div className="text-xs tabular-nums">
+			{phone && <div>1 {phone}</div>}
+			{phone2 && <div className="text-muted-foreground">2 {phone2}</div>}
+		</div>
+	);
+}
+
+function EmailCell({ a }: { a: AppointmentWithRelations }) {
+	const canSeeContact = usePermission("appointments.customer_contact_email");
+	if (!canSeeContact || !a.customer?.email) return <Empty />;
+	return (
+		<span className="block truncate text-xs" title={a.customer.email}>
+			{a.customer.email}
+		</span>
+	);
+}
 
 export type ColumnRenderer = (a: AppointmentWithRelations) => ReactNode;
 
@@ -97,26 +122,9 @@ export const COLUMN_RENDERERS: Record<ColumnKey, ColumnRenderer> = {
 		);
 	},
 
-	phone: (a) => {
-		const phone = a.customer?.phone ?? a.lead_phone ?? null;
-		const phone2 = a.customer?.phone2 ?? null;
-		if (!phone && !phone2) return <Empty />;
-		return (
-			<div className="text-xs tabular-nums">
-				{phone && <div>1 {phone}</div>}
-				{phone2 && <div className="text-muted-foreground">2 {phone2}</div>}
-			</div>
-		);
-	},
+	phone: (a) => <PhoneCell a={a} />,
 
-	email: (a) =>
-		a.customer?.email ? (
-			<span className="block truncate text-xs" title={a.customer.email}>
-				{a.customer.email}
-			</span>
-		) : (
-			<Empty />
-		),
+	email: (a) => <EmailCell a={a} />,
 
 	appt_type: (a) => <span className="text-xs">{getApptType(a)}</span>,
 

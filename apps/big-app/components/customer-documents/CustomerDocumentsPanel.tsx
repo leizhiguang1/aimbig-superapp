@@ -16,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import type { Toast } from "@/components/appointments/AppointmentToastStack";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import {
 	LetterEditorDialog,
 	type CustomerMergeData,
@@ -114,6 +115,9 @@ export function CustomerDocumentsPanel({
 	formResponses,
 	onToast,
 }: Props) {
+	const canEditDocument = usePermission("clinical.document_edit");
+	const canDeleteDocument = usePermission("clinical.document_delete");
+	const canWriteLetter = usePermission("clinical.medical_certificates");
 	const router = useRouter();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [uploading, setUploading] = useState(false);
@@ -325,27 +329,31 @@ export function CustomerDocumentsPanel({
 			className: "w-24",
 			align: "center",
 		},
-		{
-			key: "delete",
-			header: <span className="sr-only">Delete</span>,
-			cell: (r) => (
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<button
-							type="button"
-							onClick={() => setDeleteId(r.id)}
-							aria-label="Delete"
-							className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-						>
-							<Trash2 className="size-4" />
-						</button>
-					</TooltipTrigger>
-					<TooltipContent side="left">Delete</TooltipContent>
-				</Tooltip>
-			),
-			className: "w-12",
-			align: "center",
-		},
+		...(canDeleteDocument
+			? [
+					{
+						key: "delete",
+						header: <span className="sr-only">Delete</span>,
+						cell: (r: Row) => (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<button
+										type="button"
+										onClick={() => setDeleteId(r.id)}
+										aria-label="Delete"
+										className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+									>
+										<Trash2 className="size-4" />
+									</button>
+								</TooltipTrigger>
+								<TooltipContent side="left">Delete</TooltipContent>
+							</Tooltip>
+						),
+						className: "w-12",
+						align: "center" as const,
+					} satisfies DataTableColumn<Row>,
+				]
+			: []),
 	];
 
 	const helperText = appointmentId
@@ -356,31 +364,37 @@ export function CustomerDocumentsPanel({
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-center gap-3 rounded-md border bg-card p-3">
 				<div className="flex items-center gap-1.5">
-					<AddActionButton
-						label="Files"
-						tooltip="Upload a file (image or PDF)"
-						color="emerald"
-						icon={<Plus className="size-4" />}
-						onClick={() => inputRef.current?.click()}
-						disabled={uploading}
-					/>
-					<AddActionButton
-						label="Forms"
-						tooltip="Fill a consent form"
-						color="amber"
-						icon={<NotebookPen className="size-4" />}
-						onClick={() => setFormFillOpen(true)}
-					/>
-					<AddActionButton
-						label="Letters"
-						tooltip="Generate a letter for this customer"
-						color="rose"
-						icon={<Mail className="size-4" />}
-						onClick={() => {
-							setEditingLetter(null);
-							setLetterEditorOpen(true);
-						}}
-					/>
+					{canEditDocument ? (
+						<>
+							<AddActionButton
+								label="Files"
+								tooltip="Upload a file (image or PDF)"
+								color="emerald"
+								icon={<Plus className="size-4" />}
+								onClick={() => inputRef.current?.click()}
+								disabled={uploading}
+							/>
+							<AddActionButton
+								label="Forms"
+								tooltip="Fill a consent form"
+								color="amber"
+								icon={<NotebookPen className="size-4" />}
+								onClick={() => setFormFillOpen(true)}
+							/>
+						</>
+					) : null}
+					{canWriteLetter ? (
+						<AddActionButton
+							label="Letters"
+							tooltip="Generate a letter for this customer"
+							color="rose"
+							icon={<Mail className="size-4" />}
+							onClick={() => {
+								setEditingLetter(null);
+								setLetterEditorOpen(true);
+							}}
+						/>
+					) : null}
 					<AddActionButton
 						label="Collages"
 						tooltip="Collages — coming soon"

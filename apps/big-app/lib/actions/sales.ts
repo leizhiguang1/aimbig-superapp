@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
 import { hasPermission, requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
-import { NotFoundError } from "@/lib/errors";
-import { listCustomers } from "@/lib/services/customers";
+import { NotFoundError, UnauthorizedError } from "@/lib/errors";
+import { getCustomer, listCustomers } from "@/lib/services/customers";
 import type { EmployeeWithRelations } from "@/lib/services/employees";
 import { listEmployees } from "@/lib/services/employees";
 import { listSellableProducts } from "@/lib/services/inventory";
@@ -32,6 +32,11 @@ export async function collectAppointmentPaymentAction(
 	try {
 		const ctx = await getServerContext();
 		await requirePermission(ctx, "sales.create_sales");
+		// Backdate (`sold_at` set) requires the dedicated flag — UI hides the
+		// toggle, but a crafted action call could still send it.
+		if ((input as { sold_at?: string | null } | null)?.sold_at) {
+			await requirePermission(ctx, "sales.backdate_transactions");
+		}
 		const result = await salesService.collectAppointmentPayment(
 			ctx,
 			appointmentId,
@@ -55,6 +60,25 @@ export async function collectWalkInSaleAction(
 	try {
 		const ctx = await getServerContext();
 		await requirePermission(ctx, "sales.create_sales");
+		if ((input as { sold_at?: string | null } | null)?.sold_at) {
+			await requirePermission(ctx, "sales.backdate_transactions");
+		}
+		// Restricted-view users can only sell to customers tied to them.
+		const customerId =
+			input && typeof input === "object" && "customer_id" in input
+				? (input as { customer_id?: string | null }).customer_id ?? null
+				: null;
+		if (customerId) {
+			const canSalesAll = await hasPermission(ctx, "sales.customer_transparency");
+			if (!canSalesAll) {
+				const customer = await getCustomer(ctx, customerId);
+				if (customer.consultant_id !== ctx.currentUser?.employeeId) {
+					throw new UnauthorizedError(
+						"You can only create sales for customers tied to you.",
+					);
+				}
+			}
+		}
 		const result = await salesService.collectWalkInSale(ctx, input);
 		revalidatePath("/o/[outlet]/sales", "page");
 		revalidatePath("/o/[outlet]/inventory", "page");
@@ -67,6 +91,10 @@ export async function collectWalkInSaleAction(
 export async function getNewSaleDataAction() {
 	const ctx = await getServerContext();
 	await requirePermission(ctx, "sales.create_sales");
+	const canSalesAll = await hasPermission(ctx, "sales.customer_transparency");
+	const consultantFilter = canSalesAll
+		? null
+		: (ctx.currentUser?.employeeId ?? null);
 	const [
 		customers,
 		outlets,
@@ -77,7 +105,7 @@ export async function getNewSaleDataAction() {
 		paymentMethods,
 		canBackdate,
 	] = await Promise.all([
-		listCustomers(ctx),
+		listCustomers(ctx, { consultantIdFilter: consultantFilter }),
 		listOutlets(ctx),
 		listEmployees(ctx),
 		listServices(ctx),

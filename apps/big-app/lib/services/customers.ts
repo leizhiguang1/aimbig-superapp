@@ -81,12 +81,17 @@ function normalize(input: unknown) {
 
 export async function listCustomers(
 	ctx: Context,
+	args?: { consultantIdFilter?: string | null },
 ): Promise<CustomerWithRelations[]> {
-	const { data, error } = await ctx.db
+	let q = ctx.db
 		.from("customers")
 		.select(SELECT_WITH_RELATIONS)
 		.eq("brand_id", assertBrandId(ctx))
 		.order("code", { ascending: false });
+	if (args?.consultantIdFilter) {
+		q = q.eq("consultant_id", args.consultantIdFilter);
+	}
+	const { data, error } = await q;
 	if (error) throw new ValidationError(error.message);
 	return (data ?? []) as unknown as CustomerWithRelations[];
 }

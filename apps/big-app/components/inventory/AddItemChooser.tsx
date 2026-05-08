@@ -27,6 +27,7 @@ type Props = {
 	suppliers: Supplier[];
 	taxes: Tax[];
 	outlets: Outlet[];
+	canSeeCost?: boolean;
 };
 
 const CARDS: Array<{
@@ -110,6 +111,7 @@ export function AddItemButton(props: Props) {
 					suppliers={props.suppliers}
 					taxes={props.taxes}
 					outlets={props.outlets}
+					canSeeCost={props.canSeeCost ?? true}
 					onClose={() => setPickedKind(null)}
 				/>
 			)}

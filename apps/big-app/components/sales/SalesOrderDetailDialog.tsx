@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { redistribute } from "@/components/appointments/detail/collect-payment/helpers";
 import type { Allocation } from "@/components/appointments/detail/collect-payment/types";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import { EmployeePicker } from "@/components/employees/EmployeePicker";
 import { ChangePaymentMethodDialog } from "@/components/sales/ChangePaymentMethodDialog";
 import { CustomerIdentityCard } from "@/components/customers/CustomerIdentityCard";
@@ -120,6 +121,7 @@ export function SalesOrderDetailDialog({
 	salesOrderId,
 }: Props) {
 	const router = useRouter();
+	const canCreateSales = usePermission("sales.create_sales");
 	const [state, setState] = useState<LoadState>({ status: "idle" });
 	const [voidOpen, setVoidOpen] = useState(false);
 	const [recordPayOpen, setRecordPayOpen] = useState(false);
@@ -452,7 +454,7 @@ export function SalesOrderDetailDialog({
 								)}
 							</div>
 							<div className="flex items-center gap-2 self-end sm:self-auto">
-								{canRecordPayment && (
+								{canCreateSales && canRecordPayment && (
 									<Button
 										size="sm"
 										className="bg-green-600 text-white hover:bg-green-700"
@@ -465,7 +467,7 @@ export function SalesOrderDetailDialog({
 										Pay Now
 									</Button>
 								)}
-								{isCancellable && (
+								{canCreateSales && isCancellable && (
 									<Button
 										variant="outline"
 										size="sm"
@@ -601,6 +603,9 @@ function LeftPanel({
 	onLineApplyToAll: (lineId: string) => void;
 	canApplyToAll: boolean;
 }) {
+	const canReallocateIncentives = usePermission(
+		"sales.sales_person_reallocation",
+	);
 	const incentivesByLine = new Map<string, SaleItemIncentiveRow[]>();
 	for (const i of incentives) {
 		const arr = incentivesByLine.get(i.sale_item_id) ?? [];
@@ -655,7 +660,7 @@ function LeftPanel({
 							<PlaceholderPill tooltip="Cancelled orders can't be edited">
 								Edit Allocation
 							</PlaceholderPill>
-						) : (
+						) : canReallocateIncentives ? (
 							<Button
 								variant="outline"
 								size="sm"
@@ -664,7 +669,7 @@ function LeftPanel({
 								<Pencil className="mr-2 size-3.5" />
 								Edit Allocation
 							</Button>
-						)}
+						) : null}
 					</div>
 				</div>
 			</section>
@@ -912,6 +917,7 @@ function RightPanel({
 	onChangeMethod: (payment: PaymentWithProcessedBy) => void;
 	onPayNow: () => void;
 }) {
+	const canCreateSales = usePermission("sales.create_sales");
 	const subtotal = Number(order.subtotal ?? 0);
 	const total = Number(order.total ?? 0);
 	const tax = Number(order.tax ?? 0);
@@ -973,16 +979,18 @@ function RightPanel({
 								MYR {money(outstanding)}
 							</span>
 						</div>
-						<div className="mt-2">
-							<button
-								type="button"
-								onClick={onPayNow}
-								className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-							>
-								<CreditCard className="size-3.5" />
-								Pay Now
-							</button>
-						</div>
+						{canCreateSales && (
+							<div className="mt-2">
+								<button
+									type="button"
+									onClick={onPayNow}
+									className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+								>
+									<CreditCard className="size-3.5" />
+									Pay Now
+								</button>
+							</div>
+						)}
 					</div>
 				)}
 
@@ -1027,7 +1035,8 @@ function PaymentHistoryRow({
 			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
 			.join(" ");
 	const isWallet = payment.payment_mode === "wallet";
-	const canEditMethod = !isCancelled && !isWallet;
+	const canManageSales = usePermission("sales.create_sales");
+	const canEditMethod = !isCancelled && !isWallet && canManageSales;
 
 	return (
 		<div className="text-sm">

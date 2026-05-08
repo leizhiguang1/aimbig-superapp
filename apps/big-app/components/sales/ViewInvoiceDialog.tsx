@@ -38,7 +38,7 @@ export function ViewInvoiceDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				showCloseButton={false}
-				className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-[860px] flex-col gap-0 overflow-hidden bg-zinc-100 p-0 print:max-h-none print:max-w-none print:overflow-visible print:bg-white"
+				className="flex max-h-[95vh] w-[calc(100vw-2rem)] max-w-[calc(210mm+4rem)] flex-col gap-0 overflow-hidden bg-zinc-100 p-0 print:max-h-none print:max-w-none print:overflow-visible print:bg-white"
 			>
 				<DialogTitle className="sr-only">Invoice {order.so_number}</DialogTitle>
 				<div className="flex items-center justify-between gap-2 border-b bg-white px-4 py-2 print:hidden">

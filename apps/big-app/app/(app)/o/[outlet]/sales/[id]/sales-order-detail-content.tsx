@@ -29,7 +29,10 @@ export async function SalesOrderDetailContent({
 }) {
 	const ctx = await getServerContext();
 	if (!(await hasPermission(ctx, "sales.sales"))) notFound();
-	const canBackdate = await hasPermission(ctx, "sales.backdate_transactions");
+	const [canBackdate, canSalesAll] = await Promise.all([
+		hasPermission(ctx, "sales.backdate_transactions"),
+		hasPermission(ctx, "sales.customer_transparency"),
+	]);
 
 	try {
 		const [
@@ -55,6 +58,16 @@ export async function SalesOrderDetailContent({
 				: Promise.resolve(null),
 			getBrand(ctx).catch(() => null),
 		]);
+
+		// Restricted users can only view sales whose customer's
+		// consultant_id matches them. Walk-ins (no customer) are excluded
+		// from restricted views.
+		if (
+			!canSalesAll &&
+			(!customer || customer.consultant_id !== ctx.currentUser?.employeeId)
+		) {
+			notFound();
+		}
 
 		return (
 			<SalesOrderDetailView

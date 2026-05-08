@@ -3,6 +3,7 @@
 import { Clock, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePermission } from "@/components/auth/PermissionsProvider";
 import {
 	useAppointmentPilotSettings,
 	useAppointmentTag,
@@ -76,6 +77,7 @@ export function AppointmentHoverCard({ appointment: a, anchor }: Props) {
 	useEffect(() => setMounted(true), []);
 	const tagCfg = useAppointmentTag(a.tags?.[0]);
 	const { hideValueOnHover } = useAppointmentPilotSettings();
+	const canSeeContact = usePermission("appointments.customer_contact_email");
 	if (!mounted) return null;
 
 	const isBlock = a.is_time_block;
@@ -100,8 +102,10 @@ export function AppointmentHoverCard({ appointment: a, anchor }: Props) {
 		? `${a.customer.first_name} ${a.customer.last_name ?? ""}`.trim()
 		: (a.lead_name ?? null);
 	const customerCode = a.customer?.code ?? null;
-	const phone = a.customer?.phone ?? a.lead_phone ?? null;
-	const phone2 = a.customer?.phone2 ?? null;
+	const phone = canSeeContact
+		? (a.customer?.phone ?? a.lead_phone ?? null)
+		: null;
+	const phone2 = canSeeContact ? (a.customer?.phone2 ?? null) : null;
 	const employeeName = a.employee
 		? `${a.employee.first_name} ${a.employee.last_name}`
 		: null;
