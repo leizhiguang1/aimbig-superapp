@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SalesOrderDetailDialog } from "@/components/sales/SalesOrderDetailDialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import type { CancellationWithRelations } from "@/lib/services/sales";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	cancellations: CancellationWithRelations[];
@@ -23,13 +24,6 @@ function formatDateTime(iso: string) {
 		hour12: false,
 	});
 	return { date, time };
-}
-
-function money(n: number) {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
 }
 
 function fullName(

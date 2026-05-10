@@ -11,5 +11,7 @@
   "tailwindCSS.experimental.classRegex": [
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
     ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
-  ]
+  ],
+  "claudeCode.allowDangerouslySkipPermissions": true,
+  "claudeCode.enableNewConversationShortcut": true
 }

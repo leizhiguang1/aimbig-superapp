@@ -22,6 +22,7 @@ import { listActivePaymentMethodsAction } from "@/lib/actions/payment-methods";
 import { updatePaymentMethodAction } from "@/lib/actions/sales";
 import type { PaymentWithProcessedBy } from "@/lib/services/sales";
 import type { Tables } from "@/lib/supabase/types";
+import { money } from "@/lib/utils/money";
 
 type PaymentMethod = Tables<"payment_methods">;
 
@@ -34,13 +35,6 @@ type Props = {
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
-
-function money(n: number): string {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 function emptyEntry(mode: string): UIPaymentEntry {
 	return {

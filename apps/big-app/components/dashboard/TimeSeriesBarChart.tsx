@@ -47,7 +47,7 @@ export function TimeSeriesBarChart({
 			<CardContent>
 				<ChartContainer
 					config={config}
-					className="aspect-auto h-[240px] w-full"
+					className="aspect-[4/3] w-full max-h-[280px]"
 				>
 					<BarChart
 						data={data}

@@ -79,13 +79,7 @@ export function lineTaxAmount(
 	return Math.round(base * Number(tax.rate_pct)) / 100;
 }
 
-export function money(n: number) {
-	const safe = Number.isFinite(n) ? n : 0;
-	return safe.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
+export { money } from "@/lib/utils/money";
 
 export function customerDisplay(a: AppointmentWithRelations) {
 	if (a.customer) {

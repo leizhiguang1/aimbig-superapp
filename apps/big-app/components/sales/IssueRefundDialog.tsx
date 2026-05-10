@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { listActivePaymentMethodsAction } from "@/lib/actions/payment-methods";
 import { issueRefundAction } from "@/lib/actions/sales";
 import type { Tables } from "@/lib/supabase/types";
+import { money } from "@/lib/utils/money";
 
 type PaymentMethod = Tables<"payment_methods">;
 
@@ -37,13 +38,6 @@ type Props = {
 	onSuccess?: (result: { rnNumber: string | null; amount: number }) => void;
 	onError?: (message: string) => void;
 };
-
-function money(n: number): string {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 export function IssueRefundDialog({
 	open,

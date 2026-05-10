@@ -9,9 +9,11 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getSalesOrderStatusConfig } from "@/lib/constants/sales-status";
 import type { SalesOrderWithRelations } from "@/lib/services/sales";
 import { mediaPublicUrl } from "@/lib/storage/urls";
 import { cn } from "@/lib/utils";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	orders: SalesOrderWithRelations[];
@@ -34,32 +36,11 @@ function formatDateTime(iso: string) {
 	return { date, time };
 }
 
-function money(n: number) {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
-
 function fullName(
 	first: string | null | undefined,
 	last: string | null | undefined,
 ) {
 	return [first, last].filter(Boolean).join(" ").trim();
-}
-
-function statusDotClass(status: SalesOrderWithRelations["status"]) {
-	switch (status) {
-		case "completed":
-			return "bg-emerald-500";
-		case "cancelled":
-		case "void":
-			return "bg-red-500";
-		case "draft":
-			return "bg-amber-500";
-		default:
-			return "bg-muted-foreground/50";
-	}
 }
 
 function initials(
@@ -100,21 +81,6 @@ function AvatarCircle({
 			)}
 		</div>
 	);
-}
-
-function statusLabel(status: SalesOrderWithRelations["status"]) {
-	switch (status) {
-		case "completed":
-			return "Completed";
-		case "cancelled":
-			return "Cancelled";
-		case "void":
-			return "Void";
-		case "draft":
-			return "Draft";
-		default:
-			return status;
-	}
 }
 
 export function SalesOrdersTable({ orders, onOpen }: Props) {
@@ -164,29 +130,33 @@ export function SalesOrdersTable({ orders, onOpen }: Props) {
 			key: "so_number",
 			header: "Sales order #",
 			sortable: true,
-			cell: (o) => (
-				<div className="flex items-center gap-2">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<span
-								className={cn(
-									"inline-block size-2.5 shrink-0 rounded-full",
-									statusDotClass(o.status),
-								)}
-								aria-label={statusLabel(o.status)}
-							/>
-						</TooltipTrigger>
-						<TooltipContent>{statusLabel(o.status)}</TooltipContent>
-					</Tooltip>
-					<button
-						type="button"
-						onClick={() => onOpen?.(o.id)}
-						className="font-mono font-medium text-blue-600 text-sm hover:underline"
-					>
-						{o.so_number}
-					</button>
-				</div>
-			),
+			cell: (o) => {
+				const sc = getSalesOrderStatusConfig(o.status);
+				const label = sc?.label ?? o.status;
+				return (
+					<div className="flex items-center gap-2">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<span
+									className={cn(
+										"inline-block size-2.5 shrink-0 rounded-full",
+										sc?.dot ?? "bg-muted-foreground/50",
+									)}
+									aria-label={label}
+								/>
+							</TooltipTrigger>
+							<TooltipContent>{label}</TooltipContent>
+						</Tooltip>
+						<button
+							type="button"
+							onClick={() => onOpen?.(o.id)}
+							className="font-mono font-medium text-blue-600 text-sm hover:underline"
+						>
+							{o.so_number}
+						</button>
+					</div>
+				);
+			},
 		},
 		{
 			key: "outlet",

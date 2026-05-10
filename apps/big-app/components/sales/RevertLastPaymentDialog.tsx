@@ -13,6 +13,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { revertLastPaymentAction } from "@/lib/actions/sales";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	open: boolean;
@@ -27,13 +28,6 @@ type Props = {
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
-
-function money(n: number): string {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 export function RevertLastPaymentDialog({
 	open,

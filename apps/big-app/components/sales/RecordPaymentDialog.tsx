@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { listActivePaymentMethodsAction } from "@/lib/actions/payment-methods";
 import { recordAdditionalPaymentAction } from "@/lib/actions/sales";
 import type { Tables } from "@/lib/supabase/types";
+import { money } from "@/lib/utils/money";
 
 type PaymentMethod = Tables<"payment_methods">;
 
@@ -35,13 +36,6 @@ type Props = {
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
-
-function money(n: number): string {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 function emptyEntry(mode: string, amount: string): UIPaymentEntry {
 	return {
@@ -79,9 +73,7 @@ export function RecordPaymentDialog({
 	useEffect(() => {
 		if (!open) return;
 		setSubmitError(null);
-		setEntry(
-			emptyEntry("cash", outstanding > 0 ? outstanding.toFixed(2) : ""),
-		);
+		setEntry(emptyEntry("cash", outstanding > 0 ? outstanding.toFixed(2) : ""));
 		listActivePaymentMethodsAction()
 			.then((pms) => {
 				const filtered = pms.filter((m) => m.code !== "wallet");

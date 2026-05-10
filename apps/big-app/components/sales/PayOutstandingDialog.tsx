@@ -25,10 +25,8 @@ import {
 import { listActivePaymentMethodsAction } from "@/lib/actions/payment-methods";
 import { recordAdditionalPaymentAction } from "@/lib/actions/sales";
 import type { PaymentMethod } from "@/lib/services/payment-methods";
-import type {
-	SaleItem,
-	SaleItemIncentiveRow,
-} from "@/lib/services/sales";
+import type { SaleItem, SaleItemIncentiveRow } from "@/lib/services/sales";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	open: boolean;
@@ -47,16 +45,6 @@ type Props = {
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
-
-function money(n: number | string | null | undefined): string {
-	const v = typeof n === "string" ? Number(n) : (n ?? 0);
-	return Number.isFinite(v)
-		? v.toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
-			})
-		: "0.00";
-}
 
 function fullName(
 	first: string | null | undefined,
@@ -200,8 +188,7 @@ export function PayOutstandingDialog({
 	// Reset form when dialog opens
 	useEffect(() => {
 		if (!open) return;
-		const defaultMode =
-			allMethods.length > 0 ? allMethods[0].code : "cash";
+		const defaultMode = allMethods.length > 0 ? allMethods[0].code : "cash";
 		const initial = emptyEntry(defaultMode, outstanding);
 		setEntry(initial);
 		setGeneralRemarks("");
@@ -211,7 +198,7 @@ export function PayOutstandingDialog({
 		if (items.length > 0) {
 			setItemAllocations(distributeAmount(outstanding, items, paidRatio));
 		}
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
 	const selectedMethod = useMemo(
@@ -335,8 +322,7 @@ export function PayOutstandingDialog({
 					`${result.invoiceNo} · MYR ${money(result.amount)} · ${tail}`,
 				);
 			} catch (e) {
-				const msg =
-					e instanceof Error ? e.message : "Failed to record payment";
+				const msg = e instanceof Error ? e.message : "Failed to record payment";
 				setSubmitError(msg);
 				onError?.(msg);
 			}
@@ -344,8 +330,7 @@ export function PayOutstandingDialog({
 	};
 
 	const reset = () => {
-		const defaultMode =
-			allMethods.length > 0 ? allMethods[0].code : "cash";
+		const defaultMode = allMethods.length > 0 ? allMethods[0].code : "cash";
 		setEntry(emptyEntry(defaultMode, outstanding));
 		setGeneralRemarks("");
 		setBackdate(false);
@@ -410,8 +395,7 @@ export function PayOutstandingDialog({
 												? "PRD"
 												: "CHG";
 									const lineIncentives = incentivesByLine.get(item.id) ?? [];
-									const overAlloc =
-										allocNums[idx] > itemOutstanding + 0.005;
+									const overAlloc = allocNums[idx] > itemOutstanding + 0.005;
 
 									return (
 										<div key={item.id} className="px-4 py-3 text-sm">
@@ -452,10 +436,7 @@ export function PayOutstandingDialog({
 														{money(itemOutstanding)}
 													</div>
 													<div className="text-[10px] text-muted-foreground">
-														Tax:{" "}
-														{money(
-															Number(item.tax_amount ?? 0) - taxPaid,
-														)}
+														Tax: {money(Number(item.tax_amount ?? 0) - taxPaid)}
 													</div>
 												</div>
 
@@ -648,7 +629,10 @@ export function PayOutstandingDialog({
 									<span className="font-semibold uppercase">{outletName}</span>{" "}
 									<Tooltip>
 										<TooltipTrigger asChild>
-											<button type="button" className="inline-flex align-middle">
+											<button
+												type="button"
+												className="inline-flex align-middle"
+											>
 												<Info className="size-3 text-muted-foreground" />
 											</button>
 										</TooltipTrigger>

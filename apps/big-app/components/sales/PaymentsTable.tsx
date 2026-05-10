@@ -11,9 +11,11 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getSalesOrderStatusConfig } from "@/lib/constants/sales-status";
 import type { PaymentWithRelations } from "@/lib/services/sales";
 import { mediaPublicUrl } from "@/lib/storage/urls";
 import { cn } from "@/lib/utils";
+import { money } from "@/lib/utils/money";
 
 type SalesOrderStatus = NonNullable<
 	PaymentWithRelations["sales_order"]
@@ -43,13 +45,6 @@ function formatDateTime(iso: string) {
 	return { date, time };
 }
 
-function money(n: number) {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
-
 function fullName(
 	first: string | null | undefined,
 	last: string | null | undefined,
@@ -71,33 +66,8 @@ function initials(
 	return `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase() || "?";
 }
 
-function statusDotClass(status: SalesOrderStatus | undefined) {
-	switch (status) {
-		case "completed":
-			return "bg-emerald-500";
-		case "cancelled":
-		case "void":
-			return "bg-red-500";
-		case "draft":
-			return "bg-amber-500";
-		default:
-			return "bg-muted-foreground/50";
-	}
-}
-
-function statusLabel(status: SalesOrderStatus | undefined) {
-	switch (status) {
-		case "completed":
-			return "Completed";
-		case "cancelled":
-			return "Cancelled";
-		case "void":
-			return "Void";
-		case "draft":
-			return "Draft";
-		default:
-			return "—";
-	}
+function statusCfg(status: SalesOrderStatus | undefined) {
+	return getSalesOrderStatusConfig(status ?? null);
 }
 
 function AvatarCircle({
@@ -273,6 +243,8 @@ export function PaymentsTable({
 				const so = p.sales_order;
 				if (!so)
 					return <span className="text-muted-foreground text-sm">—</span>;
+				const sc = statusCfg(so.status);
+				const label = sc?.label ?? "—";
 				return (
 					<div className="flex items-center gap-2">
 						<Tooltip>
@@ -280,13 +252,13 @@ export function PaymentsTable({
 								<span
 									className={cn(
 										"inline-block size-2.5 shrink-0 rounded-full",
-										statusDotClass(so.status),
+										sc?.dot ?? "bg-muted-foreground/50",
 									)}
 									role="img"
-									aria-label={statusLabel(so.status)}
+									aria-label={label}
 								/>
 							</TooltipTrigger>
-							<TooltipContent>{statusLabel(so.status)}</TooltipContent>
+							<TooltipContent>{label}</TooltipContent>
 						</Tooltip>
 						<button
 							type="button"

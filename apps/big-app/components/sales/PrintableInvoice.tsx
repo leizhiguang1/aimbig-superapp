@@ -9,6 +9,7 @@ import type {
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
 import { publicMediaUrl } from "@/lib/services/storage";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	order: SalesOrderWithRelations;
@@ -18,16 +19,6 @@ type Props = {
 	customer: CustomerWithRelations | null;
 	brand: Brand | null;
 };
-
-function money(n: number | string | null | undefined): string {
-	const v = typeof n === "string" ? Number(n) : (n ?? 0);
-	return Number.isFinite(v)
-		? v.toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
-			})
-		: "0.00";
-}
 
 function formatDate(iso: string | null | undefined): string {
 	if (!iso) return "—";
@@ -290,7 +281,10 @@ export function PrintableInvoice({
 					<span className="text-right">{paymentTypeSummary}</span>
 				</div>
 				{payments.some(
-					(p) => p.trace_no?.trim() || p.approval_code?.trim() || p.reference_no?.trim(),
+					(p) =>
+						p.trace_no?.trim() ||
+						p.approval_code?.trim() ||
+						p.reference_no?.trim(),
 				) && (
 					<div className="mt-2 space-y-0.5 text-[10px] text-zinc-500">
 						{payments.map((p) => {
@@ -300,9 +294,7 @@ export function PrintableInvoice({
 							if (!(trace || approval || reference)) return null;
 							return (
 								<div key={p.id} className="flex flex-wrap gap-x-4">
-									{payments.length > 1 && (
-										<span>{formatMethodLabel(p)}:</span>
-									)}
+									{payments.length > 1 && <span>{formatMethodLabel(p)}:</span>}
 									{trace && <span>Trace No: {trace}</span>}
 									{approval && <span>Approval Code: {approval}</span>}
 									{reference && <span>Ref: {reference}</span>}

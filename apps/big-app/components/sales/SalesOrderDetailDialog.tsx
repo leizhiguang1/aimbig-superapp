@@ -41,6 +41,7 @@ import type {
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
 import { cn } from "@/lib/utils";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	open: boolean;
@@ -61,16 +62,6 @@ type LoadState =
 	  }
 	| { status: "not_found" }
 	| { status: "error"; message: string };
-
-function money(n: number | string | null | undefined): string {
-	const v = typeof n === "string" ? Number(n) : (n ?? 0);
-	return Number.isFinite(v)
-		? v.toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
-			})
-		: "0.00";
-}
 
 function fullName(
 	first: string | null | undefined,
@@ -181,9 +172,7 @@ export function SalesOrderDetailDialog({
 				{ employeeId: "", percent: 0 },
 			];
 			const next = redistribute(
-				cur.map((a, i) =>
-					i === idx ? { ...a, employeeId: empId ?? "" } : a,
-				),
+				cur.map((a, i) => (i === idx ? { ...a, employeeId: empId ?? "" } : a)),
 			);
 			return new Map(prev).set(lineId, next);
 		});
@@ -227,10 +216,7 @@ export function SalesOrderDetailDialog({
 				i === filledIdx
 					? {
 							...a,
-							percent: Math.max(
-								0,
-								Math.min(100, (a.percent || 0) + delta),
-							),
+							percent: Math.max(0, Math.min(100, (a.percent || 0) + delta)),
 						}
 					: a,
 			);
@@ -285,7 +271,8 @@ export function SalesOrderDetailDialog({
 	const isCancelled = order?.status === "cancelled";
 	const appointmentRef = order?.appointment?.booking_ref ?? null;
 	const outstanding = Number(order?.outstanding ?? 0);
-	const canRecordPayment = order !== null && !isCancelled && outstanding > 0.005;
+	const canRecordPayment =
+		order !== null && !isCancelled && outstanding > 0.005;
 
 	const startEditAlloc = () => {
 		if (state.status !== "ready") return;
@@ -661,11 +648,7 @@ function LeftPanel({
 								Edit Allocation
 							</PlaceholderPill>
 						) : canReallocateIncentives ? (
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={onStartEditAlloc}
-							>
+							<Button variant="outline" size="sm" onClick={onStartEditAlloc}>
 								<Pencil className="mr-2 size-3.5" />
 								Edit Allocation
 							</Button>
@@ -797,12 +780,8 @@ function ItemRow({
 					<LineAllocEditor
 						slots={editSlots}
 						employees={employees}
-						onEmployee={(idx, id) =>
-							onLineEmployeeChange(item.id, idx, id)
-						}
-						onPercent={(idx, pct) =>
-							onLinePercentChange(item.id, idx, pct)
-						}
+						onEmployee={(idx, id) => onLineEmployeeChange(item.id, idx, id)}
+						onPercent={(idx, pct) => onLinePercentChange(item.id, idx, pct)}
 						onBalance={() => onLineBalance(item.id)}
 						onApplyToAll={
 							canApplyToAll ? () => onLineApplyToAll(item.id) : null
@@ -993,7 +972,6 @@ function RightPanel({
 						)}
 					</div>
 				)}
-
 			</section>
 
 			<section className="rounded-md border bg-white p-4 shadow-sm">

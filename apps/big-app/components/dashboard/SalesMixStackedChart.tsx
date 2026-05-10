@@ -83,7 +83,7 @@ export function SalesMixStackedChart({
 			<CardContent className="flex flex-col gap-3">
 				<ChartContainer
 					config={config}
-					className="aspect-auto h-[240px] w-full"
+					className="aspect-[4/3] w-full max-h-[280px]"
 				>
 					<BarChart
 						data={data.points}

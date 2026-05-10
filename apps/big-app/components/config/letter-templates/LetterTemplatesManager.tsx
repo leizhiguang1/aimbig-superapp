@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -54,7 +48,11 @@ export function LetterTemplatesManager({ templates }: Props) {
 
 	const openEdit = (tpl: LetterTemplate) => {
 		setEditTarget(tpl);
-		setForm({ name: tpl.name, body_html: tpl.body_html, is_active: tpl.is_active });
+		setForm({
+			name: tpl.name,
+			body_html: tpl.body_html,
+			is_active: tpl.is_active,
+		});
 		setDialogOpen(true);
 	};
 
@@ -120,7 +118,10 @@ export function LetterTemplatesManager({ templates }: Props) {
 								</span>
 								<span className="text-muted-foreground text-xs">
 									{tpl.body_html
-										? `${tpl.body_html.replace(/<[^>]+>/g, " ").trim().slice(0, 80)}…`
+										? `${tpl.body_html
+												.replace(/<[^>]+>/g, " ")
+												.trim()
+												.slice(0, 80)}…`
 										: "No content"}
 								</span>
 							</div>
@@ -153,56 +154,13 @@ export function LetterTemplatesManager({ templates }: Props) {
 			)}
 
 			{/* Create / Edit dialog */}
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl">
-					<DialogHeader className="border-b px-6 py-4">
-						<DialogTitle>
-							{editTarget ? "Edit Template" : "New Letter Template"}
-						</DialogTitle>
-					</DialogHeader>
-
-					<div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
-						<div className="space-y-1.5">
-							<Label htmlFor="tpl-name">Template name</Label>
-							<Input
-								id="tpl-name"
-								placeholder="e.g. Referral Letter"
-								value={form.name}
-								onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-							/>
-						</div>
-
-						<div className="space-y-1.5">
-							<Label htmlFor="tpl-body">
-								Body HTML{" "}
-								<span className="font-normal text-muted-foreground text-xs">
-									— supports basic HTML tags
-								</span>
-							</Label>
-							<p className="text-muted-foreground text-xs">{MERGE_HINT}</p>
-							<textarea
-								id="tpl-body"
-								rows={18}
-								className="w-full rounded-md border bg-background px-3 py-2 font-mono text-xs leading-relaxed shadow-sm outline-none focus:ring-2 focus:ring-ring/50 resize-y"
-								placeholder={`<p>Dear *Insert Doctor Name*,</p>\n\n<p>Re: {{customer_name}} ({{customer_id_number}})</p>\n\n<p>Thank you for seeing {{customer_name}} regarding ...</p>`}
-								value={form.body_html}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, body_html: e.target.value }))
-								}
-							/>
-						</div>
-
-						<div className="flex items-center gap-3">
-							<Switch
-								id="tpl-active"
-								checked={form.is_active}
-								onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
-							/>
-							<Label htmlFor="tpl-active">Active (visible when creating letters)</Label>
-						</div>
-					</div>
-
-					<DialogFooter className="border-t px-6 py-4">
+			<FormDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				size="lg"
+				title={editTarget ? "Edit Template" : "New Letter Template"}
+				footer={
+					<>
 						<Button
 							variant="outline"
 							onClick={() => setDialogOpen(false)}
@@ -222,9 +180,50 @@ export function LetterTemplatesManager({ templates }: Props) {
 								"Create Template"
 							)}
 						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+					</>
+				}
+			>
+				<div className="space-y-1.5">
+					<Label htmlFor="tpl-name">Template name</Label>
+					<Input
+						id="tpl-name"
+						placeholder="e.g. Referral Letter"
+						value={form.name}
+						onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+					/>
+				</div>
+
+				<div className="space-y-1.5">
+					<Label htmlFor="tpl-body">
+						Body HTML{" "}
+						<span className="font-normal text-muted-foreground text-xs">
+							— supports basic HTML tags
+						</span>
+					</Label>
+					<p className="text-muted-foreground text-xs">{MERGE_HINT}</p>
+					<textarea
+						id="tpl-body"
+						rows={18}
+						className="w-full rounded-md border bg-background px-3 py-2 font-mono text-xs leading-relaxed shadow-sm outline-none focus:ring-2 focus:ring-ring/50 resize-y"
+						placeholder={`<p>Dear *Insert Doctor Name*,</p>\n\n<p>Re: {{customer_name}} ({{customer_id_number}})</p>\n\n<p>Thank you for seeing {{customer_name}} regarding ...</p>`}
+						value={form.body_html}
+						onChange={(e) =>
+							setForm((f) => ({ ...f, body_html: e.target.value }))
+						}
+					/>
+				</div>
+
+				<div className="flex items-center gap-3">
+					<Switch
+						id="tpl-active"
+						checked={form.is_active}
+						onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
+					/>
+					<Label htmlFor="tpl-active">
+						Active (visible when creating letters)
+					</Label>
+				</div>
+			</FormDialog>
 
 			<ConfirmDialog
 				open={deleteTarget !== null}

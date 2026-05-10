@@ -39,6 +39,7 @@ import type {
 	SaleItemIncentiveRow,
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	order: SalesOrderWithRelations;
@@ -53,13 +54,6 @@ type Props = {
 	autoPrint?: boolean;
 	canBackdate?: boolean;
 };
-
-function money(n: number) {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 function fullName(
 	first: string | null | undefined,
@@ -524,7 +518,9 @@ export function SalesOrderDetailView({
 												"—"
 											)}
 										</td>
-										<td className={`px-4 py-2.5 text-right align-top font-medium tabular-nums ${item.is_voided ? "line-through" : ""}`}>
+										<td
+											className={`px-4 py-2.5 text-right align-top font-medium tabular-nums ${item.is_voided ? "line-through" : ""}`}
+										>
 											{money(item.total ?? 0)}
 										</td>
 									</tr>
@@ -609,28 +605,35 @@ export function SalesOrderDetailView({
 											<Badge variant="outline" className="text-xs">
 												{paymentMethodName(p)}
 											</Badge>
-											{canCreateSales && !isCancelled && !isWallet && !isWriteOff && (
-												<button
-													type="button"
-													onClick={() => setChangeMethodPayment(p)}
-													className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline"
-													title="Change payment method"
-												>
-													<Pencil className="size-3" />
-													Change
-												</button>
-											)}
-											{canCreateSales && isLast && !isCancelled && !isWallet && !isWriteOff && (
-												<button
-													type="button"
-													onClick={() => setRevertPayment(p)}
-													className="inline-flex items-center gap-1 text-[11px] text-red-600 hover:underline"
-													title="Revert last payment"
-												>
-													<Undo2 className="size-3" />
-													Revert last invoice
-												</button>
-											)}
+											{canCreateSales &&
+												!isCancelled &&
+												!isWallet &&
+												!isWriteOff && (
+													<button
+														type="button"
+														onClick={() => setChangeMethodPayment(p)}
+														className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline"
+														title="Change payment method"
+													>
+														<Pencil className="size-3" />
+														Change
+													</button>
+												)}
+											{canCreateSales &&
+												isLast &&
+												!isCancelled &&
+												!isWallet &&
+												!isWriteOff && (
+													<button
+														type="button"
+														onClick={() => setRevertPayment(p)}
+														className="inline-flex items-center gap-1 text-[11px] text-red-600 hover:underline"
+														title="Revert last payment"
+													>
+														<Undo2 className="size-3" />
+														Revert last invoice
+													</button>
+												)}
 										</div>
 										<p className="text-muted-foreground text-xs">
 											{formatDateTime(p.paid_at)}
@@ -662,7 +665,9 @@ export function SalesOrderDetailView({
 			{order.appointment_id && (
 				<div className="text-sm">
 					<Link
-						href={path(`/appointments/${order.appointment?.booking_ref ?? order.appointment_id}`)}
+						href={path(
+							`/appointments/${order.appointment?.booking_ref ?? order.appointment_id}`,
+						)}
 						className="text-blue-600 hover:underline"
 					>
 						View linked appointment

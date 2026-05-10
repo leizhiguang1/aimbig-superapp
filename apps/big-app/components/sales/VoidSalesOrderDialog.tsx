@@ -28,6 +28,7 @@ import { voidSalesOrderAction } from "@/lib/actions/sales";
 import type { BrandConfigItem } from "@/lib/services/brand-config";
 import type { SaleItem } from "@/lib/services/sales";
 import type { Tables } from "@/lib/supabase/types";
+import { money } from "@/lib/utils/money";
 
 type PaymentMethod = Tables<"payment_methods">;
 
@@ -50,13 +51,6 @@ type Props = {
 };
 
 type Step = 1 | 2 | 3;
-
-function money(n: number): string {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 export function VoidSalesOrderDialog({
 	open,
@@ -121,7 +115,10 @@ export function VoidSalesOrderDialog({
 		() =>
 			items
 				.filter((i) => selectedItemIds.has(i.id))
-				.reduce((sum, i) => sum + Number(i.total ?? 0) + Number(i.tax_amount ?? 0), 0),
+				.reduce(
+					(sum, i) => sum + Number(i.total ?? 0) + Number(i.tax_amount ?? 0),
+					0,
+				),
 		[items, selectedItemIds],
 	);
 
@@ -134,14 +131,16 @@ export function VoidSalesOrderDialog({
 		() =>
 			Math.max(
 				0,
-				amountPaid - writeOffPaid - (orderTotal - selectedTotal) - effectiveAdminFee,
+				amountPaid -
+					writeOffPaid -
+					(orderTotal - selectedTotal) -
+					effectiveAdminFee,
 			),
 		[amountPaid, writeOffPaid, orderTotal, selectedTotal, effectiveAdminFee],
 	);
 
 	const isFullVoid =
-		nonVoidedItems.length > 0 &&
-		selectedItemIds.size === nonVoidedItems.length;
+		nonVoidedItems.length > 0 && selectedItemIds.size === nonVoidedItems.length;
 
 	const canAdvanceFromItems = selectedItemIds.size > 0;
 	const canSubmit =
@@ -377,7 +376,9 @@ function Step1Items({
 					<div className="text-right">Total (MYR)</div>
 					<div className="flex justify-end">
 						<Checkbox
-							checked={allSelected ? true : someSelected ? "indeterminate" : false}
+							checked={
+								allSelected ? true : someSelected ? "indeterminate" : false
+							}
 							onCheckedChange={(v) => onToggleAll(v === true)}
 							aria-label="Select all items"
 						/>
@@ -497,8 +498,8 @@ function Step2Confirm({
 					<li>
 						{isFullVoid ? (
 							<>
-								<span className="font-medium">{soNumber}</span> will be tagged as{" "}
-								<span className="font-medium">Cancelled</span>.
+								<span className="font-medium">{soNumber}</span> will be tagged
+								as <span className="font-medium">Cancelled</span>.
 							</>
 						) : (
 							<>
@@ -635,8 +636,8 @@ function Step3Authorize({
 				<div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800 text-sm">
 					<Info className="mt-0.5 size-4 shrink-0" />
 					<span>
-						No cash return for this void. The customer's outstanding balance will
-						be reduced.
+						No cash return for this void. The customer's outstanding balance
+						will be reduced.
 					</span>
 				</div>
 			)}

@@ -12,6 +12,7 @@ import type {
 	SaleItem,
 } from "@/lib/services/sales";
 import { cn } from "@/lib/utils";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	salesOrderId: string;
@@ -23,13 +24,6 @@ type Props = {
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
-
-function money(n: number): string {
-	return n.toLocaleString("en-MY", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
-}
 
 function keyFor(paymentId: string, saleItemId: string) {
 	return `${paymentId}::${saleItemId}`;

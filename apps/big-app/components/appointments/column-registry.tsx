@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { usePermission } from "@/components/auth/PermissionsProvider";
 import { useAppointmentTag } from "@/components/brand-config/AppointmentConfigProvider";
-import type { ColumnKey } from "@/lib/appointments/columns";
 import {
-	APPOINTMENT_STATUS_CONFIG,
-	type AppointmentStatus,
-	PAYMENT_STATUS_CONFIG,
-	type PaymentStatus,
+	AppointmentStatusBadge,
+	PaymentStatusBadge,
+} from "@/components/ui/status-badge";
+import type { ColumnKey } from "@/lib/appointments/columns";
+import type {
+	AppointmentStatus,
+	PaymentStatus,
 } from "@/lib/constants/appointment-status";
 import type { AppointmentWithRelations } from "@/lib/services/appointments";
 import { cn } from "@/lib/utils";
@@ -178,7 +180,9 @@ export const COLUMN_RENDERERS: Record<ColumnKey, ColumnRenderer> = {
 	appt_status: (a) => {
 		if (a.is_time_block) return <Empty />;
 		return (
-			<ApptStatusBadge status={(a.status as AppointmentStatus) ?? "pending"} />
+			<AppointmentStatusBadge
+				status={(a.status as AppointmentStatus) ?? "pending"}
+			/>
 		);
 	},
 
@@ -305,36 +309,13 @@ export const COLUMN_RENDERERS: Record<ColumnKey, ColumnRenderer> = {
 
 	payment_status: (a) => {
 		if (a.is_time_block) return <Empty />;
-		const pc =
-			PAYMENT_STATUS_CONFIG[(a.payment_status as PaymentStatus) ?? "unpaid"];
 		return (
-			<span
-				className={cn(
-					"inline-flex rounded px-2 py-0.5 font-semibold text-[10px] uppercase",
-					pc.badge,
-				)}
-			>
-				{pc.label}
-			</span>
+			<PaymentStatusBadge
+				status={(a.payment_status as PaymentStatus) ?? "unpaid"}
+			/>
 		);
 	},
 };
-
-function ApptStatusBadge({ status }: { status: AppointmentStatus }) {
-	const sc =
-		APPOINTMENT_STATUS_CONFIG[status] ?? APPOINTMENT_STATUS_CONFIG.pending;
-	return (
-		<span
-			className={cn(
-				"inline-flex items-center gap-1 rounded px-2 py-0.5 font-semibold text-[10px]",
-				sc.badge,
-			)}
-		>
-			<sc.Icon className="size-3" />
-			{sc.label}
-		</span>
-	);
-}
 
 function ApptTagChip({ code }: { code: string }) {
 	const tc = useAppointmentTag(code);

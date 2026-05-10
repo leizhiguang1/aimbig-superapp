@@ -56,7 +56,7 @@ export function OutletComparisonBarChart({
 			<CardContent className="flex flex-col gap-3">
 				<ChartContainer
 					config={CONFIG}
-					className="aspect-auto h-[220px] w-full"
+					className="aspect-[4/3] w-full max-h-[260px]"
 				>
 					<BarChart
 						data={data}

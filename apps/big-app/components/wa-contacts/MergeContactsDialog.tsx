@@ -4,13 +4,7 @@ import { ArrowLeftRight, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CrmContact } from "@aimbig/wa-client";
@@ -103,138 +97,135 @@ export function MergeContactsDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-			<DialogContent
-				preventOutsideClose
-				className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl"
-			>
-				<DialogHeader className="border-b px-5 py-4">
-					<DialogTitle className="flex items-center gap-2">
-						<ArrowLeftRight className="size-4" />
-						{step === "pick" ? "Merge contact" : "Merge preview"}
-					</DialogTitle>
-				</DialogHeader>
-
-				<div className="flex flex-col gap-3 overflow-y-auto px-5 py-4">
-					{step === "pick" && primary && (
-						<>
-							<p className="text-muted-foreground text-sm">
-								Keep{" "}
-								<strong>{primary.name || `+${primary.phone}`}</strong> as the
-								primary. Pick the contact to merge in — its tags and notes
-								will be combined, then it will be removed.
-							</p>
-							<div>
-								<Label htmlFor="merge-search">Search</Label>
-								<Input
-									id="merge-search"
-									autoFocus
-									value={search}
-									onChange={(e) => setSearch(e.target.value)}
-									placeholder="Search by name or phone…"
-									className="mt-1.5"
-								/>
-							</div>
-							<div className="flex max-h-72 flex-col divide-y overflow-y-auto rounded-md border">
-								{candidates.length === 0 && (
-									<p className="px-3 py-4 text-center text-muted-foreground text-sm">
-										No candidates.
-									</p>
-								)}
-								{candidates.map((c) => (
-									<button
-										type="button"
-										key={c.jid}
-										onClick={() => {
-											setSecondaryJid(c.jid);
-											setStep("preview");
-										}}
-										className="flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/40"
-									>
-										<Avatar size="sm">
-											<AvatarFallback className="font-semibold">
-												{(c.name || c.phone || "?")[0]?.toUpperCase()}
-											</AvatarFallback>
-										</Avatar>
-										<div className="min-w-0 flex-1">
-											<div className="truncate font-medium text-sm">
-												{c.name || `+${c.phone}`}
-											</div>
-											<div className="truncate text-muted-foreground text-xs">
-												{c.phone ? `+${c.phone}` : "no phone"}
-												{(c.tags?.length ?? 0) > 0 &&
-													` · ${c.tags?.join(", ")}`}
-											</div>
-										</div>
-										<ChevronRight className="size-4 text-muted-foreground" />
-									</button>
-								))}
-							</div>
-						</>
-					)}
-
-					{step === "preview" && preview && (
-						<>
-							<p className="text-muted-foreground text-sm">
-								Review what the merged contact will look like.
-							</p>
-							<div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr]">
-								<MergeColumn
-									label="Keep (Primary)"
-									tone="primary"
-									contact={preview.primary}
-								/>
-								<div className="flex items-center justify-center text-muted-foreground">
-									<ArrowLeftRight className="size-4" />
-								</div>
-								<MergeColumn
-									label="Merge in (will be removed)"
-									tone="secondary"
-									contact={preview.secondary}
-								/>
-							</div>
-
-							<div className="rounded-md border bg-muted/30 px-3 py-3">
-								<div className="font-semibold text-sm">Result after merge</div>
-								<div className="mt-2 text-sm">
-									<span className="mr-2 font-medium">Tags:</span>
-									{preview.mergedTags.length === 0 ? (
-										<span className="text-muted-foreground">none</span>
-									) : (
-										<span className="inline-flex flex-wrap gap-1.5 align-middle">
-											{preview.mergedTags.map((t) => (
-												<TagChip key={t} tag={t} />
-											))}
-										</span>
-									)}
-								</div>
-								<div className="mt-2 flex items-start gap-2 text-sm">
-									<span className="font-medium">Notes:</span>
-									<span className="flex-1 whitespace-pre-wrap text-muted-foreground">
-										{preview.mergedNotes || "none"}
-									</span>
-								</div>
-							</div>
-						</>
-					)}
-				</div>
-
-				<DialogFooter className="border-t bg-muted/20 px-5 py-3">
-					{step === "preview" ? (
-						<>
-							<Button variant="ghost" onClick={() => setStep("pick")}>
-								← Back
-							</Button>
-							<Button onClick={handleConfirm}>Confirm Merge</Button>
-						</>
-					) : (
-						<Button variant="ghost" onClick={handleClose}>
-							Cancel
+		<FormDialog
+			open={open}
+			onOpenChange={(o) => !o && handleClose()}
+			preventOutsideClose
+			size="lg"
+			title={
+				<span className="flex items-center gap-2">
+					<ArrowLeftRight className="size-4" />
+					{step === "pick" ? "Merge contact" : "Merge preview"}
+				</span>
+			}
+			footerClassName="bg-muted/20"
+			footer={
+				step === "preview" ? (
+					<>
+						<Button variant="ghost" onClick={() => setStep("pick")}>
+							← Back
 						</Button>
-					)}
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+						<Button onClick={handleConfirm}>Confirm Merge</Button>
+					</>
+				) : (
+					<Button variant="ghost" onClick={handleClose}>
+						Cancel
+					</Button>
+				)
+			}
+		>
+			<div className="flex flex-col gap-3">
+				{step === "pick" && primary && (
+					<>
+						<p className="text-muted-foreground text-sm">
+							Keep <strong>{primary.name || `+${primary.phone}`}</strong> as the
+							primary. Pick the contact to merge in — its tags and notes will be
+							combined, then it will be removed.
+						</p>
+						<div>
+							<Label htmlFor="merge-search">Search</Label>
+							<Input
+								id="merge-search"
+								autoFocus
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+								placeholder="Search by name or phone…"
+								className="mt-1.5"
+							/>
+						</div>
+						<div className="flex max-h-72 flex-col divide-y overflow-y-auto rounded-md border">
+							{candidates.length === 0 && (
+								<p className="px-3 py-4 text-center text-muted-foreground text-sm">
+									No candidates.
+								</p>
+							)}
+							{candidates.map((c) => (
+								<button
+									type="button"
+									key={c.jid}
+									onClick={() => {
+										setSecondaryJid(c.jid);
+										setStep("preview");
+									}}
+									className="flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/40"
+								>
+									<Avatar size="sm">
+										<AvatarFallback className="font-semibold">
+											{(c.name || c.phone || "?")[0]?.toUpperCase()}
+										</AvatarFallback>
+									</Avatar>
+									<div className="min-w-0 flex-1">
+										<div className="truncate font-medium text-sm">
+											{c.name || `+${c.phone}`}
+										</div>
+										<div className="truncate text-muted-foreground text-xs">
+											{c.phone ? `+${c.phone}` : "no phone"}
+											{(c.tags?.length ?? 0) > 0 && ` · ${c.tags?.join(", ")}`}
+										</div>
+									</div>
+									<ChevronRight className="size-4 text-muted-foreground" />
+								</button>
+							))}
+						</div>
+					</>
+				)}
+
+				{step === "preview" && preview && (
+					<>
+						<p className="text-muted-foreground text-sm">
+							Review what the merged contact will look like.
+						</p>
+						<div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr]">
+							<MergeColumn
+								label="Keep (Primary)"
+								tone="primary"
+								contact={preview.primary}
+							/>
+							<div className="flex items-center justify-center text-muted-foreground">
+								<ArrowLeftRight className="size-4" />
+							</div>
+							<MergeColumn
+								label="Merge in (will be removed)"
+								tone="secondary"
+								contact={preview.secondary}
+							/>
+						</div>
+
+						<div className="rounded-md border bg-muted/30 px-3 py-3">
+							<div className="font-semibold text-sm">Result after merge</div>
+							<div className="mt-2 text-sm">
+								<span className="mr-2 font-medium">Tags:</span>
+								{preview.mergedTags.length === 0 ? (
+									<span className="text-muted-foreground">none</span>
+								) : (
+									<span className="inline-flex flex-wrap gap-1.5 align-middle">
+										{preview.mergedTags.map((t) => (
+											<TagChip key={t} tag={t} />
+										))}
+									</span>
+								)}
+							</div>
+							<div className="mt-2 flex items-start gap-2 text-sm">
+								<span className="font-medium">Notes:</span>
+								<span className="flex-1 whitespace-pre-wrap text-muted-foreground">
+									{preview.mergedNotes || "none"}
+								</span>
+							</div>
+						</div>
+					</>
+				)}
+			</div>
+		</FormDialog>
 	);
 }
 
@@ -278,9 +269,7 @@ function MergeColumn({
 			</div>
 			<div className="mt-1 text-muted-foreground text-xs uppercase">Notes</div>
 			<p className="whitespace-pre-wrap text-xs">
-				{contact.notes || (
-					<span className="text-muted-foreground">none</span>
-				)}
+				{contact.notes || <span className="text-muted-foreground">none</span>}
 			</p>
 		</div>
 	);

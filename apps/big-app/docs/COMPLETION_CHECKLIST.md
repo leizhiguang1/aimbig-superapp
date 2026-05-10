@@ -10,6 +10,46 @@ punch list, not a spec.
 
 ---
 
+## Recently shipped (2026-05-07 → 2026-05-11)
+
+These didn't have their own checklist item but landed in this window and
+are now load-bearing for downstream work. Captured here so the checklist
+reflects reality before the next refactor pass.
+
+- **Outlet-scoped routing** — every app surface moved under
+  `/o/[outlet]/...`. Server actions and services accept `outletId` via
+  ctx. (commits `9fec4b4`, `1252ff0`)
+- **RBAC / granular permissions** — `lib/auth/permissions.ts` +
+  `PermissionsProvider`; `hasPermission` checks wired through actions,
+  sensitive customer tabs, and sales/appointment surfaces. (commits
+  `a789f05`, `57d7be3`, `36e0ea0`)
+- **Action error-handling sweep** — all 29 `lib/actions/*.ts` files now
+  use `toErr` + try/catch via `lib/actions/_helpers.ts`. Resolves the
+  tech-debt item flagged 2026-05-05. (commit `73ba9e0`)
+- **Dashboard infrastructure** — `components/dashboard/` with KpiTile,
+  ChartCard, 4 chart components (OutletComparison / SalesMix stacked +
+  donut / TimeSeries / WoW), BirthdaysCard, LowStockCard,
+  DashboardRemindersCard, and `lib/services/dashboard.ts` service layer.
+  (commit `9711bb6`) — see Phase C1 below; queries + tile copy still to
+  finalize.
+- **Chats / Inbox UI** — `components/chats/` ChatWindow, ChatList,
+  MessageInput, ContactInfoSheet, QRScreen, push notifications, multi-WA
+  hook. `components/inbox/` thread + composer + channel badge. Pure
+  Socket.IO; no mirror tables. (commits `fdec40f`, `da38211`)
+- **Automations builder scaffold** — `components/automations/` with
+  WorkflowBuilder, FolderTabs, TemplatesGallery, NewWorkflowDialog.
+  Engine location still undecided (see D3).
+- **Letter templates + e-documents + manual transactions** — new modules,
+  no checklist line yet. (commit `da38211`)
+- **Brand-scoped remark categories + stock adjustment dialog** — remark
+  vocabulary now dynamic per brand. (commit `699600e`)
+- **Server-side payment allocation validation** — moved from client.
+  (commit `c7dc87d`)
+- **Server-action error helper** — `lib/actions/_helpers.ts` provides
+  `toErr`; pattern adopted across all actions. (commit `73ba9e0`)
+
+---
+
 ## Phase A — Lock down the money path
 
 The shape of `sales_orders` / `sale_items` / `payments` / `appointments`
@@ -77,12 +117,16 @@ governs every downstream read. Stabilize these first.
 ## Phase C — Surface & peripherals
 
 ### C1. Reports / Dashboard
+- [~] **Infra landed (2026-05-11):** `components/dashboard/` (KpiTile,
+  ChartCard, OutletComparison/SalesMix/TimeSeries/WoW charts,
+  BirthdaysCard, LowStockCard, DashboardRemindersCard) +
+  `lib/services/dashboard.ts`. Remaining is data wiring and copy:
 - [ ] Daily takings
 - [ ] Appointments summary
 - [ ] Sales by service / employee / outlet
 - [ ] Outstanding balances
 - [ ] Commission payable
-- [ ] Dashboard KPI tiles (real data, not placeholders)
+- [ ] Dashboard KPI tiles fed by real queries (currently scaffolding)
 
 ### C2. Webstore
 - [ ] Public booking flow (services → slot → customer → confirm)
@@ -108,6 +152,10 @@ Lives in a separate repo; thin Socket.IO integration. Do last so core
 churn doesn't invalidate it.
 
 ### D1. Conversations — `docs/modules/11-conversations.md`
+- [x] **Chats UI shipped (2026-05-09):** `components/chats/`
+  (ChatWindow, ChatList, MessageInput, ContactInfoSheet, QRScreen,
+  multi-WA hook, push notifications). Pure Socket.IO; no big-app DB
+  writes. `components/inbox/` thread + composer also shipped.
 - [ ] Chats polish (labels from wa-crm, pinned, archived)
 - [ ] Chat → customer link (match by phone)
 - [ ] Decide mirror-table plan (currently deferred per CLAUDE.md)
@@ -117,6 +165,9 @@ churn doesn't invalidate it.
 - [ ] Keep chat-originated CRM in wa-crm
 
 ### D3. Automations — `docs/modules/14-automations.md`
+- [~] **Builder scaffold shipped:** `components/automations/`
+  (WorkflowBuilder, FolderTabs, TemplatesGallery, NewWorkflowDialog,
+  AutomationExecutionLog). UI exists; engine wiring still open.
 - [ ] Decide engine location (wa-crm vs big-app)
 - [ ] Appointment reminder send (T-24h, T-2h)
 - [ ] Post-visit follow-up
@@ -128,14 +179,96 @@ churn doesn't invalidate it.
 ## Phase E — Infra
 
 ### E1. Auth & RLS tightening
+- [x] **RBAC/permissions enforcement (2026-05-08):** granular
+  `hasPermission(...)` checks wired through actions and sensitive
+  customer/sales/appointment views via `PermissionsProvider` +
+  `lib/auth/permissions.ts`. Foundation for per-role RLS later.
 - [ ] Drop temp `anon/authenticated all` policies table-by-table
 - [ ] Per-role policies (admin / manager / staff / customer)
 - [ ] Auth email change polish (see memory `project_auth_email_change`)
 
 ### E2. Multi-tenant
+- [x] **Outlet-scoped routing (2026-05-07):** every app surface moved to
+  `/o/[outlet]/...`; ctx carries `outletId`.
 - [ ] `brand_id` filtering on reads (currently stamped on write only)
 - [ ] Brand switcher in UI
 - [ ] Per-brand config / settings isolation
+
+---
+
+## Phase R — Refactor / code-health (added 2026-05-11)
+
+Pre-emptive cleanup before pushing into A2/B1/C1. Mostly mechanical, no
+behavior changes. Rule from CLAUDE.md: components > 300 lines should split.
+Today: 13 files > 1000 lines, 4 services > 800 lines. Target the worst
+ones first.
+
+### R1. Split mega-files (>1000 lines)
+Order is "ROI first" — large extractions that unblock downstream reuse.
+- [ ] `components/appointments/detail/HistoryPanel.tsx` (1705) — extract
+  `BillingRow`, `NoteRow`, `FollowUpRow` rows; move date/currency
+  formatters to `lib/utils/`.
+- [ ] `components/sales/NewSaleDialog.tsx` (1349) — extract
+  `WalkInCartSection`, `PaymentFormSection`, `CustomerPicker`.
+- [ ] `components/customers/CustomerDetailView.tsx` (1287) — inlined
+  tabs already have sibling components elsewhere; finish the extraction.
+- [ ] `components/sales/SalesOrderDetailDialog.tsx` (1184) — separate
+  header / lines / payments / actions blocks.
+- [ ] `components/customers/CustomerForm.tsx` (1183) — extract
+  `MedicalHistorySection`, `AddressSection`, `ContactSection`.
+- [ ] `components/appointments/AppointmentDialog.tsx` (1154) — same
+  treatment as NewSaleDialog (sections + helpers).
+- [ ] `components/inventory/InventoryOptionsPanel.tsx` (1135) — split
+  per-tab.
+- [ ] `lib/services/sales.ts` (1109) — extract `_helpers/sales-assert.ts`
+  and `_helpers/sales-queries.ts` (select strings, join templates).
+- [ ] `components/employees/EmployeeForm.tsx` (1100) — reuse the
+  shared form-sections from R3.
+- [ ] `components/appointments/detail/CollectPaymentDialog.tsx` (1074).
+- [ ] `components/inventory/ItemForm.tsx` (1067).
+- [ ] `components/services/ServiceForm.tsx` (1055).
+- [ ] `components/chats/ChatWindow.tsx` (1009).
+
+### R2. Shared primitives (currently reinvented)
+- [ ] `components/ui/form-dialog.tsx` — the
+  `DialogContent + scrollable body + DialogFooter` skeleton appears in
+  ~25 places. One wrapper, props `title` / `footer` / children.
+- [ ] `components/ui/status-badge.tsx` — replaces ~15 ad-hoc
+  badge-with-color blocks for `payment_status`, `appointment_status`,
+  `sale_status`.
+- [ ] `components/shared/line-item-row.tsx` — appointment, sale, and
+  inventory line rows share structure; one generic row.
+
+### R3. Shared form sections
+- [ ] `components/shared/form-sections/MedicalHistorySection.tsx`
+- [ ] `components/shared/form-sections/AddressSection.tsx`
+- [ ] `components/shared/form-sections/ContactSection.tsx`
+Used today in `CustomerForm` and `EmployeeForm` independently; should
+become single source of truth.
+
+### R4. Service-layer query helpers
+- [ ] Audit all 21 services in `lib/services/` for repeated `select(...)`
+  string constants and brand-id filter patterns.
+- [ ] Extract `lib/services/_helpers/crud-query-builder.ts` (extend
+  `lib/supabase/query.ts`) with `withBrandFilter`, common error mapping.
+- [ ] Estimated savings: ~30 lines per service, ~600 lines workspace-wide.
+
+### R5. Server-action 10-line-rule violations
+Inline permission/auth logic in some actions makes them grow past the
+budget. Move into service signatures (services already have ctx with
+permissions).
+- [ ] `lib/actions/sales.ts` — `collectAppointmentPaymentAction`,
+  `collectWalkInSaleAction`, `getNewSaleDataAction` each >20 lines.
+- [ ] `lib/actions/appointments.ts` — review for the same pattern.
+- [ ] `lib/actions/inventory.ts` — review for the same pattern.
+
+### R6. Documentation hygiene
+- [ ] Add a `docs/modules/15-letter-templates.md`,
+  `docs/modules/16-e-documents.md`,
+  `docs/modules/17-manual-transactions.md` — three modules shipped
+  without their deep-dive doc.
+- [ ] Refresh `docs/modules/12-config.md` configurable-surface register
+  for the brand-scoped remark categories that landed in `699600e`.
 
 ---
 

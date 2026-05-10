@@ -6,6 +6,7 @@ import {
 	type ReceiptDetail,
 } from "@/lib/services/receipts";
 import { publicMediaUrl } from "@/lib/services/storage";
+import { money } from "@/lib/utils/money";
 
 type Props = {
 	receipt: ReceiptDetail;
@@ -14,16 +15,6 @@ type Props = {
 	remarksOverride?: string;
 	bare?: boolean;
 };
-
-function money(n: number | string | null | undefined): string {
-	const v = typeof n === "string" ? Number(n) : (n ?? 0);
-	return Number.isFinite(v)
-		? v.toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
-			})
-		: "0.00";
-}
 
 function formatDate(iso: string): string {
 	const d = new Date(iso);
@@ -268,7 +259,9 @@ function DtLabel({
 	className?: string;
 }) {
 	return (
-		<dt className={`font-semibold text-zinc-800${className ? ` ${className}` : ""}`}>
+		<dt
+			className={`font-semibold text-zinc-800${className ? ` ${className}` : ""}`}
+		>
 			{children}
 		</dt>
 	);
