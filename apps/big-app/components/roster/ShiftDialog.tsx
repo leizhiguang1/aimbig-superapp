@@ -7,6 +7,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Field } from "@/components/ui/field";
 import {
 	Dialog,
 	DialogContent,
@@ -469,30 +470,5 @@ export function ShiftDialog({
 				onConfirm={onDelete}
 			/>
 		</>
-	);
-}
-
-function Field({
-	label,
-	htmlFor,
-	error,
-	children,
-}: {
-	label: string;
-	htmlFor?: string;
-	error?: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex flex-col gap-1.5">
-			<label
-				htmlFor={htmlFor}
-				className="font-medium text-muted-foreground text-xs uppercase tracking-wide"
-			>
-				{label}
-			</label>
-			{children}
-			{error && <p className="text-destructive text-xs">{error}</p>}
-		</div>
 	);
 }

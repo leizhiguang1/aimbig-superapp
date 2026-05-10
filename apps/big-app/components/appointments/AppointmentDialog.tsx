@@ -1,7 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, CalendarDays, Lock, Trash2, UserPlus } from "lucide-react";
+import {
+	AlertTriangle,
+	CalendarDays,
+	Lock,
+	Trash2,
+	UserPlus,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { usePermission } from "@/components/auth/PermissionsProvider";
@@ -9,6 +15,7 @@ import { useAppointmentTagList } from "@/components/brand-config/AppointmentConf
 import { CustomerFormDialog } from "@/components/customers/CustomerForm";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
 import { CancelAppointmentDialog } from "@/components/appointments/CancelAppointmentDialog";
 import {
 	Dialog,
@@ -374,7 +381,6 @@ export function AppointmentDialog({
 		},
 	);
 
-
 	const selectTag = (key: string) => {
 		const next = tags[0] === key ? [] : [key];
 		form.setValue("tags", next, { shouldDirty: true });
@@ -645,7 +651,10 @@ export function AppointmentDialog({
 								const name = `${emp.first_name} ${emp.last_name}`.trim();
 								return (
 									<div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 text-xs">
-										<AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+										<AlertTriangle
+											className="mt-0.5 size-4 shrink-0"
+											aria-hidden
+										/>
 										<span>
 											<span className="font-semibold">{name}</span> is not
 											rostered for the time selected, but you can still book
@@ -1063,29 +1072,6 @@ function CustomerSection({
 					</div>
 				</Field>
 			)}
-		</div>
-	);
-}
-
-function Field({
-	label,
-	required,
-	error,
-	children,
-}: {
-	label: string;
-	required?: boolean;
-	error?: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex flex-col gap-1.5">
-			<span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-				{label}
-				{required && <span className="ml-0.5 text-destructive">*</span>}
-			</span>
-			{children}
-			{error && <p className="text-destructive text-xs">{error}</p>}
 		</div>
 	);
 }

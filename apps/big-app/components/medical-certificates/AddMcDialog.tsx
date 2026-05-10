@@ -11,6 +11,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
 	createMedicalCertificateAction,
@@ -183,10 +184,10 @@ export function AddMcDialog({
 							reason: reason.trim() || undefined,
 						});
 						if ("error" in result) {
-						setError(result.error);
-						return;
-					}
-					onCreated(result);
+							setError(result.error);
+							return;
+						}
+						onCreated(result);
 					} else {
 						const result = await createMedicalCertificateAction({
 							appointment_id: appointmentId,
@@ -200,10 +201,10 @@ export function AddMcDialog({
 							reason: reason.trim() || undefined,
 						});
 						if ("error" in result) {
-						setError(result.error);
-						return;
-					}
-					onCreated(result);
+							setError(result.error);
+							return;
+						}
+						onCreated(result);
 					}
 					onClose();
 				} catch (err) {
@@ -427,22 +428,5 @@ function SlipTypeOption({
 			</span>
 			{label}
 		</button>
-	);
-}
-
-function Field({
-	label,
-	children,
-}: {
-	label: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex flex-col gap-1.5">
-			<span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-				{label}
-			</span>
-			{children}
-		</div>
 	);
 }

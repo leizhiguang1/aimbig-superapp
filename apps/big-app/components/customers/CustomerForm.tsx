@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
+import { Field } from "@/components/ui/field";
 import {
 	Dialog,
 	DialogContent,
@@ -51,6 +52,7 @@ import type { Customer, CustomerWithRelations } from "@/lib/services/customers";
 import type { EmployeeWithRelations } from "@/lib/services/employees";
 import type { OutletWithRoomCount } from "@/lib/services/outlets";
 import { cn } from "@/lib/utils";
+import { parseMalaysianIc } from "@/lib/utils/malaysian-ic";
 
 type LeadContext = {
 	appointmentId: string;
@@ -148,38 +150,6 @@ function fromCustomer(c: CustomerWithRelations | null): CustomerInput {
 	};
 }
 
-// Pivot: 2-digit years <= current YY → 20YY, else 19YY.
-// Matches Malaysian convention well enough for living customers.
-type IcParseResult =
-	| { ok: true; digits: string; dob: string; gender: Gender }
-	| { ok: false; digits: string; reason: "empty" | "length" | "date" };
-
-function parseMalaysianIc(raw: string): IcParseResult {
-	const digits = raw.replace(/\D/g, "");
-	if (digits.length === 0) return { ok: false, digits, reason: "empty" };
-	if (digits.length !== 12) return { ok: false, digits, reason: "length" };
-	const yy = Number.parseInt(digits.slice(0, 2), 10);
-	const mm = Number.parseInt(digits.slice(2, 4), 10);
-	const dd = Number.parseInt(digits.slice(4, 6), 10);
-	if (mm < 1 || mm > 12 || dd < 1 || dd > 31) {
-		return { ok: false, digits, reason: "date" };
-	}
-	const currentYY = new Date().getFullYear() % 100;
-	const fullYear = yy <= currentYY ? 2000 + yy : 1900 + yy;
-	const date = new Date(Date.UTC(fullYear, mm - 1, dd));
-	if (
-		date.getUTCFullYear() !== fullYear ||
-		date.getUTCMonth() !== mm - 1 ||
-		date.getUTCDate() !== dd
-	) {
-		return { ok: false, digits, reason: "date" };
-	}
-	const dob = `${fullYear.toString().padStart(4, "0")}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-	const lastDigit = Number.parseInt(digits.slice(11, 12), 10);
-	const gender: Gender = lastDigit % 2 === 0 ? "female" : "male";
-	return { ok: true, digits, dob, gender };
-}
-
 type SectionKey = "personal" | "address" | "medical" | "notifications";
 
 const SECTIONS: { key: SectionKey; label: string }[] = [
@@ -188,36 +158,6 @@ const SECTIONS: { key: SectionKey; label: string }[] = [
 	{ key: "medical", label: "Medical Information" },
 	{ key: "notifications", label: "Notification & Marketing" },
 ];
-
-function Field({
-	label,
-	htmlFor,
-	error,
-	required,
-	full,
-	children,
-}: {
-	label: string;
-	htmlFor?: string;
-	error?: string;
-	required?: boolean;
-	full?: boolean;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className={cn("flex flex-col gap-1.5", full && "sm:col-span-2")}>
-			<label
-				htmlFor={htmlFor}
-				className="font-medium text-muted-foreground text-xs uppercase tracking-wide"
-			>
-				{label}
-				{required && <span className="ml-0.5 text-destructive">*</span>}
-			</label>
-			{children}
-			{error && <p className="text-destructive text-xs">{error}</p>}
-		</div>
-	);
-}
 
 function MedicalConditionsPicker({
 	value,
@@ -340,7 +280,11 @@ function CustomerTagsPicker({
 		if (e.key === "Enter" || e.key === ",") {
 			e.preventDefault();
 			addRaw(draft);
-		} else if (e.key === "Backspace" && draft.length === 0 && value.length > 0) {
+		} else if (
+			e.key === "Backspace" &&
+			draft.length === 0 &&
+			value.length > 0
+		) {
 			e.preventDefault();
 			onChange(value.slice(0, -1));
 		}
@@ -507,7 +451,8 @@ export function CustomerFormDialog({
 		form.setValue("gender", parsed.gender, { shouldValidate: true });
 		const targetCode = parsed.gender === "male" ? "MR" : "MS";
 		const match = salutationItems.find((s) => s.code === targetCode);
-		if (match) form.setValue("salutation", match.label, { shouldValidate: true });
+		if (match)
+			form.setValue("salutation", match.label, { shouldValidate: true });
 	}, [idType, idNumber, form, salutationItems]);
 
 	// Brand-managed customer tag vocabulary. Loaded once per dialog open.

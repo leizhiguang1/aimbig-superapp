@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
+import { Field } from "@/components/ui/field";
 import {
 	Dialog,
 	DialogContent,
@@ -39,6 +40,7 @@ import type { OutletWithRoomCount } from "@/lib/services/outlets";
 import type { Position } from "@/lib/services/positions";
 import type { Role } from "@/lib/services/roles";
 import { cn } from "@/lib/utils";
+import { parseMalaysianIc } from "@/lib/utils/malaysian-ic";
 
 type Props = {
 	open: boolean;
@@ -141,36 +143,6 @@ function fromEmployee(e: EmployeeWithRelations | null): EmployeeFormInput {
 	};
 }
 
-type IcParseResult =
-	| { ok: true; dob: string; gender: Gender }
-	| { ok: false; reason: "empty" | "length" | "date" };
-
-function parseMalaysianIc(raw: string): IcParseResult {
-	const digits = raw.replace(/\D/g, "");
-	if (digits.length === 0) return { ok: false, reason: "empty" };
-	if (digits.length !== 12) return { ok: false, reason: "length" };
-	const yy = Number.parseInt(digits.slice(0, 2), 10);
-	const mm = Number.parseInt(digits.slice(2, 4), 10);
-	const dd = Number.parseInt(digits.slice(4, 6), 10);
-	if (mm < 1 || mm > 12 || dd < 1 || dd > 31) {
-		return { ok: false, reason: "date" };
-	}
-	const currentYY = new Date().getFullYear() % 100;
-	const fullYear = yy <= currentYY ? 2000 + yy : 1900 + yy;
-	const date = new Date(Date.UTC(fullYear, mm - 1, dd));
-	if (
-		date.getUTCFullYear() !== fullYear ||
-		date.getUTCMonth() !== mm - 1 ||
-		date.getUTCDate() !== dd
-	) {
-		return { ok: false, reason: "date" };
-	}
-	const dob = `${fullYear.toString().padStart(4, "0")}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-	const lastDigit = Number.parseInt(digits.slice(11, 12), 10);
-	const gender: Gender = lastDigit % 2 === 0 ? "female" : "male";
-	return { ok: true, dob, gender };
-}
-
 function generatePassword(): string {
 	const digits = Math.floor(10000 + Math.random() * 90000);
 	return `Big${digits}`;
@@ -178,36 +150,6 @@ function generatePassword(): string {
 
 function generatePin(): string {
 	return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-function Field({
-	label,
-	htmlFor,
-	error,
-	required,
-	full,
-	children,
-}: {
-	label: string;
-	htmlFor?: string;
-	error?: string;
-	required?: boolean;
-	full?: boolean;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className={cn("flex flex-col gap-1.5", full && "sm:col-span-2")}>
-			<label
-				htmlFor={htmlFor}
-				className="font-medium text-muted-foreground text-xs uppercase tracking-wide"
-			>
-				{label}
-				{required && <span className="ml-0.5 text-destructive">*</span>}
-			</label>
-			{children}
-			{error && <p className="text-destructive text-xs">{error}</p>}
-		</div>
-	);
 }
 
 function GenderPicker({
@@ -789,14 +731,22 @@ export function EmployeeFormDialog({
 																		className="shrink-0"
 																		onClick={() => {
 																			const pw = generatePassword();
-																			form.setValue("password", pw, { shouldDirty: true, shouldValidate: true });
-																			form.setValue("password_confirm", pw, { shouldDirty: true, shouldValidate: true });
+																			form.setValue("password", pw, {
+																				shouldDirty: true,
+																				shouldValidate: true,
+																			});
+																			form.setValue("password_confirm", pw, {
+																				shouldDirty: true,
+																				shouldValidate: true,
+																			});
 																		}}
 																	>
 																		<RefreshCw className="size-3.5" />
 																	</Button>
 																</TooltipTrigger>
-																<TooltipContent>Generate password</TooltipContent>
+																<TooltipContent>
+																	Generate password
+																</TooltipContent>
 															</Tooltip>
 														</TooltipProvider>
 													)}
@@ -838,7 +788,10 @@ export function EmployeeFormDialog({
 												{...form.register("pin")}
 												onChange={(e) => {
 													const digits = e.target.value.replace(/\D/g, "");
-													form.setValue("pin", digits, { shouldValidate: true, shouldDirty: true });
+													form.setValue("pin", digits, {
+														shouldValidate: true,
+														shouldDirty: true,
+													});
 												}}
 											/>
 											<TooltipProvider>
@@ -850,7 +803,10 @@ export function EmployeeFormDialog({
 															size="icon"
 															className="shrink-0"
 															onClick={() => {
-																form.setValue("pin", generatePin(), { shouldDirty: true, shouldValidate: true });
+																form.setValue("pin", generatePin(), {
+																	shouldDirty: true,
+																	shouldValidate: true,
+																});
 															}}
 														>
 															<RefreshCw className="size-3.5" />
@@ -870,7 +826,8 @@ export function EmployeeFormDialog({
 											<span className="text-destructive text-sm">*</span>
 											{errors.outlet_ids && (
 												<p className="text-destructive text-xs">
-													{(errors.outlet_ids as { message?: string }).message ?? "At least one outlet must be selected"}
+													{(errors.outlet_ids as { message?: string })
+														.message ?? "At least one outlet must be selected"}
 												</p>
 											)}
 										</div>
@@ -879,20 +836,31 @@ export function EmployeeFormDialog({
 												type="button"
 												className="text-muted-foreground text-xs hover:text-foreground"
 												onClick={() => {
-													const allSelected = selectedOutletIds.length === outlets.length;
+													const allSelected =
+														selectedOutletIds.length === outlets.length;
 													if (allSelected) {
-														form.setValue("outlet_ids", [], { shouldDirty: true });
-														form.setValue("primary_outlet_id", null, { shouldDirty: true });
+														form.setValue("outlet_ids", [], {
+															shouldDirty: true,
+														});
+														form.setValue("primary_outlet_id", null, {
+															shouldDirty: true,
+														});
 													} else {
 														const allIds = outlets.map((o) => o.id);
-														form.setValue("outlet_ids", allIds, { shouldDirty: true });
+														form.setValue("outlet_ids", allIds, {
+															shouldDirty: true,
+														});
 														if (!primaryOutletId) {
-															form.setValue("primary_outlet_id", allIds[0], { shouldDirty: true });
+															form.setValue("primary_outlet_id", allIds[0], {
+																shouldDirty: true,
+															});
 														}
 													}
 												}}
 											>
-												{selectedOutletIds.length === outlets.length ? "Deselect all" : "Select all"}
+												{selectedOutletIds.length === outlets.length
+													? "Deselect all"
+													: "Select all"}
 											</button>
 										)}
 									</div>
@@ -922,15 +890,27 @@ export function EmployeeFormDialog({
 															onChange={(e) => {
 																if (e.target.checked) {
 																	const next = [...selectedOutletIds, o.id];
-																	form.setValue("outlet_ids", next, { shouldDirty: true });
+																	form.setValue("outlet_ids", next, {
+																		shouldDirty: true,
+																	});
 																	if (!primaryOutletId) {
-																		form.setValue("primary_outlet_id", o.id, { shouldDirty: true });
+																		form.setValue("primary_outlet_id", o.id, {
+																			shouldDirty: true,
+																		});
 																	}
 																} else {
-																	const next = selectedOutletIds.filter((id) => id !== o.id);
-																	form.setValue("outlet_ids", next, { shouldDirty: true });
+																	const next = selectedOutletIds.filter(
+																		(id) => id !== o.id,
+																	);
+																	form.setValue("outlet_ids", next, {
+																		shouldDirty: true,
+																	});
 																	if (isPrimary) {
-																		form.setValue("primary_outlet_id", next[0] ?? null, { shouldDirty: true });
+																		form.setValue(
+																			"primary_outlet_id",
+																			next[0] ?? null,
+																			{ shouldDirty: true },
+																		);
 																	}
 																}
 															}}
@@ -939,13 +919,15 @@ export function EmployeeFormDialog({
 															htmlFor={`outlet-${o.id}`}
 															className={cn(
 																"flex-1 cursor-pointer text-sm",
-																checked ? "font-medium text-foreground" : "text-muted-foreground",
+																checked
+																	? "font-medium text-foreground"
+																	: "text-muted-foreground",
 															)}
 														>
 															{o.name}
 														</label>
-														{checked && (
-															isPrimary ? (
+														{checked &&
+															(isPrimary ? (
 																<span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
 																	<Star className="size-2.5 fill-primary" />
 																	Primary
@@ -954,14 +936,15 @@ export function EmployeeFormDialog({
 																<button
 																	type="button"
 																	onClick={() =>
-																		form.setValue("primary_outlet_id", o.id, { shouldDirty: true })
+																		form.setValue("primary_outlet_id", o.id, {
+																			shouldDirty: true,
+																		})
 																	}
 																	className="text-[11px] text-muted-foreground hover:text-primary"
 																>
 																	Set primary
 																</button>
-															)
-														)}
+															))}
 													</div>
 												);
 											})}
@@ -1043,7 +1026,6 @@ export function EmployeeFormDialog({
 										</Field>
 									</div>
 								</div>
-
 							</div>
 						</div>
 					</div>
@@ -1051,7 +1033,8 @@ export function EmployeeFormDialog({
 					{hasErrors && (
 						<div className="border-t bg-destructive/5 px-4 py-2.5">
 							<p className="text-destructive text-xs font-medium">
-								{serverError ?? "Some fields are missing or invalid — check the form above."}
+								{serverError ??
+									"Some fields are missing or invalid — check the form above."}
 							</p>
 						</div>
 					)}
