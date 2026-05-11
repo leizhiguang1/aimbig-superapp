@@ -1,6 +1,7 @@
 import type { Context } from "@/lib/context/types";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import { positionInputSchema } from "@/lib/schemas/positions";
+import { throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type Position = Tables<"positions">;
@@ -39,9 +40,9 @@ export async function createPosition(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A position with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A position with that name already exists",
+		});
 	}
 	return data;
 }
@@ -63,9 +64,9 @@ export async function updatePosition(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A position with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A position with that name already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`Position ${id} not found`);
 	return data;
@@ -74,10 +75,9 @@ export async function updatePosition(
 export async function deletePosition(ctx: Context, id: string): Promise<void> {
 	const { error } = await ctx.db.from("positions").delete().eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This position is assigned to one or more employees. Reassign them first.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }

@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import {
+	Check,
+	Field,
+	Section,
+	SelectInput,
+	Two,
+} from "@/components/inventory/item-form-fields";
 import { TaxesSelector } from "@/components/taxes/TaxesSelector";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -184,7 +191,10 @@ function outletRowFromDb(o: InventoryItemOutlet): OutletRowState {
 	};
 }
 
-function outletRowFromState(state: FormState, outletId: string): OutletRowState {
+function outletRowFromState(
+	state: FormState,
+	outletId: string,
+): OutletRowState {
 	return {
 		outlet_id: outletId,
 		cost_price: state.cost_price,
@@ -727,7 +737,9 @@ export function ItemFormDialog({
 									</thead>
 									<tbody>
 										{state.outlet_rows.map((row, idx) => {
-											const outlet = outlets.find((o) => o.id === row.outlet_id);
+											const outlet = outlets.find(
+												(o) => o.id === row.outlet_id,
+											);
 											const disabled = state.apply_to_all;
 											const setRow = (patch: Partial<OutletRowState>) =>
 												setState((s) => ({
@@ -975,93 +987,5 @@ export function ItemFormDialog({
 				</form>
 			</DialogContent>
 		</Dialog>
-	);
-}
-
-function Section({
-	title,
-	children,
-}: {
-	title: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<fieldset className="flex flex-col gap-3 rounded-lg border p-3">
-			<legend className="px-1 font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-				{title}
-			</legend>
-			{children}
-		</fieldset>
-	);
-}
-
-function Two({ children }: { children: React.ReactNode }) {
-	return <div className="grid grid-cols-2 gap-3">{children}</div>;
-}
-
-function Field({
-	label,
-	error,
-	children,
-}: {
-	label: string;
-	error?: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex flex-col gap-1.5">
-			<label className="font-medium text-sm">{label}</label>
-			{children}
-			{error && <p className="text-destructive text-xs">{error}</p>}
-		</div>
-	);
-}
-
-function Check({
-	label,
-	checked,
-	onChange,
-}: {
-	label: string;
-	checked: boolean;
-	onChange: (v: boolean) => void;
-}) {
-	return (
-		<label className="flex items-center gap-2 text-sm">
-			<input
-				type="checkbox"
-				checked={checked}
-				onChange={(e) => onChange(e.target.checked)}
-				className="size-4"
-			/>
-			{label}
-		</label>
-	);
-}
-
-function SelectInput({
-	value,
-	onChange,
-	options,
-	placeholder,
-}: {
-	value: string;
-	onChange: (v: string) => void;
-	options: Array<{ value: string; label: string }>;
-	placeholder?: string;
-}) {
-	return (
-		<select
-			value={value}
-			onChange={(e) => onChange(e.target.value)}
-			className="h-9 rounded-md border bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-		>
-			<option value="">{placeholder ?? "Choose…"}</option>
-			{options.map((o) => (
-				<option key={o.value} value={o.value}>
-					{o.label}
-				</option>
-			))}
-		</select>
 	);
 }

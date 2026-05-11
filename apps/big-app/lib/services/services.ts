@@ -1,5 +1,5 @@
 import type { Context } from "@/lib/context/types";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import {
 	type ServiceInventoryLinkInput,
 	serviceCategoryInputSchema,
@@ -7,7 +7,7 @@ import {
 	serviceUpdateSchema,
 } from "@/lib/schemas/services";
 import { listTaxIdsForService, setTaxesForService } from "@/lib/services/taxes";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type Service = Tables<"services">;
@@ -164,9 +164,9 @@ export async function createService(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A service with that SKU already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A service with that SKU already exists",
+		});
 	}
 	await setTaxesForService(ctx, data.id, parsed.tax_ids);
 	await setInventoryLinksForService(ctx, data.id, parsed.inventory_links);
@@ -217,11 +217,10 @@ export async function deleteService(ctx: Context, id: string): Promise<void> {
 		.eq("id", id)
 		.eq("brand_id", assertBrandId(ctx));
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This service is referenced by existing records (appointments, sales, etc.). Mark it inactive from the edit form instead.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }
 
@@ -250,9 +249,9 @@ export async function createCategory(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A category with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A category with that name already exists",
+		});
 	}
 	return data;
 }
@@ -274,9 +273,9 @@ export async function updateCategory(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A category with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A category with that name already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`Category ${id} not found`);
 	return data;
@@ -288,10 +287,9 @@ export async function deleteCategory(ctx: Context, id: string): Promise<void> {
 		.delete()
 		.eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This category is still used by one or more services. Reassign them first.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }

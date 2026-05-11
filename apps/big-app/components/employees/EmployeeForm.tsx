@@ -1,9 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mars, RefreshCw, Star, Venus } from "lucide-react";
+import { RefreshCw, Star } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { EmployeeGenderPicker as GenderPicker } from "@/components/employees/EmployeeGenderPicker";
+import { SidebarToggle } from "@/components/employees/SidebarToggle";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Field } from "@/components/ui/field";
@@ -150,78 +152,6 @@ function generatePassword(): string {
 
 function generatePin(): string {
 	return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-function GenderPicker({
-	value,
-	onChange,
-}: {
-	value: Gender | null | undefined;
-	onChange: (g: Gender) => void;
-}) {
-	return (
-		<div className="flex h-9 items-center gap-2 rounded-md border bg-background px-2">
-			<button
-				type="button"
-				aria-label="Male"
-				aria-pressed={value === "male"}
-				onClick={() => onChange("male")}
-				className={cn(
-					"flex h-7 flex-1 items-center justify-center gap-1.5 rounded text-xs font-medium transition",
-					value === "male"
-						? "bg-sky-100 text-sky-700 ring-1 ring-sky-300"
-						: "text-muted-foreground hover:bg-muted",
-				)}
-			>
-				<Mars className="size-4" />
-				Male
-			</button>
-			<button
-				type="button"
-				aria-label="Female"
-				aria-pressed={value === "female"}
-				onClick={() => onChange("female")}
-				className={cn(
-					"flex h-7 flex-1 items-center justify-center gap-1.5 rounded text-xs font-medium transition",
-					value === "female"
-						? "bg-pink-100 text-pink-700 ring-1 ring-pink-300"
-						: "text-muted-foreground hover:bg-muted",
-				)}
-			>
-				<Venus className="size-4" />
-				Female
-			</button>
-		</div>
-	);
-}
-
-function SidebarToggle({
-	label,
-	checked,
-	onChange,
-}: {
-	label: string;
-	checked: boolean;
-	onChange: (v: boolean) => void;
-}) {
-	return (
-		<label className="flex items-center gap-2.5 text-sm">
-			<input
-				type="checkbox"
-				className="size-4 accent-emerald-500"
-				checked={checked}
-				onChange={(e) => onChange(e.target.checked)}
-			/>
-			<span
-				className={cn(
-					"transition",
-					checked ? "text-foreground" : "text-muted-foreground",
-				)}
-			>
-				{label}
-			</span>
-		</label>
-	);
 }
 
 export function EmployeeFormDialog({

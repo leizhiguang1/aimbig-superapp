@@ -4,13 +4,8 @@ import { revalidatePath } from "next/cache";
 import { toErr } from "@/lib/actions/_helpers";
 import { hasPermission, requirePermission } from "@/lib/auth/permissions";
 import { getServerContext } from "@/lib/context/server";
-import { NotFoundError, UnauthorizedError } from "@/lib/errors";
-import { getCustomer, listCustomers } from "@/lib/services/customers";
+import { NotFoundError } from "@/lib/errors";
 import type { EmployeeWithRelations } from "@/lib/services/employees";
-import { listEmployees } from "@/lib/services/employees";
-import { listSellableProducts } from "@/lib/services/inventory";
-import { listOutlets } from "@/lib/services/outlets";
-import { listActivePaymentMethods } from "@/lib/services/payment-methods";
 import type {
 	PaymentWithProcessedBy,
 	SaleItem,
@@ -18,8 +13,6 @@ import type {
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
 import * as salesService from "@/lib/services/sales";
-import { listServices } from "@/lib/services/services";
-import { listTaxes } from "@/lib/services/taxes";
 
 export type CollectPaymentResult =
 	| { error: string }
@@ -63,23 +56,13 @@ export async function collectWalkInSaleAction(
 		if ((input as { sold_at?: string | null } | null)?.sold_at) {
 			await requirePermission(ctx, "sales.backdate_transactions");
 		}
-		// Restricted-view users can only sell to customers tied to them.
-		const customerId =
-			input && typeof input === "object" && "customer_id" in input
-				? (input as { customer_id?: string | null }).customer_id ?? null
-				: null;
-		if (customerId) {
-			const canSalesAll = await hasPermission(ctx, "sales.customer_transparency");
-			if (!canSalesAll) {
-				const customer = await getCustomer(ctx, customerId);
-				if (customer.consultant_id !== ctx.currentUser?.employeeId) {
-					throw new UnauthorizedError(
-						"You can only create sales for customers tied to you.",
-					);
-				}
-			}
-		}
-		const result = await salesService.collectWalkInSale(ctx, input);
+		const restrictToOwnCustomer = !(await hasPermission(
+			ctx,
+			"sales.customer_transparency",
+		));
+		const result = await salesService.collectWalkInSale(ctx, input, {
+			restrictToOwnCustomer,
+		});
 		revalidatePath("/o/[outlet]/sales", "page");
 		revalidatePath("/o/[outlet]/inventory", "page");
 		return result;
@@ -95,36 +78,11 @@ export async function getNewSaleDataAction() {
 	const consultantFilter = canSalesAll
 		? null
 		: (ctx.currentUser?.employeeId ?? null);
-	const [
-		customers,
-		outlets,
-		allEmployees,
-		services,
-		products,
-		taxes,
-		paymentMethods,
-		canBackdate,
-	] = await Promise.all([
-		listCustomers(ctx, { consultantIdFilter: consultantFilter }),
-		listOutlets(ctx),
-		listEmployees(ctx),
-		listServices(ctx),
-		listSellableProducts(ctx),
-		listTaxes(ctx),
-		listActivePaymentMethods(ctx),
+	const [data, canBackdate] = await Promise.all([
+		salesService.getNewSaleData(ctx, { consultantFilter }),
 		hasPermission(ctx, "sales.backdate_transactions"),
 	]);
-	return {
-		customers,
-		outlets: outlets.filter((o) => o.is_active),
-		employees: allEmployees.filter((e) => e.is_active),
-		services: services.filter((s) => s.is_active),
-		products,
-		taxes,
-		paymentMethods,
-		currentEmployeeId: ctx.currentUser?.employeeId ?? null,
-		canBackdate,
-	};
+	return { ...data, canBackdate };
 }
 
 export type SalesOrderDetailResult =
@@ -144,22 +102,8 @@ export async function getSalesOrderDetailAction(
 	const ctx = await getServerContext();
 	await requirePermission(ctx, "sales.sales");
 	try {
-		const [order, items, payments, incentives, employees] =
-			await Promise.all([
-				salesService.getSalesOrder(ctx, id),
-				salesService.listSaleItems(ctx, id),
-				salesService.listPaymentsForOrder(ctx, id),
-				salesService.listIncentivesForOrder(ctx, id),
-				listEmployees(ctx),
-			]);
-		return {
-			ok: true,
-			order,
-			items,
-			payments,
-			incentives,
-			employees: employees.filter((e) => e.is_active),
-		};
+		const detail = await salesService.getSalesOrderDetail(ctx, id);
+		return { ok: true, ...detail };
 	} catch (err) {
 		if (err instanceof NotFoundError) return { ok: false, reason: "not_found" };
 		throw err;
@@ -224,7 +168,8 @@ function revalidateSalesOrder(
 	revalidatePath("/o/[outlet]/sales", "page");
 	revalidatePath(`/o/[outlet]/sales/${salesOrderId}`, "page");
 	revalidatePath("/o/[outlet]/appointments", "page");
-	if (appointmentRef) revalidatePath(`/o/[outlet]/appointments/${appointmentRef}`, "page");
+	if (appointmentRef)
+		revalidatePath(`/o/[outlet]/appointments/${appointmentRef}`, "page");
 }
 
 export type RevertLastPaymentResult =
@@ -345,7 +290,11 @@ export async function writeOffOutstandingAction(
 	try {
 		const ctx = await getServerContext();
 		await requirePermission(ctx, "sales.create_sales");
-		const result = await salesService.writeOffOutstanding(ctx, salesOrderId, input);
+		const result = await salesService.writeOffOutstanding(
+			ctx,
+			salesOrderId,
+			input,
+		);
 		revalidateSalesOrder(salesOrderId, appointmentRef);
 		return {
 			invoiceNo: result.invoice_no,

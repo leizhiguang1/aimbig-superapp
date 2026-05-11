@@ -6,7 +6,7 @@ import {
 	ValidationError,
 } from "@/lib/errors";
 import { employeeInputSchema, pinField } from "@/lib/schemas/employees";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type Employee = Tables<"employees">;
@@ -295,9 +295,7 @@ export async function createEmployee(
 
 	if (error) {
 		if (authUserId) await deleteAuthUser(ctx, authUserId);
-		if (error.code === "23505")
-			throw new ConflictError(describeUniqueViolation(error));
-		throw new ValidationError(error.message);
+		throwDbError(error, { uniqueMsg: describeUniqueViolation(error) });
 	}
 
 	try {
@@ -398,9 +396,7 @@ export async function updateEmployee(
 		if (createdAuthUserHere && authUserId) {
 			await deleteAuthUser(ctx, authUserId);
 		}
-		if (error.code === "23505")
-			throw new ConflictError(describeUniqueViolation(error));
-		throw new ValidationError(error.message);
+		throwDbError(error, { uniqueMsg: describeUniqueViolation(error) });
 	}
 	if (!data) throw new NotFoundError(`Employee ${id} not found`);
 
@@ -530,11 +526,10 @@ export async function deleteEmployee(ctx: Context, id: string): Promise<void> {
 		.eq("id", id)
 		.eq("brand_id", brandId);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This employee is referenced by existing records (appointments, sales, etc.). Deactivate instead.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 	if (existing.auth_user_id) {
 		await deleteAuthUser(ctx, existing.auth_user_id);

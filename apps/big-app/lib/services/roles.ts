@@ -1,11 +1,12 @@
 import type { Context } from "@/lib/context/types";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import {
 	emptyPermissions,
 	normalizePermissions,
 	type RolePermissions,
 } from "@/lib/schemas/role-permissions";
 import { roleInputSchema } from "@/lib/schemas/roles";
+import { throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 type RoleRow = Tables<"roles">;
@@ -49,9 +50,9 @@ export async function createRole(ctx: Context, input: unknown): Promise<Role> {
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A role with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A role with that name already exists",
+		});
 	}
 	return hydrate(data);
 }
@@ -73,9 +74,9 @@ export async function updateRole(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A role with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A role with that name already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`Role ${id} not found`);
 	return hydrate(data);
@@ -84,11 +85,10 @@ export async function updateRole(
 export async function deleteRole(ctx: Context, id: string): Promise<void> {
 	const { error } = await ctx.db.from("roles").delete().eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This role is assigned to one or more employees. Reassign them first.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }
 

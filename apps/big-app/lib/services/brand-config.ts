@@ -11,7 +11,7 @@ import {
 	type NewBrandConfigItemInput,
 	newBrandConfigItemInputSchema,
 } from "@/lib/schemas/brand-config";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type BrandConfigItem = Tables<"brand_config_items">;
@@ -148,11 +148,9 @@ export async function createBrandConfigItem(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError(
-				"An item with that code already exists for this category",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "An item with that code already exists for this category",
+		});
 	}
 	return data;
 }

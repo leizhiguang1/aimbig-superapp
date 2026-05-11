@@ -1,5 +1,5 @@
 import type { Context } from "@/lib/context/types";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import {
 	outletCreateSchema,
 	outletTimezoneSchema,
@@ -7,7 +7,7 @@ import {
 	roomInputSchema,
 } from "@/lib/schemas/outlets";
 import { assertOutletInBrand } from "@/lib/supabase/brand-ownership";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type Outlet = Tables<"outlets">;
@@ -89,9 +89,9 @@ export async function createOutlet(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("An outlet with that code already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "An outlet with that code already exists",
+		});
 	}
 	const { error: roomError } = await ctx.db.from("rooms").insert({
 		outlet_id: data.id,
@@ -170,11 +170,10 @@ export async function deleteOutlet(ctx: Context, id: string): Promise<void> {
 		.eq("id", id)
 		.eq("brand_id", assertBrandId(ctx));
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This outlet has rooms, employees or customers linked to it. Remove those first.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }
 
@@ -225,11 +224,9 @@ export async function createRoom(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError(
-				"A room with that name already exists at this outlet",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A room with that name already exists at this outlet",
+		});
 	}
 	return data;
 }
@@ -252,11 +249,9 @@ export async function updateRoom(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError(
-				"A room with that name already exists at this outlet",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A room with that name already exists at this outlet",
+		});
 	}
 	if (!data) throw new NotFoundError(`Room ${id} not found`);
 	return data;
@@ -283,10 +278,9 @@ export async function deleteRoom(ctx: Context, id: string): Promise<void> {
 
 	const { error } = await ctx.db.from("rooms").delete().eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This room is linked to existing appointments. Reassign them first.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }

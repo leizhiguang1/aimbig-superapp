@@ -21,7 +21,7 @@ import {
 	listTaxIdsForInventoryItem,
 	setTaxesForInventoryItem,
 } from "@/lib/services/taxes";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type InventoryItem = Tables<"inventory_items">;
@@ -33,7 +33,11 @@ export type InventoryMovement = Tables<"inventory_movements">;
 export type InventoryItemOutlet = Tables<"inventory_item_outlets">;
 
 export type InventoryMovementWithRefs = InventoryMovement & {
-	created_by_employee: { id: string; first_name: string; last_name: string | null } | null;
+	created_by_employee: {
+		id: string;
+		first_name: string;
+		last_name: string | null;
+	} | null;
 };
 
 export type LowStockItem = {
@@ -100,13 +104,14 @@ function shapeForOutlet(
 	};
 	const { inventory_item_taxes, outlets: rawOutlets, ...rest } = r;
 	const outlets = rawOutlets ?? [];
-	const active = outletId ? outlets.find((o) => o.outlet_id === outletId) : null;
+	const active = outletId
+		? outlets.find((o) => o.outlet_id === outletId)
+		: null;
 	const stock = active ? Number(active.stock) : Number(rest.stock);
 	const alert = active
 		? Number(active.stock_alert_count)
 		: Number(rest.stock_alert_count);
-	const status =
-		active?.stock_status ?? rest.stock_status ?? "normal";
+	const status = active?.stock_status ?? rest.stock_status ?? "normal";
 	return {
 		...rest,
 		brand: r.brand,
@@ -315,9 +320,9 @@ export async function createInventoryItem(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("An inventory item with that SKU already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "An inventory item with that SKU already exists",
+		});
 	}
 	// Trigger seeds inventory_item_outlets with the global template values.
 	// If the form supplied per-outlet overrides, apply them now (initial
@@ -383,11 +388,10 @@ export async function deleteInventoryItem(
 		.eq("id", id)
 		.eq("brand_id", assertBrandId(ctx));
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This item is referenced by existing records. Mark it inactive from the edit form instead.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }
 
@@ -450,9 +454,9 @@ export async function createUom(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A UoM with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A UoM with that name already exists",
+		});
 	}
 	return data;
 }
@@ -470,9 +474,9 @@ export async function updateUom(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A UoM with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A UoM with that name already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`UoM ${id} not found`);
 	return data;
@@ -481,11 +485,9 @@ export async function updateUom(
 export async function deleteUom(ctx: Context, id: string): Promise<void> {
 	const { error } = await ctx.db.from("inventory_uoms").delete().eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
-				"This UoM is used by inventory items and cannot be deleted.",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			fkMsg: "This UoM is used by inventory items and cannot be deleted.",
+		});
 	}
 }
 
@@ -511,9 +513,9 @@ export async function createBrand(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A brand with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A brand with that name already exists",
+		});
 	}
 	return data;
 }
@@ -531,9 +533,9 @@ export async function updateBrand(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A brand with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A brand with that name already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`Brand ${id} not found`);
 	return data;
@@ -542,11 +544,9 @@ export async function updateBrand(
 export async function deleteBrand(ctx: Context, id: string): Promise<void> {
 	const { error } = await ctx.db.from("inventory_brands").delete().eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
-				"This brand is used by inventory items and cannot be deleted.",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			fkMsg: "This brand is used by inventory items and cannot be deleted.",
+		});
 	}
 }
 
@@ -574,9 +574,9 @@ export async function createCategory(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A category with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A category with that name already exists",
+		});
 	}
 	return data;
 }
@@ -594,9 +594,9 @@ export async function updateCategory(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A category with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A category with that name already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`Category ${id} not found`);
 	return data;
@@ -608,11 +608,9 @@ export async function deleteCategory(ctx: Context, id: string): Promise<void> {
 		.delete()
 		.eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
-				"This category is used by inventory items and cannot be deleted.",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			fkMsg: "This category is used by inventory items and cannot be deleted.",
+		});
 	}
 }
 
@@ -638,9 +636,9 @@ export async function createSupplier(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A supplier with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A supplier with that name already exists",
+		});
 	}
 	return data;
 }
@@ -658,9 +656,9 @@ export async function updateSupplier(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A supplier with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A supplier with that name already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`Supplier ${id} not found`);
 	return data;
@@ -669,11 +667,9 @@ export async function updateSupplier(
 export async function deleteSupplier(ctx: Context, id: string): Promise<void> {
 	const { error } = await ctx.db.from("suppliers").delete().eq("id", id);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
-				"This supplier is used by inventory items and cannot be deleted.",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			fkMsg: "This supplier is used by inventory items and cannot be deleted.",
+		});
 	}
 }
 

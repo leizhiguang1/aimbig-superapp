@@ -1,7 +1,7 @@
 import type { Context } from "@/lib/context/types";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import { taxInputSchema } from "@/lib/schemas/taxes";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type Tax = Tables<"taxes">;
@@ -37,9 +37,7 @@ export async function createTax(ctx: Context, input: unknown): Promise<Tax> {
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A tax with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, { uniqueMsg: "A tax with that name already exists" });
 	}
 	return data;
 }
@@ -58,9 +56,7 @@ export async function updateTax(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A tax with that name already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, { uniqueMsg: "A tax with that name already exists" });
 	}
 	if (!data) throw new NotFoundError(`Tax ${id} not found`);
 	return data;
@@ -73,11 +69,10 @@ export async function deleteTax(ctx: Context, id: string): Promise<void> {
 		.eq("id", id)
 		.eq("brand_id", assertBrandId(ctx));
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This tax is attached to one or more services or inventory items. Detach it first or mark it inactive.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }
 

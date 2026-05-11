@@ -16,7 +16,7 @@ import {
 	assertCustomerInBrand,
 	assertOutletInBrand,
 } from "@/lib/supabase/brand-ownership";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables, TablesUpdate } from "@/lib/supabase/types";
 
 export type Appointment = Tables<"appointments">;
@@ -183,9 +183,9 @@ export async function createAppointment(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError("Referenced record no longer exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			fkMsg: "Referenced record no longer exists",
+		});
 	}
 	await logStatusChange(ctx, data.id, null, data.status);
 	return data;

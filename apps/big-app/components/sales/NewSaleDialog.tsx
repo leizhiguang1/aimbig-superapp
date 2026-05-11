@@ -42,7 +42,10 @@ import { usePaymentAllocations } from "@/components/appointments/detail/collect-
 import { usePayments } from "@/components/appointments/detail/collect-payment/use-payments";
 import { useRounding } from "@/components/appointments/detail/collect-payment/use-rounding";
 import { EmployeePicker } from "@/components/employees/EmployeePicker";
+import { CustomerPickerDialog } from "@/components/sales/CustomerPickerDialog";
+import { EmptyCartCTA } from "@/components/sales/EmptyCartCTA";
 import { useWalkInEmployeeAllocations } from "@/components/sales/use-walkin-employee-allocations";
+import { WalkInHeader } from "@/components/sales/WalkInHeader";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -685,219 +688,219 @@ function NewSaleBody({
 			{/* Single scroll on mobile; independent panel scrolls on desktop */}
 			<div className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
 				<div className="flex min-h-full flex-col lg:h-full lg:flex-row">
-				<div className="flex flex-col border-b bg-slate-50/40 px-5 pt-4 pb-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:pb-10">
-					<div className="mb-2 grid grid-cols-[1fr_56px_96px_80px_24px] items-center gap-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-blue-600">
-						<span>Product/Service</span>
-						<span className="text-center">Qty</span>
-						<span className="text-right">Unit (MYR)</span>
-						<span className="text-right">Total (MYR)</span>
-						<span />
-					</div>
+					<div className="flex flex-col border-b bg-slate-50/40 px-5 pt-4 pb-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:pb-10">
+						<div className="mb-2 grid grid-cols-[1fr_56px_96px_80px_24px] items-center gap-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-blue-600">
+							<span>Product/Service</span>
+							<span className="text-center">Qty</span>
+							<span className="text-right">Unit (MYR)</span>
+							<span className="text-right">Total (MYR)</span>
+							<span />
+						</div>
 
-					<div className="rounded-md border bg-white shadow-sm">
-						{lines.length === 0 ? (
-							<EmptyCartCTA
-								hasCustomer={!!customerId}
-								hasOutlet={!!outletId}
-								onSelectCustomer={() => setCustomerPickerOpen(true)}
-								onAddItem={() => setPickerOpen(true)}
-							/>
-						) : (
-							<>
-								<div className="flex items-center justify-end border-b px-3 py-1.5">
-									<button
-										type="button"
-										onClick={toggleAll}
-										className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-									>
-										{allExpanded ? (
-											<>
-												<ChevronsDownUp className="size-3.5" />
-												Collapse All
-											</>
-										) : (
-											<>
-												<ChevronsUpDown className="size-3.5" />
-												Expand All
-											</>
-										)}
-									</button>
-								</div>
-								<ul className="divide-y">
-									{lines.map((l, i) => (
-										<LineItemRow
-											key={l.id}
-											line={l}
-											lineDiscount={lineDiscounts[i] ?? 0}
-											lineNet={lineNets[i] ?? 0}
-											taxes={data.taxes}
-											service={
-												l.service_id
-													? (serviceById.get(l.service_id) ?? null)
-													: null
-											}
-											capPct={capFor(l)}
-											requiresFullPay={requiresFullFor(l)}
-											isExpanded={expandedIds.has(l.id)}
-											onToggleExpanded={() => toggleExpanded(l.id)}
-											remarksOpen={remarksOpenIds.has(l.id)}
-											onToggleRemarks={() => toggleRemarks(l.id)}
-											updateLine={(patch) => updateLine(l.id, patch)}
-											showPaymentAlloc={
-												payments.isUnderpaid && payments.totalPaid > 0
-											}
-											linePayAlloc={payAlloc.getLinePayAlloc(l.id)}
-											onLinePayAllocChange={(v) =>
-												payAlloc.setLinePayAllocVal(l.id, v)
-											}
-											lineAllocOver={payAlloc.lineOverAllocated[i] === true}
-											lineAllocShort={payAlloc.lineUnderRequired[i] === true}
-											itemized={empAlloc.itemized}
-											allEmployees={data.employees}
-											lineEmpAlloc={empAlloc.getLineAlloc(l.id)}
-											onLineEmpChange={(idx, empId) =>
-												empAlloc.setLineEmployee(l.id, idx, empId)
-											}
-											onLinePercentChange={(idx, pct) =>
-												empAlloc.setLinePercent(l.id, idx, pct)
-											}
-											onBalanceEmpLine={() =>
-												empAlloc.balanceLineEmployee(l.id)
-											}
-											onRemove={() =>
-												setLines((prev) => prev.filter((r) => r.id !== l.id))
-											}
-										/>
-									))}
-								</ul>
-							</>
-						)}
-					</div>
-
-					<div className="mt-3 grid grid-cols-[1fr_1fr] gap-4">
-						<div className="space-y-2 text-sm">
-							<button
-								type="button"
-								onClick={() => setPickerOpen(true)}
-								disabled={!customerId || !outletId}
-								className={cn(
-									"flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
-									customerId && outletId
-										? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-										: "cursor-not-allowed bg-muted text-muted-foreground",
-								)}
-							>
-								<ShoppingCart className="size-4" />
-								Add Item to Cart
-							</button>
-							{(!customerId || !outletId) && (
-								<div className="text-[11px] text-muted-foreground">
-									Pick a customer and outlet above to start adding items.
-								</div>
+						<div className="rounded-md border bg-white shadow-sm">
+							{lines.length === 0 ? (
+								<EmptyCartCTA
+									hasCustomer={!!customerId}
+									hasOutlet={!!outletId}
+									onSelectCustomer={() => setCustomerPickerOpen(true)}
+									onAddItem={() => setPickerOpen(true)}
+								/>
+							) : (
+								<>
+									<div className="flex items-center justify-end border-b px-3 py-1.5">
+										<button
+											type="button"
+											onClick={toggleAll}
+											className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+										>
+											{allExpanded ? (
+												<>
+													<ChevronsDownUp className="size-3.5" />
+													Collapse All
+												</>
+											) : (
+												<>
+													<ChevronsUpDown className="size-3.5" />
+													Expand All
+												</>
+											)}
+										</button>
+									</div>
+									<ul className="divide-y">
+										{lines.map((l, i) => (
+											<LineItemRow
+												key={l.id}
+												line={l}
+												lineDiscount={lineDiscounts[i] ?? 0}
+												lineNet={lineNets[i] ?? 0}
+												taxes={data.taxes}
+												service={
+													l.service_id
+														? (serviceById.get(l.service_id) ?? null)
+														: null
+												}
+												capPct={capFor(l)}
+												requiresFullPay={requiresFullFor(l)}
+												isExpanded={expandedIds.has(l.id)}
+												onToggleExpanded={() => toggleExpanded(l.id)}
+												remarksOpen={remarksOpenIds.has(l.id)}
+												onToggleRemarks={() => toggleRemarks(l.id)}
+												updateLine={(patch) => updateLine(l.id, patch)}
+												showPaymentAlloc={
+													payments.isUnderpaid && payments.totalPaid > 0
+												}
+												linePayAlloc={payAlloc.getLinePayAlloc(l.id)}
+												onLinePayAllocChange={(v) =>
+													payAlloc.setLinePayAllocVal(l.id, v)
+												}
+												lineAllocOver={payAlloc.lineOverAllocated[i] === true}
+												lineAllocShort={payAlloc.lineUnderRequired[i] === true}
+												itemized={empAlloc.itemized}
+												allEmployees={data.employees}
+												lineEmpAlloc={empAlloc.getLineAlloc(l.id)}
+												onLineEmpChange={(idx, empId) =>
+													empAlloc.setLineEmployee(l.id, idx, empId)
+												}
+												onLinePercentChange={(idx, pct) =>
+													empAlloc.setLinePercent(l.id, idx, pct)
+												}
+												onBalanceEmpLine={() =>
+													empAlloc.balanceLineEmployee(l.id)
+												}
+												onRemove={() =>
+													setLines((prev) => prev.filter((r) => r.id !== l.id))
+												}
+											/>
+										))}
+									</ul>
+								</>
 							)}
 						</div>
 
-						<TotalsPanel
-							totalTax={totalTax}
-							totalDiscount={totalDiscount}
-							rawTotal={rawTotal}
-							total={rounding.total}
-							rounding={rounding.rounding}
-							requireRounding={rounding.requireRounding}
-							setRequireRounding={rounding.setRequireRounding}
-							roundedTotalInput={rounding.roundedTotalInput}
-							setRoundedTotalInput={rounding.setRoundedTotalInput}
-							roundingExceedsLimit={rounding.roundingExceedsLimit}
-							totalPaid={payments.totalPaid}
-							balanceDiff={payments.balanceDiff}
-							isUnderpaid={payments.isUnderpaid}
-							linesCount={lines.length}
-							allocSum={payAlloc.allocSum}
-							allocSumMismatch={payAlloc.allocSumMismatch}
-							autoAllocatePartial={payAlloc.autoAllocatePartial}
-							forcesFullPayment={forcesFullPayment}
-						/>
-					</div>
-				</div>
+						<div className="mt-3 grid grid-cols-[1fr_1fr] gap-4">
+							<div className="space-y-2 text-sm">
+								<button
+									type="button"
+									onClick={() => setPickerOpen(true)}
+									disabled={!customerId || !outletId}
+									className={cn(
+										"flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+										customerId && outletId
+											? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+											: "cursor-not-allowed bg-muted text-muted-foreground",
+									)}
+								>
+									<ShoppingCart className="size-4" />
+									Add Item to Cart
+								</button>
+								{(!customerId || !outletId) && (
+									<div className="text-[11px] text-muted-foreground">
+										Pick a customer and outlet above to start adding items.
+									</div>
+								)}
+							</div>
 
-				<div className="flex flex-col bg-white px-5 py-4 lg:w-[360px] lg:min-h-0 lg:shrink-0 lg:overflow-y-auto">
-					<PaymentSection
-						payments={payments.payments}
-						paymentMethods={data.paymentMethods}
-						methodByCode={payments.methodByCode}
-						total={rounding.total}
-						walletBalance={null}
-						onChangeMethod={payments.changePaymentMethod}
-						onUpdatePayment={payments.updatePayment}
-						onRemovePayment={payments.removePaymentEntry}
-						onAddPayment={payments.addPaymentEntry}
-						onSetPaymentToTotal={payments.setPaymentToTotal}
-						backdate={backdate}
-						onBackdateChange={setBackdate}
-						backdateValue={backdateValue}
-						onBackdateValueChange={setBackdateValue}
-						canBackdate={data.canBackdate}
-						remarks={remarks}
-						onRemarksChange={setRemarks}
-					/>
-
-					<div className="mt-4 text-[11px] text-muted-foreground">
-						This Sale will be created at{" "}
-						<span className="font-semibold text-blue-600">
-							{data.outlets.find((o) => o.id === outletId)?.name ??
-								"— select outlet —"}
-						</span>
-					</div>
-
-					<div className="mt-3 hidden items-center justify-end gap-2 lg:flex">
-						<TooltipProvider>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<span
-										className={cn(
-											"inline-flex",
-											disabled && !isPending && "cursor-not-allowed",
-										)}
-									>
-										<button
-											type="button"
-											onClick={handleSubmit}
-											disabled={disabled}
-											className="flex size-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-											aria-label="Collect payment"
-										>
-											{isPending ? (
-												<Loader2 className="size-5 animate-spin" />
-											) : (
-												<svg
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													strokeWidth="3"
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													className="size-6"
-													aria-hidden="true"
-												>
-													<polyline points="20 6 9 17 4 12" />
-												</svg>
-											)}
-										</button>
-									</span>
-								</TooltipTrigger>
-								<TooltipContent>
-									{blockerReason ?? "Collect payment"}
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
-					</div>
-
-					{formError && (
-						<div className="mt-3 hidden rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 lg:block">
-							{formError}
+							<TotalsPanel
+								totalTax={totalTax}
+								totalDiscount={totalDiscount}
+								rawTotal={rawTotal}
+								total={rounding.total}
+								rounding={rounding.rounding}
+								requireRounding={rounding.requireRounding}
+								setRequireRounding={rounding.setRequireRounding}
+								roundedTotalInput={rounding.roundedTotalInput}
+								setRoundedTotalInput={rounding.setRoundedTotalInput}
+								roundingExceedsLimit={rounding.roundingExceedsLimit}
+								totalPaid={payments.totalPaid}
+								balanceDiff={payments.balanceDiff}
+								isUnderpaid={payments.isUnderpaid}
+								linesCount={lines.length}
+								allocSum={payAlloc.allocSum}
+								allocSumMismatch={payAlloc.allocSumMismatch}
+								autoAllocatePartial={payAlloc.autoAllocatePartial}
+								forcesFullPayment={forcesFullPayment}
+							/>
 						</div>
-					)}
-				</div>
+					</div>
+
+					<div className="flex flex-col bg-white px-5 py-4 lg:w-[360px] lg:min-h-0 lg:shrink-0 lg:overflow-y-auto">
+						<PaymentSection
+							payments={payments.payments}
+							paymentMethods={data.paymentMethods}
+							methodByCode={payments.methodByCode}
+							total={rounding.total}
+							walletBalance={null}
+							onChangeMethod={payments.changePaymentMethod}
+							onUpdatePayment={payments.updatePayment}
+							onRemovePayment={payments.removePaymentEntry}
+							onAddPayment={payments.addPaymentEntry}
+							onSetPaymentToTotal={payments.setPaymentToTotal}
+							backdate={backdate}
+							onBackdateChange={setBackdate}
+							backdateValue={backdateValue}
+							onBackdateValueChange={setBackdateValue}
+							canBackdate={data.canBackdate}
+							remarks={remarks}
+							onRemarksChange={setRemarks}
+						/>
+
+						<div className="mt-4 text-[11px] text-muted-foreground">
+							This Sale will be created at{" "}
+							<span className="font-semibold text-blue-600">
+								{data.outlets.find((o) => o.id === outletId)?.name ??
+									"— select outlet —"}
+							</span>
+						</div>
+
+						<div className="mt-3 hidden items-center justify-end gap-2 lg:flex">
+							<TooltipProvider>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span
+											className={cn(
+												"inline-flex",
+												disabled && !isPending && "cursor-not-allowed",
+											)}
+										>
+											<button
+												type="button"
+												onClick={handleSubmit}
+												disabled={disabled}
+												className="flex size-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+												aria-label="Collect payment"
+											>
+												{isPending ? (
+													<Loader2 className="size-5 animate-spin" />
+												) : (
+													<svg
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														strokeWidth="3"
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														className="size-6"
+														aria-hidden="true"
+													>
+														<polyline points="20 6 9 17 4 12" />
+													</svg>
+												)}
+											</button>
+										</span>
+									</TooltipTrigger>
+									<TooltipContent>
+										{blockerReason ?? "Collect payment"}
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						</div>
+
+						{formError && (
+							<div className="mt-3 hidden rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 lg:block">
+								{formError}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 
@@ -908,7 +911,9 @@ function NewSaleBody({
 						<div className="text-[10px] uppercase tracking-wide text-muted-foreground">
 							Total
 						</div>
-						<div className="text-lg font-semibold">RM {money(rounding.total)}</div>
+						<div className="text-lg font-semibold">
+							RM {money(rounding.total)}
+						</div>
 					</div>
 					<TooltipProvider>
 						<Tooltip>
@@ -945,7 +950,9 @@ function NewSaleBody({
 									</button>
 								</span>
 							</TooltipTrigger>
-							<TooltipContent>{blockerReason ?? "Collect payment"}</TooltipContent>
+							<TooltipContent>
+								{blockerReason ?? "Collect payment"}
+							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
 				</div>
@@ -985,365 +992,5 @@ function NewSaleBody({
 				}}
 			/>
 		</>
-	);
-}
-
-// ---------------------------------------------------------------------------
-// Header with customer chip, outlet + consultant selectors, total, close
-// ---------------------------------------------------------------------------
-
-function WalkInHeader({
-	customer,
-	onClearCustomer,
-	onOpenCustomerPicker,
-	outlets,
-	outletId,
-	onOutletChange,
-	employees,
-	total,
-	itemized,
-	onItemizedChange,
-	globalAlloc,
-	onGlobalEmpChange,
-	onGlobalPercentChange,
-	onBalanceGlobal,
-	onClose,
-	closeDisabled,
-}: {
-	customer: CustomerWithRelations | null;
-	onClearCustomer: () => void;
-	onOpenCustomerPicker: () => void;
-	outlets: OutletWithRoomCount[];
-	outletId: string | null;
-	onOutletChange: (id: string) => void;
-	employees: EmployeeWithRelations[];
-	total: number;
-	itemized: boolean;
-	onItemizedChange: (v: boolean) => void;
-	globalAlloc: Allocation[];
-	onGlobalEmpChange: (idx: number, empId: string | null) => void;
-	onGlobalPercentChange: (idx: number, pct: number) => void;
-	onBalanceGlobal: () => void;
-	onClose: () => void;
-	closeDisabled: boolean;
-}) {
-	const customerName = customer
-		? [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
-			"Customer"
-		: null;
-
-	const filled = globalAlloc.filter((a) => a.employeeId);
-	const allocSum = filled.reduce((s, a) => s + a.percent, 0);
-	const sumInvalid = filled.length > 0 && Math.abs(allocSum - 100) > 0.01;
-
-	return (
-		<div className="shrink-0 border-b bg-white">
-			{/* Row 1: customer + total + close */}
-			<div className="flex items-start gap-3 px-5 pt-3 pb-2">
-				<div className="flex min-w-0 flex-1 flex-col">
-					<div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-						New sale
-					</div>
-					{customer ? (
-						<div className="mt-0.5 flex items-center gap-2">
-							<button
-								type="button"
-								onClick={onOpenCustomerPicker}
-								className="group flex min-w-0 items-center gap-2 text-left"
-							>
-								<span className="truncate text-lg font-semibold tracking-wide text-blue-600 group-hover:underline">
-									{(customerName ?? "Customer").toUpperCase()}
-								</span>
-								<span className="shrink-0 text-xs text-muted-foreground">
-									{customer.code}
-								</span>
-							</button>
-							<button
-								type="button"
-								onClick={onClearCustomer}
-								className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-								aria-label="Clear customer"
-							>
-								<X className="size-3" />
-							</button>
-						</div>
-					) : (
-						<button
-							type="button"
-							onClick={onOpenCustomerPicker}
-							className="mt-1 inline-flex items-center gap-2 rounded-md border-2 border-dashed border-blue-400 bg-blue-50 px-4 py-2 text-base font-semibold text-blue-700 shadow-sm hover:border-blue-500 hover:bg-blue-100"
-						>
-							<UserRound className="size-5" />
-							Select customer
-						</button>
-					)}
-					<div className="mt-0.5 text-xs text-muted-foreground">
-						MYR {money(total)}
-					</div>
-				</div>
-
-				<TooltipProvider>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<button
-								type="button"
-								onClick={onClose}
-								disabled={closeDisabled}
-								aria-label="Close"
-								className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-							>
-								<X className="size-4" />
-							</button>
-						</TooltipTrigger>
-						<TooltipContent>Close</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
-			</div>
-
-			{/* Row 2: outlet + itemised toggle + employee allocation */}
-			<div className="flex flex-wrap items-end gap-x-4 gap-y-2 px-5 pb-3">
-				<label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-					Outlet
-					<select
-						value={outletId ?? ""}
-						onChange={(e) => onOutletChange(e.target.value)}
-						className="h-8 w-40 rounded-md border bg-background px-2 text-xs outline-none focus-visible:border-ring"
-					>
-						{outlets.map((o) => (
-							<option key={o.id} value={o.id}>
-								{o.name}
-							</option>
-						))}
-					</select>
-				</label>
-
-				<div className="flex items-center gap-2">
-					<span className="text-xs text-muted-foreground">Itemised?</span>
-					<Toggle checked={itemized} onCheckedChange={onItemizedChange} />
-				</div>
-
-				<div
-					className={cn("flex items-end gap-2", itemized && "invisible")}
-					aria-hidden={itemized}
-				>
-					{globalAlloc.map((slot, idx) => (
-						<div
-							// biome-ignore lint/suspicious/noArrayIndexKey: fixed 3-slot array
-							key={`walkin-global-${idx}`}
-							className="flex flex-col items-center gap-1"
-						>
-							<EmployeePicker
-								employees={employees}
-								value={slot.employeeId || null}
-								onChange={(id) => onGlobalEmpChange(idx, id)}
-								size="sm"
-								placeholder={`Employee ${idx + 1}`}
-							/>
-							{slot.employeeId ? (
-								<div className="flex items-center gap-0.5">
-									<PercentInput
-										value={slot.percent}
-										onChange={(n) => onGlobalPercentChange(idx, n)}
-										className="h-5 w-14 px-1 text-center text-[10px] tabular-nums"
-										aria-label="Employee percent"
-									/>
-									<span className="text-[10px] text-muted-foreground">%</span>
-								</div>
-							) : (
-								<div className="h-5" />
-							)}
-						</div>
-					))}
-					{filled.length > 0 && (
-						<div className="flex items-center gap-1.5 text-[10px] tabular-nums text-muted-foreground">
-							<span className={cn(sumInvalid && "text-red-600 font-medium")}>
-								{allocSum.toFixed(0)}%
-							</span>
-							{sumInvalid && (
-								<button
-									type="button"
-									onClick={onBalanceGlobal}
-									className="rounded border border-amber-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-amber-900 hover:bg-amber-50"
-								>
-									Balance
-								</button>
-							)}
-						</div>
-					)}
-				</div>
-			</div>
-		</div>
-	);
-}
-
-// ---------------------------------------------------------------------------
-// Empty-cart call-to-action — big, obvious buttons instead of a quiet message
-// ---------------------------------------------------------------------------
-
-function EmptyCartCTA({
-	hasCustomer,
-	hasOutlet,
-	onSelectCustomer,
-	onAddItem,
-}: {
-	hasCustomer: boolean;
-	hasOutlet: boolean;
-	onSelectCustomer: () => void;
-	onAddItem: () => void;
-}) {
-	const ready = hasCustomer && hasOutlet;
-	return (
-		<div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
-			{!hasCustomer ? (
-				<>
-					<div className="flex size-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-						<UserRound className="size-6" />
-					</div>
-					<div>
-						<div className="text-base font-semibold">Pick a customer</div>
-						<div className="mt-1 text-sm text-muted-foreground">
-							Start by selecting who this sale is for.
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={onSelectCustomer}
-						className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-					>
-						<UserRound className="size-4" />
-						Select customer
-					</button>
-				</>
-			) : !hasOutlet ? (
-				<div className="text-sm text-muted-foreground">
-					Select an outlet above to continue.
-				</div>
-			) : (
-				<>
-					<div className="flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-						<ShoppingCart className="size-6" />
-					</div>
-					<div>
-						<div className="text-base font-semibold">Add items to the sale</div>
-						<div className="mt-1 text-sm text-muted-foreground">
-							Pick services or products — you can tune price, quantity and
-							discount on each line.
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={onAddItem}
-						disabled={!ready}
-						className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-					>
-						<ShoppingCart className="size-4" />
-						Add items
-					</button>
-				</>
-			)}
-		</div>
-	);
-}
-
-// ---------------------------------------------------------------------------
-// Customer picker
-// ---------------------------------------------------------------------------
-
-function CustomerPickerDialog({
-	open,
-	onOpenChange,
-	customers,
-	onPick,
-}: {
-	open: boolean;
-	onOpenChange: (v: boolean) => void;
-	customers: CustomerWithRelations[];
-	onPick: (id: string) => void;
-}) {
-	const [query, setQuery] = useState("");
-
-	const filtered = useMemo(() => {
-		const q = query.trim().toLowerCase();
-		if (!q) return customers.slice(0, 200);
-		return customers
-			.filter((c) => {
-				const name = [c.first_name, c.last_name].filter(Boolean).join(" ");
-				return [name, c.code, c.phone ?? "", c.id_number ?? ""]
-					.join(" ")
-					.toLowerCase()
-					.includes(q);
-			})
-			.slice(0, 200);
-	}, [customers, query]);
-
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[80vh] w-full max-w-2xl flex-col gap-0 p-0">
-				<div className="border-b px-5 py-4">
-					<DialogTitle className="text-base">Pick customer</DialogTitle>
-					<DialogDescription className="sr-only">
-						Search and select a customer for this walk-in sale.
-					</DialogDescription>
-					<div className="relative mt-3">
-						<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-						<Input
-							autoFocus
-							value={query}
-							onChange={(e) => setQuery(e.target.value)}
-							placeholder="Search by name, code, phone, or ID…"
-							className="h-10 pl-9"
-						/>
-					</div>
-				</div>
-				<div className="min-h-0 flex-1 overflow-y-auto">
-					{filtered.length === 0 ? (
-						<div className="p-10 text-center text-sm text-muted-foreground">
-							{query
-								? `No customers match "${query}".`
-								: "No customers available."}
-						</div>
-					) : (
-						<ul className="divide-y">
-							{filtered.map((c) => {
-								const name = [c.first_name, c.last_name]
-									.filter(Boolean)
-									.join(" ");
-								return (
-									<li key={c.id}>
-										<button
-											type="button"
-											onClick={() => onPick(c.id)}
-											className="flex w-full items-center justify-between gap-4 px-5 py-3 text-left hover:bg-muted/60"
-										>
-											<div className="flex min-w-0 flex-col gap-0.5">
-												<div className="flex items-center gap-2">
-													<span className="truncate font-semibold text-sm">
-														{name || "Unnamed customer"}
-													</span>
-													{c.is_staff && (
-														<span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
-															STAFF
-														</span>
-													)}
-													{c.is_vip && (
-														<span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800">
-															VIP
-														</span>
-													)}
-												</div>
-												<div className="flex items-center gap-2 text-xs text-muted-foreground">
-													<span className="font-mono">{c.code}</span>
-													{c.phone && <span>· {c.phone}</span>}
-												</div>
-											</div>
-										</button>
-									</li>
-								);
-							})}
-						</ul>
-					)}
-				</div>
-			</DialogContent>
-		</Dialog>
 	);
 }

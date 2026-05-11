@@ -7,7 +7,7 @@ import {
 	paymentMethodInputSchema,
 } from "@/lib/schemas/payment-methods";
 import type { PaymentEntry } from "@/lib/schemas/sales";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type PaymentMethod = Tables<"payment_methods">;
@@ -98,9 +98,9 @@ export async function createPaymentMethod(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A payment method with that code already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A payment method with that code already exists",
+		});
 	}
 	return data;
 }
@@ -149,11 +149,10 @@ export async function deletePaymentMethod(
 		.eq("id", id)
 		.eq("brand_id", brandId);
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
+		throwDbError(error, {
+			fkMsg:
 				"This method has been used on a payment and cannot be deleted. Toggle it inactive instead.",
-			);
-		throw new ValidationError(error.message);
+		});
 	}
 }
 

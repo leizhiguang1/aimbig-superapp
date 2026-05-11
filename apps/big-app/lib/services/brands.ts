@@ -5,6 +5,7 @@ import {
 	UnauthorizedError,
 	ValidationError,
 } from "@/lib/errors";
+import { throwDbError } from "@/lib/supabase/query";
 import {
 	type RenameSubdomainInput,
 	renameSubdomainSchema,
@@ -53,9 +54,7 @@ export async function updateBrand(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("That subdomain is already taken");
-		throw new ValidationError(error.message);
+		throwDbError(error, { uniqueMsg: "That subdomain is already taken" });
 	}
 	if (!data) throw new NotFoundError(`Brand ${ctx.brandId} not found`);
 	return data;

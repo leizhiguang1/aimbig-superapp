@@ -15,18 +15,7 @@ import {
 } from "lucide-react";
 import type { CaseNoteWithAuthor } from "@/lib/services/case-notes";
 import { cn } from "@/lib/utils";
-
-function formatDayMonthYear(d: Date) {
-	return d.toLocaleDateString("en-GB", {
-		day: "2-digit",
-		month: "short",
-		year: "numeric",
-	});
-}
-
-function formatWeekdayTime(d: Date) {
-	return `${d.toLocaleDateString("en-GB", { weekday: "short" })} · ${d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true })}`;
-}
+import { formatDayMonthYear, formatWeekdayTime } from "@/lib/utils/format-date";
 
 export function authorLabel(
 	employee: { first_name: string; last_name: string } | null | undefined,

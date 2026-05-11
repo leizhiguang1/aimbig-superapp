@@ -1,5 +1,9 @@
 import type { Context } from "@/lib/context/types";
-import { NotFoundError, ValidationError } from "@/lib/errors";
+import {
+	NotFoundError,
+	UnauthorizedError,
+	ValidationError,
+} from "@/lib/errors";
 import {
 	type CollectPaymentInput,
 	type CollectPaymentItem,
@@ -21,7 +25,19 @@ import {
 	type WriteOffInput,
 	writeOffInputSchema,
 } from "@/lib/schemas/sales";
-import { assertPaymentFields } from "@/lib/services/payment-methods";
+import { listCustomers } from "@/lib/services/customers";
+import {
+	type EmployeeWithRelations,
+	listEmployees,
+} from "@/lib/services/employees";
+import { listSellableProducts } from "@/lib/services/inventory";
+import { listOutlets } from "@/lib/services/outlets";
+import {
+	assertPaymentFields,
+	listActivePaymentMethods,
+} from "@/lib/services/payment-methods";
+import { listServices } from "@/lib/services/services";
+import { listTaxes } from "@/lib/services/taxes";
 import {
 	assertAppointmentInBrand,
 	assertCustomerInBrand,
@@ -191,10 +207,14 @@ export async function collectAppointmentPayment(
 export async function collectWalkInSale(
 	ctx: Context,
 	input: unknown,
+	options?: { restrictToOwnCustomer?: boolean },
 ): Promise<CollectPaymentResult> {
 	const parsed: WalkInSaleInput = walkInSaleInputSchema.parse(input);
 	await assertOutletInBrand(ctx, parsed.outlet_id);
 	await assertCustomerInBrand(ctx, parsed.customer_id);
+	if (options?.restrictToOwnCustomer) {
+		await assertCustomerTiedToCurrentUser(ctx, parsed.customer_id);
+	}
 	await assertLineDiscountCaps(ctx, parsed.items);
 	await assertRequiredFullAllocations(ctx, parsed.items, parsed.allocations);
 	const normalizedPayments = await assertPaymentFields(ctx, parsed.payments);
@@ -253,6 +273,30 @@ export async function collectWalkInSale(
 }
 
 // Server guard for the "Full payment required" rule. The UI's `requiresFullFor`
+// Restricted-view rule for walk-in sales: when the caller lacks the
+// `sales.customer_transparency` permission, they can only sell to customers
+// tied to them (consultant_id == current user). The action layer reads the
+// permission and decides whether to enforce; the service does the lookup.
+async function assertCustomerTiedToCurrentUser(
+	ctx: Context,
+	customerId: string,
+): Promise<void> {
+	const me = ctx.currentUser?.employeeId ?? null;
+	const { data, error } = await ctx.db
+		.from("customers")
+		.select("consultant_id")
+		.eq("id", customerId)
+		.eq("brand_id", assertBrandId(ctx))
+		.maybeSingle();
+	if (error) throw new ValidationError(error.message);
+	if (!data) throw new NotFoundError(`Customer ${customerId} not found`);
+	if (data.consultant_id !== me) {
+		throw new UnauthorizedError(
+			"You can only create sales for customers tied to you.",
+		);
+	}
+}
+
 // disables submit when a required-full line is under-allocated; this is the
 // matching server-side check so a non-UI client can't bypass it. Threshold is
 // pre-tax (qty*price - discount) — looser than the UI's tax-inclusive net, but
@@ -260,10 +304,7 @@ export async function collectWalkInSale(
 async function assertRequiredFullAllocations(
 	ctx: Context,
 	items: CollectPaymentItem[],
-	allocations:
-		| { item_index: number; amount: number }[]
-		| null
-		| undefined,
+	allocations: { item_index: number; amount: number }[] | null | undefined,
 ): Promise<void> {
 	if (!allocations || allocations.length === 0) return;
 	const serviceIds = Array.from(
@@ -1104,6 +1145,78 @@ export async function writeOffOutstanding(
 		p_reason: parsed.reason,
 		p_processed_by: (ctx.currentUser?.employeeId ?? null) as string,
 	});
-	if (error) throw new ValidationError(error.message || "Failed to write off outstanding");
+	if (error)
+		throw new ValidationError(
+			error.message || "Failed to write off outstanding",
+		);
 	return data as unknown as WriteOffOutstandingResult;
+}
+
+// ---------------------------------------------------------------------------
+// Read-side assemblies — packaged for the New Sale dialog and the Sales Order
+// detail view. Compose multiple service reads and apply the active-row filters
+// the UI expects. Permissions stay in the action layer; this is pure data.
+// ---------------------------------------------------------------------------
+
+export type NewSaleData = Awaited<ReturnType<typeof getNewSaleData>>;
+
+export async function getNewSaleData(
+	ctx: Context,
+	opts: { consultantFilter: string | null },
+) {
+	const [
+		customers,
+		outlets,
+		allEmployees,
+		services,
+		products,
+		taxes,
+		paymentMethods,
+	] = await Promise.all([
+		listCustomers(ctx, { consultantIdFilter: opts.consultantFilter }),
+		listOutlets(ctx),
+		listEmployees(ctx),
+		listServices(ctx),
+		listSellableProducts(ctx),
+		listTaxes(ctx),
+		listActivePaymentMethods(ctx),
+	]);
+	return {
+		customers,
+		outlets: outlets.filter((o) => o.is_active),
+		employees: allEmployees.filter((e) => e.is_active),
+		services: services.filter((s) => s.is_active),
+		products,
+		taxes,
+		paymentMethods,
+		currentEmployeeId: ctx.currentUser?.employeeId ?? null,
+	};
+}
+
+export type SalesOrderDetail = {
+	order: SalesOrderWithRelations;
+	items: SaleItem[];
+	payments: PaymentWithProcessedBy[];
+	incentives: SaleItemIncentiveRow[];
+	employees: EmployeeWithRelations[];
+};
+
+export async function getSalesOrderDetail(
+	ctx: Context,
+	id: string,
+): Promise<SalesOrderDetail> {
+	const [order, items, payments, incentives, employees] = await Promise.all([
+		getSalesOrder(ctx, id),
+		listSaleItems(ctx, id),
+		listPaymentsForOrder(ctx, id),
+		listIncentivesForOrder(ctx, id),
+		listEmployees(ctx),
+	]);
+	return {
+		order,
+		items,
+		payments,
+		incentives,
+		employees: employees.filter((e) => e.is_active),
+	};
 }

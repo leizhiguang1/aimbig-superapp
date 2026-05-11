@@ -1,7 +1,7 @@
 import type { Context } from "@/lib/context/types";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import { customerInputSchema } from "@/lib/schemas/customers";
-import { assertBrandId } from "@/lib/supabase/query";
+import { assertBrandId, throwDbError } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
 export type Customer = Tables<"customers">;
@@ -66,9 +66,7 @@ function normalize(input: unknown) {
 		external_code: nz(p.external_code),
 		is_vip: p.is_vip,
 		is_staff: p.is_staff,
-		tags: (p.tags ?? [])
-			.map((t) => t.trim())
-			.filter((t) => t.length > 0),
+		tags: (p.tags ?? []).map((t) => t.trim()).filter((t) => t.length > 0),
 		smoker: p.smoker ?? null,
 		drug_allergies: nz(p.drug_allergies),
 		medical_conditions: p.medical_conditions ?? [],
@@ -128,9 +126,9 @@ export async function createCustomer(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A customer with that identifier already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A customer with that identifier already exists",
+		});
 	}
 	return data;
 }
@@ -154,9 +152,9 @@ export async function updateCustomer(
 		.select("*")
 		.single();
 	if (error) {
-		if (error.code === "23505")
-			throw new ConflictError("A customer with that identifier already exists");
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			uniqueMsg: "A customer with that identifier already exists",
+		});
 	}
 	if (!data) throw new NotFoundError(`Customer ${id} not found`);
 	return data;
@@ -169,10 +167,8 @@ export async function deleteCustomer(ctx: Context, id: string): Promise<void> {
 		.eq("id", id)
 		.eq("brand_id", assertBrandId(ctx));
 	if (error) {
-		if (error.code === "23503")
-			throw new ConflictError(
-				"Cannot delete: customer is referenced by other records",
-			);
-		throw new ValidationError(error.message);
+		throwDbError(error, {
+			fkMsg: "Cannot delete: customer is referenced by other records",
+		});
 	}
 }
