@@ -26,6 +26,7 @@ import { listActivePaymentMethodsAction } from "@/lib/actions/payment-methods";
 import { recordAdditionalPaymentAction } from "@/lib/actions/sales";
 import type { PaymentMethod } from "@/lib/services/payment-methods";
 import type { SaleItem, SaleItemIncentiveRow } from "@/lib/services/sales";
+import { fullName } from "@/lib/utils/full-name";
 import { money } from "@/lib/utils/money";
 
 type Props = {
@@ -45,13 +46,6 @@ type Props = {
 	onSuccess?: (message: string) => void;
 	onError?: (message: string) => void;
 };
-
-function fullName(
-	first: string | null | undefined,
-	last: string | null | undefined,
-) {
-	return [first, last].filter(Boolean).join(" ").trim() || "—";
-}
 
 function usePaymentMethods() {
 	const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -481,7 +475,7 @@ export function PayOutstandingDialog({
 														{lineIncentives
 															.map(
 																(i) =>
-																	`${fullName(i.employee?.first_name, i.employee?.last_name)} (${Number(i.percent).toFixed(2)}%)`,
+																	`${fullName(i.employee?.first_name, i.employee?.last_name) || "—"} (${Number(i.percent).toFixed(2)}%)`,
 															)
 															.join(", ")}
 													</span>

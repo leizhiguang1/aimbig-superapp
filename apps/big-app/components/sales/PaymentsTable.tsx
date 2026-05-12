@@ -15,6 +15,7 @@ import { getSalesOrderStatusConfig } from "@/lib/constants/sales-status";
 import type { PaymentWithRelations } from "@/lib/services/sales";
 import { mediaPublicUrl } from "@/lib/storage/urls";
 import { cn } from "@/lib/utils";
+import { fullName } from "@/lib/utils/full-name";
 import { money } from "@/lib/utils/money";
 
 type SalesOrderStatus = NonNullable<
@@ -43,13 +44,6 @@ function formatDateTime(iso: string) {
 		hour12: false,
 	});
 	return { date, time };
-}
-
-function fullName(
-	first: string | null | undefined,
-	last: string | null | undefined,
-) {
-	return [first, last].filter(Boolean).join(" ").trim();
 }
 
 function prettyCode(code: string): string {

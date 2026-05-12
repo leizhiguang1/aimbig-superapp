@@ -39,6 +39,7 @@ import type {
 	SaleItemIncentiveRow,
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
+import { fullName } from "@/lib/utils/full-name";
 import { money } from "@/lib/utils/money";
 
 type Props = {
@@ -54,13 +55,6 @@ type Props = {
 	autoPrint?: boolean;
 	canBackdate?: boolean;
 };
-
-function fullName(
-	first: string | null | undefined,
-	last: string | null | undefined,
-) {
-	return [first, last].filter(Boolean).join(" ").trim();
-}
 
 function formatDate(iso: string) {
 	return new Date(iso).toLocaleDateString("en-GB", {

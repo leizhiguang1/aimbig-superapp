@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SalesOrderDetailDialog } from "@/components/sales/SalesOrderDetailDialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import type { CancellationWithRelations } from "@/lib/services/sales";
+import { fullName } from "@/lib/utils/full-name";
 import { money } from "@/lib/utils/money";
 
 type Props = {
@@ -24,13 +25,6 @@ function formatDateTime(iso: string) {
 		hour12: false,
 	});
 	return { date, time };
-}
-
-function fullName(
-	first: string | null | undefined,
-	last: string | null | undefined,
-) {
-	return [first, last].filter(Boolean).join(" ").trim();
 }
 
 export function CancellationsTable({ cancellations }: Props) {

@@ -22,14 +22,8 @@ import type {
 	SalesOrderWithRelations,
 } from "@/lib/services/sales";
 import { cn } from "@/lib/utils";
+import { fullName } from "@/lib/utils/full-name";
 import { money } from "@/lib/utils/money";
-
-function fullName(
-	first: string | null | undefined,
-	last: string | null | undefined,
-) {
-	return [first, last].filter(Boolean).join(" ").trim();
-}
 
 function formatHeaderDate(iso: string) {
 	const d = new Date(iso);
