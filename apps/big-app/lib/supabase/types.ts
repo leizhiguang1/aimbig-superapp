@@ -959,6 +959,9 @@ export type Database = {
           date_of_birth: string | null
           drug_allergies: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
           external_code: string | null
           first_name: string
           gender: string | null
@@ -998,6 +1001,9 @@ export type Database = {
           date_of_birth?: string | null
           drug_allergies?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           external_code?: string | null
           first_name: string
           gender?: string | null
@@ -1037,6 +1043,9 @@ export type Database = {
           date_of_birth?: string | null
           drug_allergies?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           external_code?: string | null
           first_name?: string
           gender?: string | null
