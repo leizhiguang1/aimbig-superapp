@@ -93,6 +93,20 @@ export const BRAND_CONFIG_CATEGORIES = {
 			consumer: "components/customers/CustomerForm.tsx",
 		},
 	},
+	customer_emergency_relationship: {
+		label: "Emergency contact relationships",
+		singularLabel: "Relationship",
+		codeEditable: true,
+		hasColor: false,
+		hint: "Options shown in the customer emergency contact picker (Spouse, Parent, Child, etc.). Free-text entries are also accepted.",
+		storage: "live",
+		usage: {
+			description:
+				"Relationship picker on the customer form's Emergency Contact block.",
+			wired: true,
+			consumer: "components/customers/CustomerForm.tsx",
+		},
+	},
 	salutation: {
 		label: "Salutations",
 		codeEditable: true,

@@ -95,6 +95,9 @@ const EMPTY: CustomerInput = {
 	is_vip: false,
 	is_staff: false,
 	tags: [],
+	emergency_contact_name: undefined,
+	emergency_contact_phone: undefined,
+	emergency_contact_relationship: undefined,
 	smoker: null,
 	drug_allergies: undefined,
 	medical_conditions: [],
@@ -134,6 +137,15 @@ function fromCustomer(c: CustomerWithRelations | null): CustomerInput {
 		is_vip: c.is_vip,
 		is_staff: c.is_staff,
 		tags: c.tags ?? [],
+		emergency_contact_name:
+			(c as { emergency_contact_name?: string | null }).emergency_contact_name ??
+			undefined,
+		emergency_contact_phone:
+			(c as { emergency_contact_phone?: string | null })
+				.emergency_contact_phone ?? undefined,
+		emergency_contact_relationship:
+			(c as { emergency_contact_relationship?: string | null })
+				.emergency_contact_relationship ?? undefined,
 		smoker: (c.smoker as CustomerInput["smoker"]) ?? null,
 		drug_allergies: c.drug_allergies ?? undefined,
 		medical_conditions:
@@ -170,6 +182,9 @@ export function CustomerFormDialog({
 	const [section, setSection] = useState<SectionKey>("personal");
 	const [pendingId, setPendingId] = useState<string | null>(null);
 	const [customerTags, setCustomerTags] = useState<BrandConfigItem[]>([]);
+	const [relationshipOptions, setRelationshipOptions] = useState<
+		BrandConfigItem[]
+	>([]);
 	const [salutationOptions, setSalutationOptions] = useState<string[]>([
 		...SALUTATION_FALLBACK,
 	]);
@@ -245,6 +260,13 @@ export function CustomerFormDialog({
 		listActiveBrandConfigItemsAction("customer_tag")
 			.then(setCustomerTags)
 			.catch(() => setCustomerTags([]));
+	}, [open]);
+
+	useEffect(() => {
+		if (!open) return;
+		listActiveBrandConfigItemsAction("customer_emergency_relationship")
+			.then(setRelationshipOptions)
+			.catch(() => setRelationshipOptions([]));
 	}, [open]);
 
 	// Brand-managed salutation list. Empty result → use the hardcoded
@@ -716,6 +738,63 @@ export function CustomerFormDialog({
 												))}
 											</select>
 										</Field>
+									</div>
+
+									<div className="flex flex-col gap-3 border-t pt-5">
+										<div className="flex items-baseline gap-2">
+											<h3 className="font-semibold text-sm">
+												Emergency Contact
+											</h3>
+											<span className="text-muted-foreground text-xs">
+												optional
+											</span>
+										</div>
+										<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+											<Field
+												label="Name"
+												htmlFor="cus-ec-name"
+												error={errors.emergency_contact_name?.message}
+											>
+												<Input
+													id="cus-ec-name"
+													placeholder="Eg. JOHN DOE"
+													{...form.register("emergency_contact_name")}
+												/>
+											</Field>
+											<Field
+												label="Phone"
+												htmlFor="cus-ec-phone"
+												error={errors.emergency_contact_phone?.message}
+											>
+												<Input
+													id="cus-ec-phone"
+													type="tel"
+													placeholder="+60 12-345 6789"
+													{...form.register("emergency_contact_phone")}
+												/>
+											</Field>
+											<Field
+												label="Relationship"
+												htmlFor="cus-ec-rel"
+												error={
+													errors.emergency_contact_relationship?.message
+												}
+											>
+												<Input
+													id="cus-ec-rel"
+													list="cus-ec-rel-options"
+													placeholder="Spouse, Parent, …"
+													{...form.register(
+														"emergency_contact_relationship",
+													)}
+												/>
+												<datalist id="cus-ec-rel-options">
+													{relationshipOptions.map((o) => (
+														<option key={o.code} value={o.label} />
+													))}
+												</datalist>
+											</Field>
+										</div>
 									</div>
 								</div>
 							)}

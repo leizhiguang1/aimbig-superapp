@@ -7,7 +7,7 @@ import {
 	AppointmentToastStack,
 	type Toast,
 } from "@/components/appointments/AppointmentToastStack";
-import { FollowUpHistoryPanel } from "@/components/appointments/detail/HistoryPanel";
+import { FollowUpHistoryPanel } from "@/components/appointments/detail/FollowUpHistoryPanel";
 import { Button } from "@/components/ui/button";
 import {
 	createCustomerFollowUpAction,

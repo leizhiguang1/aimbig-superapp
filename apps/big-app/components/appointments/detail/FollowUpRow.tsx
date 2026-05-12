@@ -12,8 +12,8 @@ import {
 	PinOff,
 	Trash2,
 } from "lucide-react";
-import { ContextHeader } from "@/components/appointments/detail/HistoryPanel";
-import type { FollowUpThread } from "@/components/appointments/detail/HistoryPanel";
+import { ContextHeader } from "@/components/appointments/detail/ContextHeader";
+import type { FollowUpThread } from "@/components/appointments/detail/history/types";
 import { IconBtn } from "@/components/appointments/detail/IconBtn";
 import type { FollowUpWithRefs } from "@/lib/services/follow-ups";
 import { cn } from "@/lib/utils";

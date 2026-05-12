@@ -3,24 +3,17 @@
 import {
 	Archive,
 	BarChart2,
-	BookOpen,
-	Bot,
 	Calendar,
 	CalendarDays,
-	Contact,
 	KeyRound,
 	LayoutDashboard,
-	MessageCircle,
-	MessageSquare,
 	Settings,
 	ShoppingCart,
-	Smartphone,
 	Stethoscope,
 	Store,
 	Ticket,
 	UserCog,
 	Users,
-	Zap,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,7 +27,6 @@ import {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarRail,
@@ -71,41 +63,6 @@ const baseNavItems: ReadonlyArray<SidebarNavItemData & { key: NavKey }> = [
 	{ key: "reports", label: "Reports", href: "/reports", icon: BarChart2 },
 	{ key: "webstore", label: "Webstore", href: "/webstore", icon: Store },
 	{ key: "config", label: "Config", href: "/config", icon: Settings },
-];
-
-const baseWhatsappNavItems: SidebarNavItemData[] = [
-	{
-		label: "Inbox",
-		href: "/chats",
-		icon: MessageCircle,
-		variant: "whatsapp",
-	},
-	{
-		label: "WhatsApp",
-		href: "/whatsapp",
-		icon: MessageSquare,
-		variant: "whatsapp",
-	},
-	{ label: "Contacts", href: "/contacts", icon: Contact, variant: "whatsapp" },
-	{
-		label: "Automations",
-		href: "/automations",
-		icon: Zap,
-		variant: "whatsapp",
-	},
-	{ label: "AI Bot", href: "/ai", icon: Bot, variant: "whatsapp" },
-	{
-		label: "Knowledge Base",
-		href: "/knowledge-base",
-		icon: BookOpen,
-		variant: "whatsapp",
-	},
-	{
-		label: "WA Lines",
-		href: "/wa-settings",
-		icon: Smartphone,
-		variant: "whatsapp",
-	},
 ];
 
 function withOutlet(
@@ -154,10 +111,6 @@ export function AppSidebar({
 			outletCode,
 		);
 	}, [outletCode, hiddenNavKeys]);
-	const whatsappNavItems = useMemo(
-		() => withOutlet(baseWhatsappNavItems, outletCode),
-		[outletCode],
-	);
 
 	return (
 		<Sidebar collapsible="icon">
@@ -187,24 +140,6 @@ export function AppSidebar({
 					<SidebarGroupContent>
 						<SidebarMenu className="gap-0.5">
 							{navItems.map((item) => (
-								<SidebarNavItem
-									key={item.href}
-									item={item}
-									pendingHref={pendingHref}
-									onPending={handlePending}
-								/>
-							))}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
-
-				<SidebarGroup className="border-sidebar-border border-t px-2 py-3">
-					<SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">
-						WhatsApp
-					</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<SidebarMenu className="gap-0.5">
-							{whatsappNavItems.map((item) => (
 								<SidebarNavItem
 									key={item.href}
 									item={item}

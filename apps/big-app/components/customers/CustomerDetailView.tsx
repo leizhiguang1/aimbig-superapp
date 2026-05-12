@@ -13,6 +13,7 @@ import {
 	MapPin,
 	Megaphone,
 	Pencil,
+	LifeBuoy,
 	Phone,
 	Star,
 	Tag,
@@ -543,6 +544,37 @@ export function CustomerDetailView({
 												<span className="truncate">{customer.email}</span>
 											</div>
 										)}
+										{canSeeContact && (() => {
+											const c = customer as {
+												emergency_contact_name?: string | null;
+												emergency_contact_phone?: string | null;
+												emergency_contact_relationship?: string | null;
+											};
+											const name = c.emergency_contact_name?.trim();
+											const phone = c.emergency_contact_phone?.trim();
+											const rel = c.emergency_contact_relationship?.trim();
+											if (!name && !phone && !rel) return null;
+											return (
+												<div className="flex items-start gap-1 text-[11px] text-muted-foreground">
+													<LifeBuoy className="mt-0.5 size-3 shrink-0" />
+													<span className="line-clamp-2">
+														{name ?? "—"}
+														{rel ? ` (${rel})` : ""}
+														{phone ? (
+															<>
+																{" · "}
+																<a
+																	href={`tel:${phone}`}
+																	className="tabular-nums hover:underline"
+																>
+																	{phone}
+																</a>
+															</>
+														) : null}
+													</span>
+												</div>
+											);
+										})()}
 									</div>
 									<Tooltip>
 										<TooltipTrigger asChild>

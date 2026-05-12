@@ -1,8 +1,8 @@
 "use client";
 
 import { ExternalLink, Pin, PinOff, RotateCcw, XCircle } from "lucide-react";
-import { ContextHeader } from "@/components/appointments/detail/HistoryPanel";
-import type { BillingThread } from "@/components/appointments/detail/HistoryPanel";
+import { ContextHeader } from "@/components/appointments/detail/ContextHeader";
+import type { BillingThread } from "@/components/appointments/detail/history/types";
 import { IconBtn } from "@/components/appointments/detail/IconBtn";
 import { usePermission } from "@/components/auth/PermissionsProvider";
 import {

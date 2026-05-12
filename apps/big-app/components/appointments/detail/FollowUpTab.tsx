@@ -4,11 +4,9 @@ import { BellRing, Pencil, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { Toast } from "@/components/appointments/AppointmentToastStack";
-import {
-	ContextHeader,
-	type ServiceChip,
-	summarizeServices,
-} from "@/components/appointments/detail/HistoryPanel";
+import { ContextHeader } from "@/components/appointments/detail/ContextHeader";
+import { summarizeServices } from "@/components/appointments/detail/history/threads";
+import type { ServiceChip } from "@/components/appointments/detail/history/types";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {

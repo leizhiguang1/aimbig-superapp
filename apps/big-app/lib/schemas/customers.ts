@@ -124,6 +124,11 @@ export const customerInputSchema = z
 		// label (rendered as a plain chip when no matching code exists).
 		tags: z.array(z.string().trim().min(1).max(80)).max(10),
 
+		// Emergency contact (all optional)
+		emergency_contact_name: optionalText(120),
+		emergency_contact_phone: optionalText(40),
+		emergency_contact_relationship: optionalText(60),
+
 		// Medical
 		smoker: z.enum(SMOKER_OPTIONS).nullable().optional(),
 		drug_allergies: optionalText(2000),

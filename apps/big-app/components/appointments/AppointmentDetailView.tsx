@@ -21,10 +21,8 @@ import {
 import { DocumentsTab } from "@/components/appointments/detail/DocumentsTab";
 import { FollowUpTab } from "@/components/appointments/detail/FollowUpTab";
 import { HandsOnIncentivesCard } from "@/components/appointments/detail/HandsOnIncentivesCard";
-import {
-	FollowUpHistoryPanel,
-	HistoryPanel,
-} from "@/components/appointments/detail/HistoryPanel";
+import { FollowUpHistoryPanel } from "@/components/appointments/detail/FollowUpHistoryPanel";
+import { HistoryPanel } from "@/components/appointments/detail/HistoryPanel";
 import { PlaceholderPanel } from "@/components/appointments/detail/PlaceholderPanel";
 import { StatusChangeLogCard } from "@/components/appointments/detail/StatusChangeLogCard";
 import type {
