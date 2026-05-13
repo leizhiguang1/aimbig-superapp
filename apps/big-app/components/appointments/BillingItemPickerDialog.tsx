@@ -11,6 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/numeric-input";
 import {
 	Tooltip,
 	TooltipContent,
@@ -30,7 +31,24 @@ export type BillingItemSelection =
 export type CartEntry = {
 	selection: BillingItemSelection;
 	quantity: number;
+	unit_price: number;
 };
+
+function defaultUnitPriceFor(selection: BillingItemSelection): number {
+	if (selection.type === "service") return Number(selection.service.price);
+	if (selection.type === "wallet_topup") return 0;
+	return Number(selection.product.selling_price ?? 0);
+}
+
+function priceRangeFor(
+	selection: BillingItemSelection,
+): { min: number; max: number } | null {
+	if (selection.type !== "service") return null;
+	const svc = selection.service;
+	if (!svc.allow_cash_price_range) return null;
+	if (svc.price_min == null || svc.price_max == null) return null;
+	return { min: Number(svc.price_min), max: Number(svc.price_max) };
+}
 
 export type ExistingCartItem = {
 	id: string;
@@ -85,6 +103,9 @@ function entrySku(selection: BillingItemSelection): string {
 
 function entryPriceLabel(selection: BillingItemSelection): string {
 	if (selection.type === "service") {
+		const range = priceRangeFor(selection);
+		if (range)
+			return `MYR ${range.min.toFixed(2)} – MYR ${range.max.toFixed(2)}`;
 		return `MYR ${Number(selection.service.price).toFixed(2)}`;
 	}
 	if (selection.type === "wallet_topup") return "set at billing";
@@ -184,12 +205,17 @@ export function BillingItemPickerDialog({
 			const existing = next.get(key);
 			// Wallet top-ups are always qty=1.
 			if (selection.type === "wallet_topup") {
-				next.set(key, { selection, quantity: 1 });
+				next.set(key, {
+					selection,
+					quantity: 1,
+					unit_price: existing?.unit_price ?? 0,
+				});
 				return next;
 			}
 			next.set(key, {
 				selection,
 				quantity: (existing?.quantity ?? 0) + 1,
+				unit_price: existing?.unit_price ?? defaultUnitPriceFor(selection),
 			});
 			return next;
 		});
@@ -203,6 +229,16 @@ export function BillingItemPickerDialog({
 			const q = entry.quantity + delta;
 			if (q <= 0) next.delete(key);
 			else next.set(key, { ...entry, quantity: q });
+			return next;
+		});
+	};
+
+	const changeUnitPrice = (key: string, value: number) => {
+		setDraft((prev) => {
+			const entry = prev.get(key);
+			if (!entry) return prev;
+			const next = new Map(prev);
+			next.set(key, { ...entry, unit_price: value });
 			return next;
 		});
 	};
@@ -425,12 +461,13 @@ export function BillingItemPickerDialog({
 									{draftArray.map((entry) => {
 										const key = entryKey(entry.selection);
 										const isWallet = entry.selection.type === "wallet_topup";
+										const range = priceRangeFor(entry.selection);
 										return (
 											<li
 												key={key}
 												className="flex items-start justify-between gap-2 px-3 py-3"
 											>
-												<div className="flex min-w-0 flex-col gap-0.5">
+												<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 													<div className="flex items-center gap-1.5">
 														{isWallet && (
 															<Wallet className="size-3 shrink-0 text-teal-600" />
@@ -446,8 +483,23 @@ export function BillingItemPickerDialog({
 														{entrySku(entry.selection)}
 													</span>
 													<span className="text-[10px] text-muted-foreground">
-														{entryPriceLabel(entry.selection)}
+														{entryPriceLabel(entry.selection)} / Qty
 													</span>
+													{range && (
+														<div className="mt-1 flex items-center gap-1.5">
+															<span className="text-[10px] font-semibold text-muted-foreground">
+																MYR
+															</span>
+															<MoneyInput
+																value={entry.unit_price}
+																onChange={(n) => changeUnitPrice(key, n)}
+																min={range.min}
+																max={range.max}
+																className="h-7 w-24 text-right text-xs tabular-nums"
+																aria-label={`Unit price for ${entryName(entry.selection)}`}
+															/>
+														</div>
+													)}
 													{!isWallet && (
 														<div className="mt-1 flex items-center gap-1">
 															<button

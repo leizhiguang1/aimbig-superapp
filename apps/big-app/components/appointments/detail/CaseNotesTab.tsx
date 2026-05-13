@@ -14,7 +14,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { Toast } from "@/components/appointments/AppointmentToastStack";
-import { CaseNoteRow } from "@/components/case-notes/CaseNoteRow";
 import { usePermission } from "@/components/auth/PermissionsProvider";
 import { AddMcDialog } from "@/components/medical-certificates/AddMcDialog";
 import { Button } from "@/components/ui/button";
@@ -25,15 +24,10 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-	cancelCaseNoteAction,
 	createCaseNoteAction,
-	deleteCaseNoteAction,
-	revertCaseNoteAction,
-	setCaseNotePinAction,
 	updateCaseNoteAction,
 } from "@/lib/actions/case-notes";
 import type { AppointmentWithRelations } from "@/lib/services/appointments";
-import type { CaseNoteWithContext } from "@/lib/services/case-notes";
 import type { MedicalCertificateWithRefs } from "@/lib/services/medical-certificates";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +35,6 @@ type PendingEdit = { noteId: string; content: string };
 
 type Props = {
 	appointment: AppointmentWithRelations;
-	caseNotes: CaseNoteWithContext[];
 	medicalCertificates: MedicalCertificateWithRefs[];
 	onToast: (
 		message: string,
@@ -54,7 +47,6 @@ type Props = {
 
 export function CaseNotesTab({
 	appointment,
-	caseNotes,
 	medicalCertificates,
 	onToast,
 	pendingEdit,
@@ -65,22 +57,11 @@ export function CaseNotesTab({
 	const [editingFromHistoryId, setEditingFromHistoryId] = useState<
 		string | null
 	>(null);
-	const [editingId, setEditingId] = useState<string | null>(null);
-	const [editContent, setEditContent] = useState("");
-	const [deleteId, setDeleteId] = useState<string | null>(null);
-	const [cancelId, setCancelId] = useState<string | null>(null);
-	const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 	const [mcDialogOpen, setMcDialogOpen] = useState(false);
 	const canIssueMc = usePermission("clinical.medical_certificates");
 	const canEditNotes = usePermission("clinical.case_notes_edit");
 	const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
-	const [pending, startTransition] = useTransition();
-	const [localNotes, setLocalNotes] =
-		useState<CaseNoteWithContext[]>(caseNotes);
-
-	useEffect(() => {
-		setLocalNotes(caseNotes);
-	}, [caseNotes]);
+	const [, startTransition] = useTransition();
 
 	useEffect(() => {
 		if (pendingEdit == null) return;
@@ -110,9 +91,6 @@ export function CaseNotesTab({
 
 		if (editingFromHistoryId) {
 			const id = editingFromHistoryId;
-			setLocalNotes((prev) =>
-				prev.map((n) => (n.id === id ? { ...n, content } : n)),
-			);
 			clearDraft();
 			startTransition(async () => {
 				try {
@@ -131,21 +109,6 @@ export function CaseNotesTab({
 		}
 
 		if (!customerId) return;
-		const tempId = `temp-${crypto.randomUUID()}`;
-		const optimistic: CaseNoteWithContext = {
-			id: tempId,
-			appointment_id: appointment.id,
-			customer_id: customerId,
-			employee_id: appointment.employee_id ?? null,
-			content,
-			is_pinned: false,
-			is_cancelled: false,
-			created_at: new Date().toISOString(),
-			updated_at: new Date().toISOString(),
-			employee: null,
-			appointment: null,
-		};
-		setLocalNotes((prev) => [...prev, optimistic]);
 		clearDraft();
 		startTransition(async () => {
 			try {
@@ -158,7 +121,6 @@ export function CaseNotesTab({
 				onToast("Note saved", "success");
 				refresh();
 			} catch (err) {
-				setLocalNotes((prev) => prev.filter((n) => n.id !== tempId));
 				setDraft(content);
 				onToast(
 					err instanceof Error ? err.message : "Could not save note",
@@ -167,118 +129,6 @@ export function CaseNotesTab({
 			}
 		});
 	};
-
-	const handleUpdate = () => {
-		if (!editingId || !editContent.trim()) return;
-		const id = editingId;
-		const content = editContent.trim();
-		setLocalNotes((prev) =>
-			prev.map((n) => (n.id === id ? { ...n, content } : n)),
-		);
-		setEditingId(null);
-		setEditContent("");
-		startTransition(async () => {
-			try {
-				await updateCaseNoteAction(appointment.id, id, { content });
-				onToast("Note updated", "success");
-				refresh();
-			} catch (err) {
-				onToast(
-					err instanceof Error ? err.message : "Could not update note",
-					"error",
-				);
-				refresh();
-			}
-		});
-	};
-
-	const handleDelete = () => {
-		if (!deleteId) return;
-		const id = deleteId;
-		setLocalNotes((prev) => prev.filter((n) => n.id !== id));
-		setDeleteId(null);
-		startTransition(async () => {
-			try {
-				await deleteCaseNoteAction(appointment.id, id);
-				onToast("Note deleted", "success");
-				refresh();
-			} catch (err) {
-				onToast(
-					err instanceof Error ? err.message : "Could not delete note",
-					"error",
-				);
-				refresh();
-			}
-		});
-	};
-
-	const handleTogglePin = (id: string, currentPinned: boolean) => {
-		setLocalNotes((prev) =>
-			prev.map((n) => (n.id === id ? { ...n, is_pinned: !currentPinned } : n)),
-		);
-		startTransition(async () => {
-			try {
-				await setCaseNotePinAction(appointment.id, id, !currentPinned);
-				onToast(currentPinned ? "Unpinned" : "Pinned to top", "success");
-				refresh();
-			} catch (err) {
-				onToast(
-					err instanceof Error ? err.message : "Could not update pin",
-					"error",
-				);
-				refresh();
-			}
-		});
-	};
-
-	const handleConfirmCancel = () => {
-		if (!cancelId) return;
-		const id = cancelId;
-		setLocalNotes((prev) =>
-			prev.map((n) => (n.id === id ? { ...n, is_cancelled: true } : n)),
-		);
-		setCancelId(null);
-		startTransition(async () => {
-			try {
-				await cancelCaseNoteAction(appointment.id, id);
-				onToast("Note cancelled", "success");
-				refresh();
-			} catch (err) {
-				onToast(
-					err instanceof Error ? err.message : "Could not cancel note",
-					"error",
-				);
-				refresh();
-			}
-		});
-	};
-
-	const handleRevert = (id: string) => {
-		setLocalNotes((prev) =>
-			prev.map((n) => (n.id === id ? { ...n, is_cancelled: false } : n)),
-		);
-		startTransition(async () => {
-			try {
-				await revertCaseNoteAction(appointment.id, id);
-				onToast("Note restored", "success");
-				refresh();
-			} catch (err) {
-				onToast(
-					err instanceof Error ? err.message : "Could not restore note",
-					"error",
-				);
-				refresh();
-			}
-		});
-	};
-
-	const toggleCollapse = (id: string) =>
-		setCollapsedIds((prev) => {
-			const next = new Set(prev);
-			if (next.has(id)) next.delete(id);
-			else next.add(id);
-			return next;
-		});
 
 	if (isBlock) {
 		return (
@@ -295,10 +145,6 @@ export function CaseNotesTab({
 			</div>
 		);
 	}
-
-	const notesOnThisVisit = localNotes.filter(
-		(n) => n.appointment_id === appointment.id,
-	);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -353,63 +199,6 @@ export function CaseNotesTab({
 			{medicalCertificates.length > 0 && (
 				<MedicalCertificateStrip items={medicalCertificates} />
 			)}
-
-			<div className="rounded-md border bg-card">
-				<div className="border-b px-4 py-2.5 text-muted-foreground text-xs uppercase tracking-wide">
-					Notes on this visit
-				</div>
-				{notesOnThisVisit.length === 0 ? (
-					<p className="p-4 text-muted-foreground text-sm italic">
-						No notes yet for this visit.
-					</p>
-				) : (
-					notesOnThisVisit.map((n) => (
-						<CaseNoteRow
-							key={n.id}
-							note={n}
-							collapsed={collapsedIds.has(n.id)}
-							isEditing={editingId === n.id}
-							editContent={editContent}
-							pending={pending}
-							onToggle={() => toggleCollapse(n.id)}
-							onEditStart={() => {
-								setEditingId(n.id);
-								setEditContent(n.content);
-							}}
-							onEditCancel={() => {
-								setEditingId(null);
-								setEditContent("");
-							}}
-							onEditChange={setEditContent}
-							onEditSave={handleUpdate}
-							onDelete={() => setDeleteId(n.id)}
-							onTogglePin={() => handleTogglePin(n.id, n.is_pinned)}
-							onCancel={() => setCancelId(n.id)}
-							onRevert={() => handleRevert(n.id)}
-						/>
-					))
-				)}
-			</div>
-
-			<ConfirmDialog
-				open={deleteId !== null}
-				onOpenChange={(o) => !o && setDeleteId(null)}
-				title="Delete this case note?"
-				description="This removes the note permanently."
-				confirmLabel="Delete"
-				pending={pending}
-				onConfirm={handleDelete}
-			/>
-
-			<ConfirmDialog
-				open={cancelId !== null}
-				onOpenChange={(o) => !o && setCancelId(null)}
-				title="Cancel this case note?"
-				description="The note stays on the record marked as cancelled. You can restore it later."
-				confirmLabel="Cancel note"
-				pending={pending}
-				onConfirm={handleConfirmCancel}
-			/>
 
 			{customerId && (
 				<AddMcDialog

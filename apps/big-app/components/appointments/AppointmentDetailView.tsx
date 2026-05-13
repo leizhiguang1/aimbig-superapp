@@ -147,9 +147,9 @@ export function AppointmentDetailView({
 	}, []);
 
 	const hasCustomer = !appointment.is_time_block && !!appointment.customer_id;
-	const isCaseBillingTab = activeTab === "casenotes" || activeTab === "billing";
+	const isCaseNotesTab = activeTab === "casenotes";
 	const isFollowUpTab = activeTab === "followup";
-	const showHistoryPanel = isCaseBillingTab && hasCustomer;
+	const showHistoryPanel = isCaseNotesTab && hasCustomer;
 	const showFollowUpPanel = isFollowUpTab && hasCustomer;
 
 	const showToast = useCallback(
@@ -281,8 +281,7 @@ export function AppointmentDetailView({
 					<DetailTabs
 					activeTab={activeTab}
 					onChange={goToTab}
-					canSeeCaseNotes={canSeeCaseNotes}
-					canCaseBilling={canCaseBilling}
+					canSeeCaseOrBilling={canSeeCaseNotes || canCaseBilling}
 				/>
 
 					{visitedTabs.has("overview") && (
@@ -310,35 +309,52 @@ export function AppointmentDetailView({
 						</TabPanel>
 					)}
 
-					{visitedTabs.has("casenotes") && (
-						<TabPanel hidden={activeTab !== "casenotes"}>
-							<CaseNotesTab
-								appointment={appointment}
-								caseNotes={caseNotes}
-								medicalCertificates={medicalCertificates}
-								onToast={showToast}
-								pendingEdit={pendingEdit}
-								onPendingEditHandled={() => setPendingEdit(null)}
-							/>
-						</TabPanel>
-					)}
-
-					{canCaseBilling && visitedTabs.has("billing") && (
-						<TabPanel hidden={activeTab !== "billing"}>
-							<BillingTab
-								appointmentId={appointment.id}
-								entries={lineItems}
-								services={services}
-								products={products}
-								taxes={taxes}
-								frontdeskMessage={appointment.frontdesk_message}
-								isLead={!appointment.is_time_block && !appointment.customer_id}
-								isBlock={appointment.is_time_block}
-								customer={appointment.customer}
-								billingSettings={billingSettings}
-							/>
-						</TabPanel>
-					)}
+					{(canSeeCaseNotes || canCaseBilling) &&
+						visitedTabs.has("casenotes") && (
+							<TabPanel hidden={activeTab !== "casenotes"}>
+								<div className="flex flex-col gap-8">
+									{canSeeCaseNotes && (
+										<section className="space-y-4">
+											<header className="border-b pb-2">
+												<h2 className="font-semibold text-xl tracking-tight">
+													Case Notes
+												</h2>
+											</header>
+											<CaseNotesTab
+												appointment={appointment}
+												medicalCertificates={medicalCertificates}
+												onToast={showToast}
+												pendingEdit={pendingEdit}
+												onPendingEditHandled={() => setPendingEdit(null)}
+											/>
+										</section>
+									)}
+									{canCaseBilling && (
+										<section className="space-y-4">
+											<header className="border-b pb-2">
+												<h2 className="font-semibold text-xl tracking-tight">
+													Billing
+												</h2>
+											</header>
+											<BillingTab
+												appointmentId={appointment.id}
+												entries={lineItems}
+												services={services}
+												products={products}
+												taxes={taxes}
+												frontdeskMessage={appointment.frontdesk_message}
+												isLead={
+													!appointment.is_time_block && !appointment.customer_id
+												}
+												isBlock={appointment.is_time_block}
+												customer={appointment.customer}
+												billingSettings={billingSettings}
+											/>
+										</section>
+									)}
+								</div>
+							</TabPanel>
+						)}
 
 					{visitedTabs.has("dental-assessment") && (
 						<TabPanel hidden={activeTab !== "dental-assessment"}>

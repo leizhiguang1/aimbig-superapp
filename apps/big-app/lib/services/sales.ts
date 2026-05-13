@@ -26,6 +26,7 @@ import {
 	writeOffInputSchema,
 } from "@/lib/schemas/sales";
 import { assertPaymentFields } from "@/lib/services/payment-methods";
+import { assertUnitPriceInRange } from "@/lib/services/services";
 import {
 	assertAppointmentInBrand,
 	assertCustomerInBrand,
@@ -135,6 +136,14 @@ export async function collectAppointmentPayment(
 	const parsed: CollectPaymentInput = collectPaymentInputSchema.parse(input);
 	await assertLineDiscountCaps(ctx, parsed.items);
 	await assertRequiredFullAllocations(ctx, parsed.items, parsed.allocations);
+	await assertUnitPriceInRange(
+		ctx,
+		parsed.items.map((i) => ({
+			service_id: i.service_id ?? null,
+			unit_price: i.unit_price,
+			item_name: i.item_name,
+		})),
+	);
 	const normalizedPayments = await assertPaymentFields(ctx, parsed.payments);
 	// Only forward p_sold_at when the operator actually chose a backdate —
 	// the RPC column is timestamptz and rejects "" with
@@ -205,6 +214,14 @@ export async function collectWalkInSale(
 	}
 	await assertLineDiscountCaps(ctx, parsed.items);
 	await assertRequiredFullAllocations(ctx, parsed.items, parsed.allocations);
+	await assertUnitPriceInRange(
+		ctx,
+		parsed.items.map((i) => ({
+			service_id: i.service_id ?? null,
+			unit_price: i.unit_price,
+			item_name: i.item_name,
+		})),
+	);
 	const normalizedPayments = await assertPaymentFields(ctx, parsed.payments);
 	const { data, error } = await ctx.db.rpc("collect_walkin_sale", {
 		p_customer_id: parsed.customer_id,

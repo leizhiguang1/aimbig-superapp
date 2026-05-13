@@ -8,6 +8,7 @@ import {
 } from "@/components/appointments/BillingItemPickerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/numeric-input";
 import {
 	createLineItemsBulkAction,
 	deleteLineItemAction,
@@ -231,7 +232,7 @@ export function BillingSection({
 		);
 
 	const onPickerCommit = (batch: CartEntry[]) => {
-		const newItems: Item[] = batch.map(({ selection, quantity }) => {
+		const newItems: Item[] = batch.map(({ selection, quantity, unit_price }) => {
 			if (selection.type === "service") {
 				const svc = selection.service;
 				return {
@@ -242,7 +243,7 @@ export function BillingSection({
 					product_id: null,
 					description: svc.name,
 					quantity,
-					unit_price: Number(svc.price),
+					unit_price,
 					discount: 0,
 					tax_id: defaultTaxForParent(
 						svc.tax_ids ?? [],
@@ -263,7 +264,7 @@ export function BillingSection({
 					product_id: prod.id,
 					description: prod.name,
 					quantity: 1,
-					unit_price: 0, // staff types the top-up amount at billing time
+					unit_price, // staff types the top-up amount at billing time
 					discount: 0,
 					tax_id: null, // wallet credit is never taxed
 					notes: "",
@@ -278,7 +279,7 @@ export function BillingSection({
 				product_id: prod.id,
 				description: prod.name,
 				quantity,
-				unit_price: Number(prod.selling_price ?? 0),
+				unit_price,
 				discount: 0,
 				tax_id: defaultTaxForParent(
 					prod.tax_ids ?? [],
@@ -398,12 +399,9 @@ export function BillingSection({
 		>
 			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center gap-2">
-					<div>
-						<h3 className="font-semibold text-sm">Billing</h3>
-						<p className="text-muted-foreground text-xs">
-							{items.length} {items.length === 1 ? "item" : "items"}
-						</p>
-					</div>
+					<p className="text-muted-foreground text-xs">
+						{items.length} {items.length === 1 ? "item" : "items"}
+					</p>
 					{pending && (
 						<span
 							className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 font-medium text-[11px] text-primary"
@@ -469,6 +467,16 @@ export function BillingSection({
 							const lineAmount =
 								item.quantity * item.unit_price - item.discount;
 							const lineTotal = Math.max(0, lineAmount);
+							const svcPriceMin =
+								svc?.allow_cash_price_range && svc.price_min != null
+									? Number(svc.price_min)
+									: undefined;
+							const svcPriceMax =
+								svc?.allow_cash_price_range && svc.price_max != null
+									? Number(svc.price_max)
+									: undefined;
+							const hasPriceRange =
+								svcPriceMin != null && svcPriceMax != null;
 							const lineTaxIds = parentTaxIdsFor(item);
 							const lineTaxes = taxes.filter(
 								(t) => t.is_active && lineTaxIds.includes(t.id),
@@ -534,18 +542,23 @@ export function BillingSection({
 											className="h-7 text-right text-xs tabular-nums"
 											aria-label="Quantity"
 										/>
-										<Input
-											type="number"
-											step="0.01"
-											value={item.unit_price}
-											onChange={(e) =>
-												update(item.key, {
-													unit_price: Number(e.target.value) || 0,
-												})
-											}
-											className="h-7 text-right text-xs tabular-nums"
-											aria-label="Unit price"
-										/>
+										<div className="flex flex-col items-stretch">
+											<MoneyInput
+												value={item.unit_price}
+												onChange={(n) =>
+													update(item.key, { unit_price: n })
+												}
+												min={svcPriceMin}
+												max={svcPriceMax}
+												className="h-7 text-right text-xs tabular-nums"
+												aria-label="Unit price"
+											/>
+											{hasPriceRange && (
+												<span className="mt-0.5 text-right text-[10px] text-muted-foreground tabular-nums">
+													{svcPriceMin?.toFixed(2)}–{svcPriceMax?.toFixed(2)}
+												</span>
+											)}
+										</div>
 										<Input
 											type="number"
 											step="0.01"
@@ -698,18 +711,21 @@ export function BillingSection({
 												/>
 											</Field>
 											<Field label="Price (RM)">
-												<Input
-													type="number"
-													step="0.01"
+												<MoneyInput
 													value={item.unit_price}
-													onChange={(e) =>
-														update(item.key, {
-															unit_price: Number(e.target.value) || 0,
-														})
+													onChange={(n) =>
+														update(item.key, { unit_price: n })
 													}
+													min={svcPriceMin}
+													max={svcPriceMax}
 													className="h-7 text-right text-xs tabular-nums"
 													aria-label="Unit price"
 												/>
+												{hasPriceRange && (
+													<span className="mt-0.5 block text-right text-[10px] text-muted-foreground tabular-nums">
+														{svcPriceMin?.toFixed(2)}–{svcPriceMax?.toFixed(2)}
+													</span>
+												)}
 											</Field>
 											<Field label="Discount (RM)">
 												<Input

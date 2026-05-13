@@ -308,7 +308,7 @@ export function CollectPaymentDialog({
 			appointment.customer,
 			billingSettings ?? null,
 		);
-		const newLines: Line[] = batch.map(({ selection, quantity }) => {
+		const newLines: Line[] = batch.map(({ selection, quantity, unit_price }) => {
 			const base = {
 				id: crypto.randomUUID(),
 				discount_type: "amount" as const,
@@ -326,7 +326,7 @@ export function CollectPaymentDialog({
 					item_name: selection.service.name,
 					sku: selection.service.sku ?? "",
 					quantity,
-					unit_price: Number(selection.service.price),
+					unit_price,
 					tax_id: defaultTaxId,
 				};
 			}
@@ -339,7 +339,7 @@ export function CollectPaymentDialog({
 					item_name: selection.product.name,
 					sku: selection.product.sku ?? "",
 					quantity: 1,
-					unit_price: 0,
+					unit_price,
 					tax_id: null,
 				};
 			}
@@ -351,7 +351,7 @@ export function CollectPaymentDialog({
 				item_name: selection.product.name,
 				sku: selection.product.sku ?? "",
 				quantity,
-				unit_price: Number(selection.product.selling_price ?? 0),
+				unit_price,
 				tax_id: defaultTaxId,
 			};
 		});

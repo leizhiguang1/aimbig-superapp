@@ -9,13 +9,11 @@ export type DetailTabKey =
 	| "periodontal-charting"
 	| "followup"
 	| "camera"
-	| "documents"
-	| "billing";
+	| "documents";
 
 const TABS: { key: DetailTabKey; label: string }[] = [
 	{ key: "overview", label: "Overview" },
 	{ key: "casenotes", label: "Case notes" },
-	{ key: "billing", label: "Billing" },
 	{ key: "dental-assessment", label: "Dental assessment" },
 	{ key: "periodontal-charting", label: "Periodontal charting" },
 	{ key: "followup", label: "Follow up" },
@@ -26,19 +24,16 @@ const TABS: { key: DetailTabKey; label: string }[] = [
 type Props = {
 	activeTab: DetailTabKey;
 	onChange: (key: DetailTabKey) => void;
-	canSeeCaseNotes?: boolean;
-	canCaseBilling?: boolean;
+	canSeeCaseOrBilling?: boolean;
 };
 
 export function DetailTabs({
 	activeTab,
 	onChange,
-	canSeeCaseNotes = true,
-	canCaseBilling = true,
+	canSeeCaseOrBilling = true,
 }: Props) {
 	const tabs = TABS.filter((t) => {
-		if (t.key === "casenotes" && !canSeeCaseNotes) return false;
-		if (t.key === "billing" && !canCaseBilling) return false;
+		if (t.key === "casenotes" && !canSeeCaseOrBilling) return false;
 		return true;
 	});
 	return (

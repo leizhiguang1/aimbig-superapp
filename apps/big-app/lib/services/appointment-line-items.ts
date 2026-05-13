@@ -4,6 +4,7 @@ import {
 	lineItemIncentiveInputSchema,
 	lineItemInputSchema,
 } from "@/lib/schemas/appointments";
+import { assertUnitPriceInRange } from "@/lib/services/services";
 import {
 	assertAppointmentInBrand,
 	assertCustomerInBrand,
@@ -128,6 +129,13 @@ export async function createLineItem(
 ): Promise<AppointmentLineItem> {
 	const row = normalize(input);
 	await assertAppointmentInBrand(ctx, row.appointment_id);
+	await assertUnitPriceInRange(ctx, [
+		{
+			service_id: row.service_id,
+			unit_price: row.unit_price,
+			item_name: row.description,
+		},
+	]);
 	const insert = {
 		...row,
 		created_by: ctx.currentUser?.employeeId ?? null,
@@ -158,6 +166,14 @@ export async function createLineItemsBulk(
 	for (const apptId of apptIds) await assertAppointmentInBrand(ctx, apptId);
 
 	await assertWalletExclusivity(ctx, rows);
+	await assertUnitPriceInRange(
+		ctx,
+		rows.map((r) => ({
+			service_id: r.service_id,
+			unit_price: r.unit_price,
+			item_name: r.description,
+		})),
+	);
 
 	const { data, error } = await ctx.db
 		.from("appointment_line_items")
@@ -205,6 +221,13 @@ export async function updateLineItem(
 	await assertLineItemInBrand(ctx, id);
 	const row = normalize(input);
 	await assertAppointmentInBrand(ctx, row.appointment_id);
+	await assertUnitPriceInRange(ctx, [
+		{
+			service_id: row.service_id,
+			unit_price: row.unit_price,
+			item_name: row.description,
+		},
+	]);
 	const { data, error } = await ctx.db
 		.from("appointment_line_items")
 		.update(row)

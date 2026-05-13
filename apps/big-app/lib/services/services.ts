@@ -54,6 +54,57 @@ function normalizeLinks(rows: RawLinkRow[] | null): ServiceInventoryLink[] {
 	}));
 }
 
+export type PriceRangeCheckItem = {
+	service_id: string | null;
+	unit_price: number;
+	item_name?: string;
+};
+
+// Server invariant: when a service has allow_cash_price_range = true, the
+// unit_price on a line item must fall within [price_min, price_max]. The UI
+// clamps on blur via MoneyInput; this is the matching server-side guard so a
+// non-UI client cannot bypass it. Mirrors the discount-cap guard in sales.ts.
+export async function assertUnitPriceInRange(
+	ctx: Context,
+	items: PriceRangeCheckItem[],
+): Promise<void> {
+	const serviceIds = Array.from(
+		new Set(
+			items.map((i) => i.service_id).filter((id): id is string => id != null),
+		),
+	);
+	if (serviceIds.length === 0) return;
+	const { data, error } = await ctx.db
+		.from("services")
+		.select("id, name, allow_cash_price_range, price_min, price_max")
+		.eq("brand_id", assertBrandId(ctx))
+		.in("id", serviceIds);
+	if (error) throw new ValidationError(error.message);
+	const map = new Map(
+		(data ?? []).map((r) => [
+			r.id,
+			{
+				name: r.name,
+				allow: !!r.allow_cash_price_range,
+				min: r.price_min == null ? null : Number(r.price_min),
+				max: r.price_max == null ? null : Number(r.price_max),
+			},
+		]),
+	);
+	for (const item of items) {
+		if (!item.service_id) continue;
+		const svc = map.get(item.service_id);
+		if (!svc || !svc.allow || svc.min == null || svc.max == null) continue;
+		const price = Number(item.unit_price);
+		if (price < svc.min - 0.005 || price > svc.max + 0.005) {
+			const label = item.item_name ?? svc.name;
+			throw new ValidationError(
+				`"${label}" price RM ${price.toFixed(2)} is outside the allowed range RM ${svc.min.toFixed(2)} – RM ${svc.max.toFixed(2)}.`,
+			);
+		}
+	}
+}
+
 export async function listServices(
 	ctx: Context,
 ): Promise<ServiceWithCategory[]> {

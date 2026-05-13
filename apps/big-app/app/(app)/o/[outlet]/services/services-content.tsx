@@ -31,10 +31,7 @@ export async function ServicesContent() {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-4">
-			<div className="flex shrink-0 items-center justify-between">
-				<p className="text-muted-foreground text-sm">
-					{services.length} service{services.length === 1 ? "" : "s"}
-				</p>
+			<div className="flex shrink-0 items-center justify-end">
 				<NewServiceButton
 					categories={categories}
 					taxes={taxes}

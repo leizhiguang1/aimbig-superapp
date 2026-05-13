@@ -210,6 +210,31 @@ export function ServiceFormDialog({
 								{/* ─── LEFT COLUMN ──────────────────────────── */}
 								<div className="flex flex-col gap-5">
 									<Section title="General">
+										<div className="flex flex-wrap items-center gap-2 text-sm">
+											<Controller
+												control={form.control}
+												name="is_active"
+												render={({ field }) => (
+													<Checkbox
+														id="svc-is-active"
+														checked={!!field.value}
+														onCheckedChange={(c) =>
+															field.onChange(c === true)
+														}
+													/>
+												)}
+											/>
+											<label
+												htmlFor="svc-is-active"
+												className="cursor-pointer"
+											>
+												Active
+											</label>
+											<span className="text-muted-foreground text-xs">
+												— uncheck to hide this service from new appointments
+												and sales while keeping it on historical records.
+											</span>
+										</div>
 										<div className="flex flex-col items-center">
 											<Controller
 												control={form.control}

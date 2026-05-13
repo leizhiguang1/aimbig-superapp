@@ -340,7 +340,7 @@ function NewSaleBody({
 
 	const handlePickerCommit = (batch: CartEntry[]) => {
 		const defaultTaxId = resolveDefaultTaxId(selectedCustomer, null);
-		const newLines: Line[] = batch.map(({ selection, quantity }) => {
+		const newLines: Line[] = batch.map(({ selection, quantity, unit_price }) => {
 			const base = {
 				id: crypto.randomUUID(),
 				quantity,
@@ -358,7 +358,7 @@ function NewSaleBody({
 					item_type: "service",
 					item_name: selection.service.name,
 					sku: selection.service.sku ?? "",
-					unit_price: Number(selection.service.price),
+					unit_price,
 					tax_id: defaultTaxId,
 				};
 			}
@@ -371,7 +371,7 @@ function NewSaleBody({
 					item_type: "wallet_topup",
 					item_name: selection.product.name,
 					sku: selection.product.sku ?? "",
-					unit_price: 0, // staff types the top-up amount
+					unit_price, // staff types the top-up amount
 					tax_id: null, // wallet credit is never taxed
 				};
 			}
@@ -382,7 +382,7 @@ function NewSaleBody({
 				item_type: "product",
 				item_name: selection.product.name,
 				sku: selection.product.sku ?? "",
-				unit_price: Number(selection.product.selling_price ?? 0),
+				unit_price,
 				tax_id: defaultTaxId,
 			};
 		});

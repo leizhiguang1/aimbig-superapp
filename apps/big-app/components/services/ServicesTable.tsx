@@ -1,9 +1,10 @@
 "use client";
 
 import { Check, ImageIcon, Pencil, Trash2, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import {
@@ -63,6 +64,13 @@ export function ServicesTable({
 	const [deleting, setDeleting] = useState<ServiceWithCategory | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
 	const [pending, startTransition] = useTransition();
+	const [showInactive, setShowInactive] = useState(false);
+
+	const visibleServices = useMemo(
+		() =>
+			showInactive ? services : services.filter((s) => s.is_active),
+		[services, showInactive],
+	);
 
 	const columns: DataTableColumn<ServiceWithCategory>[] = [
 		{
@@ -233,6 +241,23 @@ export function ServicesTable({
 				),
 		},
 		{
+			key: "is_active",
+			header: "Status",
+			sortable: true,
+			sortValue: (s) => (s.is_active ? 1 : 0),
+			cell: (s) => (
+				<span
+					className={
+						s.is_active
+							? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-600 text-xs"
+							: "rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs"
+					}
+				>
+					{s.is_active ? "Active" : "Inactive"}
+				</span>
+			),
+		},
+		{
 			key: "actions",
 			header: "",
 			align: "right",
@@ -264,8 +289,24 @@ export function ServicesTable({
 
 	return (
 		<>
+			<div className="flex shrink-0 items-center justify-between gap-3">
+				<p className="text-muted-foreground text-sm">
+					{visibleServices.length} service
+					{visibleServices.length === 1 ? "" : "s"}
+					{showInactive && services.length !== visibleServices.length
+						? ` (${services.length} total)`
+						: ""}
+				</p>
+				<label className="flex cursor-pointer items-center gap-2 text-muted-foreground text-sm">
+					<Checkbox
+						checked={showInactive}
+						onCheckedChange={(c) => setShowInactive(c === true)}
+					/>
+					Show inactive
+				</label>
+			</div>
 			<DataTable
-				data={services}
+				data={visibleServices}
 				columns={columns}
 				getRowKey={(s) => s.id}
 				searchKeys={["name", "sku"]}

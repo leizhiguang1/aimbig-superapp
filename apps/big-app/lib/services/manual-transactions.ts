@@ -6,6 +6,7 @@ import {
 	type CreateManualTransactionInput,
 	createManualTransactionInputSchema,
 } from "@/lib/schemas/manual-transactions";
+import { assertUnitPriceInRange } from "@/lib/services/services";
 import { assertBrandId } from "@/lib/supabase/query";
 import type { Tables } from "@/lib/supabase/types";
 
@@ -94,6 +95,15 @@ export async function createManualTransaction(
 		createManualTransactionInputSchema.parse(input);
 	const employeeId = ctx.currentUser?.employeeId;
 	if (!employeeId) throw new ValidationError("Employee context required");
+
+	await assertUnitPriceInRange(
+		ctx,
+		parsed.items.map((item) => ({
+			service_id: item.service_id ?? null,
+			unit_price: item.unit_price,
+			item_name: item.item_name,
+		})),
+	);
 
 	const { data, error } = await ctx.db.rpc("create_manual_transaction", {
 		p_outlet_id: parsed.outlet_id,
