@@ -10,12 +10,16 @@ import {
 	useTransition,
 } from "react";
 import { AppointmentContextMenu } from "@/components/appointments/AppointmentContextMenu";
-import { AppointmentDialog } from "@/components/appointments/AppointmentDialog";
+import {
+	AppointmentDialog,
+	type CreateMode,
+} from "@/components/appointments/AppointmentDialog";
 import {
 	AppointmentToastStack,
 	type Toast,
 } from "@/components/appointments/AppointmentToastStack";
 import { CancelAppointmentDialog } from "@/components/appointments/CancelAppointmentDialog";
+import { CreateAppointmentMenu } from "@/components/appointments/CreateAppointmentMenu";
 import { DayView } from "@/components/appointments/DayView";
 import { GridView } from "@/components/appointments/GridView";
 import { ListView } from "@/components/appointments/ListView";
@@ -23,7 +27,6 @@ import { MonthView } from "@/components/appointments/MonthView";
 import { ResourceFilterNotice } from "@/components/appointments/ResourceFilterNotice";
 import { WeekView } from "@/components/appointments/WeekView";
 import { useAppointmentNotifications } from "@/components/notifications/AppointmentNotificationsProvider";
-import { CreateButton } from "@/components/ui/create-button";
 import { useOutletPath } from "@/hooks/use-outlet-path";
 import {
 	rescheduleAppointmentAction,
@@ -90,6 +93,7 @@ type DialogState =
 			endAt: string;
 			employeeId: string | null;
 			roomId: string | null;
+			mode: CreateMode;
 	  }
 	| null;
 
@@ -246,6 +250,7 @@ export function AppointmentsCalendar({
 		durationMinutes?: number;
 		employeeId?: string | null;
 		roomId?: string | null;
+		mode?: CreateMode;
 	}) => {
 		const startIso = buildLocalIso(args.dateStr, args.hour, args.minute);
 		const end = new Date(startIso);
@@ -258,6 +263,22 @@ export function AppointmentsCalendar({
 			endAt: end.toISOString(),
 			employeeId: args.employeeId ?? null,
 			roomId: args.roomId ?? null,
+			mode: args.mode ?? "booking",
+		});
+	};
+
+	const openCreateNow = (mode: CreateMode) => {
+		const baseDate = fmtDate(new Date());
+		const start = new Date(`${baseDate}T09:00`);
+		const end = new Date(start);
+		end.setMinutes(end.getMinutes() + DEFAULT_CREATE_DURATION_MIN);
+		setDialog({
+			kind: "create",
+			startAt: start.toISOString(),
+			endAt: end.toISOString(),
+			employeeId: null,
+			roomId: mode === "block" ? null : (rooms[0]?.id ?? null),
+			mode,
 		});
 	};
 
@@ -561,25 +582,7 @@ export function AppointmentsCalendar({
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex justify-end">
-				<CreateButton
-					type="button"
-					size="sm"
-					onClick={() => {
-						const baseDate = fmtDate(new Date());
-						const start = new Date(`${baseDate}T09:00`);
-						const end = new Date(start);
-						end.setMinutes(end.getMinutes() + DEFAULT_CREATE_DURATION_MIN);
-						setDialog({
-							kind: "create",
-							startAt: start.toISOString(),
-							endAt: end.toISOString(),
-							employeeId: null,
-							roomId: rooms[0]?.id ?? null,
-						});
-					}}
-				>
-					New appointment
-				</CreateButton>
+				<CreateAppointmentMenu onSelect={openCreateNow} />
 			</div>
 
 			{offRosterFilter && (
@@ -607,6 +610,7 @@ export function AppointmentsCalendar({
 									endAt: dialog.endAt,
 									employeeId: dialog.employeeId,
 									roomId: dialog.roomId,
+									mode: dialog.mode,
 								}
 							: null
 					}

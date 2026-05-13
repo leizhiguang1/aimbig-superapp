@@ -10,6 +10,29 @@ punch list, not a spec.
 
 ---
 
+## Recently shipped (2026-05-12)
+
+- **Onboarding gap fix** — migration `0104_create_brand_atomic_seed_outlet`
+  extends the `create_brand_atomic` RPC to also insert a default outlet
+  (using the brand code as outlet code, brand name as outlet name) so that
+  newly-created brand admins land directly on a working `/o/<code>/dashboard`
+  instead of the "No active outlets" dead-end at `/`. The owner can rename
+  or add more outlets from `/o/<code>/config/outlets` afterward. Verified
+  end-to-end via the apex admin UI (`/admin/brands` → New brand → admin
+  signs in at new subdomain → dashboard loads).
+- **Walk-in & Time-block split-button on calendar** — `CreateAppointmentMenu`
+  replaces the single "New appointment" button. Walk-in pre-toggles lead
+  form + `lead_source = walk_in`; Time block pre-toggles `is_time_block`
+  and clears the default room.
+- **Status edge case lock** — `setAppointmentStatus()` now rejects
+  `cancelled` (same pattern as `completed`); forces callers through the
+  dedicated cancel flow so reason / cancelled_by / cancelled_at are
+  always captured.
+- **Top 10 sellers widget** — dashboard `TopSellersCard` with Services /
+  Products tabs, last-30-day revenue ranking.
+
+---
+
 ## Recently shipped (2026-05-07 → 2026-05-11)
 
 These didn't have their own checklist item but landed in this window and
@@ -69,10 +92,10 @@ governs every downstream read. Stabilize these first.
 
 ### A2. Appointments fixes — `docs/modules/02-appointments.md`
 - [ ] Outstanding appointment bugs from backlog (2026-04-15 entry)
-- [ ] Payment-dialog loose ends (follow-up after recent `1f3c643`)
-- [ ] Status progression edge cases (no-show, rescheduled, cancelled)
-- [ ] Block-out / leave overlays on calendar
-- [ ] Walk-in creation from calendar
+- [x] Payment-dialog loose ends (follow-up after recent `1f3c643`) — **swept 2026-05-12.** The 1f3c643 work (frontdesk message autosave + re-send at submit) is complete. Doc-only update: marked Itemised Allocation / Add Item to Cart / Repeat / Apply Auto Discount / Backdate / frontdesk plumbing as shipped in `docs/modules/02-appointments.md`. Remaining items (secondary staff avatars, Attachments, in-dialog Add Payment Type) are net-new features, not loose ends.
+- [~] Status progression edge cases (no-show, rescheduled, cancelled) — **`cancelled` write-locked at service 2026-05-12** (`setAppointmentStatus()` rejects `cancelled` like it does `completed`; forces callers through `cancelAppointment` so reason/cancelled_by/cancelled_at are always captured). Bug-hunt sweep 2026-05-12 found no concrete remaining edges; revisit if real bugs surface in production.
+- [~] Block-out / leave overlays on calendar — **block-out creation entry point added 2026-05-12** (`CreateAppointmentMenu` split-button on the calendar). Leave overlays still deferred (no leave schema yet — tracked under B4 Employees).
+- [x] Walk-in creation from calendar — **shipped 2026-05-12.** `CreateAppointmentMenu` split-button on the top-right of the calendar offers `New appointment` / `Walk-in` / `Time block`. Walk-in opens `AppointmentDialog` with `prefill.mode = "walkin"`, which pre-toggles the lead form and seeds `lead_source = walk_in`.
 
 ---
 
@@ -121,12 +144,13 @@ governs every downstream read. Stabilize these first.
   ChartCard, OutletComparison/SalesMix/TimeSeries/WoW charts,
   BirthdaysCard, LowStockCard, DashboardRemindersCard) +
   `lib/services/dashboard.ts`. Remaining is data wiring and copy:
-- [ ] Daily takings
-- [ ] Appointments summary
-- [ ] Sales by service / employee / outlet
-- [ ] Outstanding balances
-- [ ] Commission payable
-- [ ] Dashboard KPI tiles fed by real queries (currently scaffolding)
+- [x] Daily takings (Collection time-series: day / month / year)
+- [x] Appointments summary (KPI tile + WoW chart + outlet comparison)
+- [x] Sales by service / employee / outlet — sales-by-outlet shipped (Outlet comparison charts + Sales mix stacked); sales-by-service via Sales mix + **Top 10 sellers (2026-05-12)**; sales-by-employee remains (see commission tile below).
+- [x] Outstanding balances (KPI tile reads `sales_orders.outstanding > 0`)
+- [~] Commission payable / Employee collection ranking — **deferred for v1 launch (2026-05-12).** Data shape is workable (incentive rows auto-seeded since 2026-04-24, currently 62% historical coverage with fallback to appointment primary doctor available) but the owner-visible ranking + commission engine ship together post-launch. Placeholder Card removed from dashboard.
+- [x] Dashboard KPI tiles fed by real queries — all four tiles (Today's appointments, New customers, Collection, Outstanding) are real
+- [x] **Top 10 sellers widget (2026-05-12)** — Services + Products tabs, last 30 days, ranked by revenue. `getTopSellers()` in `lib/services/dashboard.ts`; `TopSellersCard` in `components/dashboard/`.
 
 ### C2. Webstore
 - [ ] Public booking flow (services → slot → customer → confirm)

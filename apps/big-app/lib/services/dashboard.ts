@@ -744,6 +744,84 @@ function humanizeCategory(s: string): string {
 	return s.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// ---- Top sellers (revenue, last 30 days) -------------------------------
+
+export type TopSellerKind = "service" | "product";
+
+export type TopSellerRow = {
+	rank: number;
+	itemId: string | null;
+	name: string;
+	sku: string | null;
+	units: number;
+	revenue: number;
+};
+
+export async function getTopSellers(
+	ctx: Context,
+	outletIds: string[],
+	kind: TopSellerKind,
+	asOf: Date = new Date(),
+	periodDays = 30,
+	limit = 10,
+): Promise<TopSellerRow[]> {
+	if (outletIds.length === 0) return [];
+	const end = addDays(startOfDay(asOf), 1);
+	const start = addDays(startOfDay(asOf), -(periodDays - 1));
+
+	const idColumn = kind === "service" ? "service_id" : "inventory_item_id";
+
+	const { data, error } = await ctx.db
+		.from("sale_items")
+		.select(
+			`id, ${idColumn}, item_name, sku, quantity, total, sales_orders!inner(sold_at, outlet_id, status)`,
+		)
+		.eq("is_voided", false)
+		.eq("item_type", kind)
+		.in("sales_orders.outlet_id", outletIds)
+		.neq("sales_orders.status", "cancelled")
+		.gte("sales_orders.sold_at", start.toISOString())
+		.lt("sales_orders.sold_at", end.toISOString());
+	if (error) throw new ValidationError(error.message);
+
+	type Row = {
+		service_id?: string | null;
+		inventory_item_id?: string | null;
+		item_name: string;
+		sku: string | null;
+		quantity: number | null;
+		total: number | null;
+	};
+
+	type Agg = { itemId: string | null; name: string; sku: string | null; units: number; revenue: number };
+	const buckets = new Map<string, Agg>();
+	for (const r of (data ?? []) as unknown as Row[]) {
+		const itemId =
+			(kind === "service" ? r.service_id : r.inventory_item_id) ?? null;
+		const key = itemId ?? `__${r.item_name}`;
+		const existing = buckets.get(key);
+		const units = Number(r.quantity ?? 0);
+		const revenue = Number(r.total ?? 0);
+		if (existing) {
+			existing.units += units;
+			existing.revenue += revenue;
+		} else {
+			buckets.set(key, {
+				itemId,
+				name: r.item_name,
+				sku: r.sku,
+				units,
+				revenue,
+			});
+		}
+	}
+
+	return Array.from(buckets.values())
+		.sort((a, b) => b.revenue - a.revenue)
+		.slice(0, limit)
+		.map((row, idx) => ({ rank: idx + 1, ...row }));
+}
+
 // ---- Today's birthdays ------------------------------------------------
 
 export type BirthdayCustomer = {

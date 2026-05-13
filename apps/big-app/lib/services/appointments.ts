@@ -272,6 +272,11 @@ export async function setAppointmentStatus(
 			"Use Mark Complete on the floating action bar to complete an appointment.",
 		);
 	}
+	if (p.status === "cancelled") {
+		throw new ValidationError(
+			"Use Cancel appointment to cancel — it captures the reason and audit trail.",
+		);
+	}
 	const { data: prev } = await ctx.db
 		.from("appointments")
 		.select("status")

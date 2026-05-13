@@ -10,18 +10,17 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { usePermission } from "@/components/auth/PermissionsProvider";
-import { useAppointmentTagList } from "@/components/brand-config/AppointmentConfigProvider";
-import { CustomerFormDialog } from "@/components/customers/CustomerForm";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field } from "@/components/ui/field";
-import { CancelAppointmentDialog } from "@/components/appointments/CancelAppointmentDialog";
 import {
 	CustomerSection,
 	StatusButton,
 	TagPicker,
 } from "@/components/appointments/AppointmentDialogParts";
+import { CancelAppointmentDialog } from "@/components/appointments/CancelAppointmentDialog";
+import { usePermission } from "@/components/auth/PermissionsProvider";
+import { useAppointmentTagList } from "@/components/brand-config/AppointmentConfigProvider";
+import { CustomerFormDialog } from "@/components/customers/CustomerForm";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -30,6 +29,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
 	createAppointmentAction,
@@ -89,6 +89,8 @@ function addMinutesIso(iso: string, mins: number): string {
 
 type BookingMode = "appointment" | "block";
 
+export type CreateMode = "booking" | "walkin" | "block";
+
 type Props = {
 	open: boolean;
 	onClose: () => void;
@@ -100,6 +102,7 @@ type Props = {
 		employeeId: string | null;
 		roomId: string | null;
 		customerId?: string | null;
+		mode?: CreateMode;
 	} | null;
 	customers: CustomerWithRelations[];
 	employees: RosterEmployee[];
@@ -161,29 +164,36 @@ function buildDefaults(args: {
 	fallbackStart.setMinutes(0, 0, 0);
 	const fallbackEnd = new Date(fallbackStart);
 	fallbackEnd.setMinutes(fallbackStart.getMinutes() + DEFAULT_DURATION_MIN);
+	const mode: CreateMode = args.prefill?.mode ?? "booking";
 	return {
 		customer_id: args.prefill?.customerId ?? null,
 		employee_id: args.prefill?.employeeId ?? null,
 		outlet_id: args.outletId,
-		room_id: args.prefill?.roomId ?? defaultRoomId,
+		room_id: args.prefill?.roomId ?? (mode === "block" ? null : defaultRoomId),
 		start_at: args.prefill?.startAt ?? fallbackStart.toISOString(),
 		end_at: args.prefill?.endAt ?? fallbackEnd.toISOString(),
 		status: "pending",
 		payment_status: "unpaid",
 		notes: undefined,
 		tags: [],
-		is_time_block: false,
+		is_time_block: mode === "block",
 		block_title: undefined,
 		lead_name: undefined,
 		lead_phone: undefined,
-		lead_source: null,
+		lead_source: mode === "walkin" ? "walk_in" : null,
 		lead_attended_by_id: null,
 	};
 }
 
-function computeInitialIsLead(a: AppointmentWithRelations | null): boolean {
-	if (!a || a.is_time_block) return false;
-	return !a.customer_id && !!a.lead_name;
+function computeInitialIsLead(
+	a: AppointmentWithRelations | null,
+	prefill: Props["prefill"],
+): boolean {
+	if (a) {
+		if (a.is_time_block) return false;
+		return !a.customer_id && !!a.lead_name;
+	}
+	return prefill?.mode === "walkin";
 }
 
 export function AppointmentDialog({
@@ -206,7 +216,7 @@ export function AppointmentDialog({
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [customerSearch, setCustomerSearch] = useState("");
 	const [isLead, setIsLead] = useState<boolean>(
-		computeInitialIsLead(appointment),
+		computeInitialIsLead(appointment, prefill),
 	);
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [convertOpen, setConvertOpen] = useState(false);
@@ -231,7 +241,7 @@ export function AppointmentDialog({
 			setServerError(null);
 			setCustomerSearch("");
 			setPickerOpen(false);
-			setIsLead(computeInitialIsLead(appointment));
+			setIsLead(computeInitialIsLead(appointment, prefill));
 			setConvertOpen(false);
 		}
 	}, [open, outletId, appointment, prefill, rooms, form]);
@@ -286,7 +296,7 @@ export function AppointmentDialog({
 			setIsLead(false);
 			setPickerOpen(false);
 		} else {
-			setIsLead(computeInitialIsLead(appointment));
+			setIsLead(computeInitialIsLead(appointment, prefill));
 		}
 	};
 
@@ -414,7 +424,9 @@ export function AppointmentDialog({
 			: "Edit appointment"
 		: isBlock
 			? "New time block"
-			: "New appointment";
+			: isLead
+				? "New walk-in"
+				: "New appointment";
 
 	return (
 		<>

@@ -1,5 +1,4 @@
 import { BirthdaysCard } from "@/components/dashboard/BirthdaysCard";
-import { ChartCard } from "@/components/dashboard/ChartCard";
 import { DashboardRemindersCard } from "@/components/dashboard/DashboardRemindersCard";
 import { KpiTile } from "@/components/dashboard/KpiTile";
 import { LowStockCard } from "@/components/dashboard/LowStockCard";
@@ -7,6 +6,7 @@ import { OutletComparisonBarChart } from "@/components/dashboard/OutletCompariso
 import { SalesMixDonutChart } from "@/components/dashboard/SalesMixDonutChart";
 import { SalesMixStackedChart } from "@/components/dashboard/SalesMixStackedChart";
 import { TimeSeriesBarChart } from "@/components/dashboard/TimeSeriesBarChart";
+import { TopSellersCard } from "@/components/dashboard/TopSellersCard";
 import { WoWLineChart } from "@/components/dashboard/WoWLineChart";
 import {
 	Card,
@@ -27,6 +27,7 @@ import {
 	getSalesMixDonut,
 	getSalesMixTimeSeries,
 	getTodayBirthdays,
+	getTopSellers,
 	getTransactionsWeekOverWeek,
 } from "@/lib/services/dashboard";
 import { listRemindersForEmployee } from "@/lib/services/follow-ups";
@@ -68,6 +69,8 @@ export default async function DashboardPage({
 		salesMixByYear,
 		salesMixDonut,
 		birthdays,
+		topServices,
+		topProducts,
 	] = await Promise.all([
 		ctx.currentUser?.employeeId
 			? listRemindersForEmployee(ctx, ctx.currentUser.employeeId)
@@ -90,6 +93,8 @@ export default async function DashboardPage({
 		getSalesMixTimeSeries(ctx, outletIds, "year"),
 		getSalesMixDonut(ctx, outletIds),
 		getTodayBirthdays(ctx, outletDescs),
+		getTopSellers(ctx, outletIds, "service"),
+		getTopSellers(ctx, outletIds, "product"),
 	]);
 
 	const today = new Date().toLocaleDateString("en-MY", {
@@ -252,31 +257,13 @@ export default async function DashboardPage({
 						<SalesMixDonutChart slices={salesMixDonut} />
 					</CardContent>
 				</Card>
-				<Card className="lg:col-span-2">
-					<CardHeader>
-						<CardTitle>Top 10 sellers</CardTitle>
-						<CardDescription>
-							Tabbed: Services · Products — coming next
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div
-							className="flex items-center justify-center rounded-md border border-dashed text-muted-foreground text-xs"
-							style={{ height: 260 }}
-						>
-							Top sellers table placeholder — period semantics pending
-						</div>
-					</CardContent>
-				</Card>
+				<div className="lg:col-span-2">
+					<TopSellersCard services={topServices} products={topProducts} />
+				</div>
 			</section>
 
-			<section className="grid gap-4 lg:grid-cols-2">
+			<section>
 				<BirthdaysCard customers={birthdays} />
-				<ChartCard
-					title="Employee collection"
-					description="Ranking by collection · MTD / YTD"
-					hint="Attribution model pending — see docs/modules/10-dashboard.md"
-				/>
 			</section>
 		</div>
 	);
